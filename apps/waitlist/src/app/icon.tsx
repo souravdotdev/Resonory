@@ -1,17 +1,12 @@
 import { ImageResponse } from "next/og";
 import { brandColors } from "@/brand/colors";
-import { loadGeistSemibold } from "@/brand/image-font";
+import { SymbolImage } from "@/brand/symbol-image";
 
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-/**
- * The favicon: the wordmark's initial in the theme colours. Replace this file
- * with `icon.png` (or `icon.svg`) from the logo files once they arrive.
- */
-export default async function Icon() {
-  const font = await loadGeistSemibold();
-
+/** The favicon: the logo symbol on the page's ground, so it reads on light and dark tabs. */
+export default function Icon() {
   return new ImageResponse(
     <div
       style={{
@@ -21,16 +16,11 @@ export default async function Icon() {
         alignItems: "center",
         justifyContent: "center",
         borderRadius: 14,
-        backgroundColor: brandColors.accent,
-        color: brandColors.text,
-        fontFamily: "Geist",
-        fontSize: 46,
-        lineHeight: 1,
-        paddingBottom: 4,
+        backgroundColor: brandColors.bg,
       }}
     >
-      R
+      <SymbolImage width={44} />
     </div>,
-    { ...size, fonts: [font] },
+    size,
   );
 }

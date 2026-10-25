@@ -21,8 +21,10 @@ apps/
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
   waitlist/ Next.js marketing page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory
-              src/app/             the page, privacy page, 404, OG/icon images, the form and showcase
-              src/brand/           brand colors and the font for generated images
+              src/app/             the page, privacy page, 404, OG/icon images, the form, nav and footer
+              src/landing/         the landing page's sections, palette pieces, FAQ and visual slots
+              src/motion/          the shared viewport observer and the scroll in reveal
+              src/brand/           brand colors, the logo paths and the font for generated images
 
 packages/
   shared/             zod request/response schemas for web <-> api; depends only on zod

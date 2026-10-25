@@ -2,42 +2,79 @@
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   --color-bg: #141414;
   --color-card: #1f1f1f;
   --color-card-raised: #272727;
   --color-border: #313131;
+  /* The palette's hairline edge: light, barely there. */
+  --color-hairline: rgb(250 250 247 / 0.08);
   --color-text: #fafaf7;
   --color-muted: #9b9b9b;
   --color-accent: #d4621a;
   --color-accent-hover: #e0712b;
   --color-error: #f28b82;
 
+  /* A palette floats: a soft drop well below it, a tight one close in. */
+  --shadow-palette: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35);
+
   /* The one easing curve: every transition and animation uses it. */
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
-
-  /* A heavy fade up as the hero first appears. */
-  --animate-rise: rise 900ms var(--ease-spring) both;
-
-  @keyframes rise {
-    from {
-      opacity: 0;
-      filter: blur(12px);
-      transform: translateY(4rem);
-    }
-    to {
-      opacity: 1;
-      filter: blur(0);
-      transform: translateY(0);
-    }
-  }
 }
 
 :root {
   color-scheme: dark;
+  scrollbar-color: var(--color-border) var(--color-bg);
+  scroll-padding-top: 6rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  caret-color: var(--color-text);
+}
+
+::selection {
+  background-color: rgb(250 250 247 / 0.2);
+  color: var(--color-text);
+}
+
+/*
+ * Scroll in reveals, driven by `src/motion/reveal.tsx` through the shared
+ * viewport observer. Only elements that start below the fold are ever put in
+ * the waiting state, and never under reduced motion.
+ */
+[data-reveal] {
+  transition:
+    opacity 900ms var(--ease-spring),
+    transform 900ms var(--ease-spring);
+}
+
+[data-reveal="waiting"] {
+  opacity: 0;
+  transform: translateY(4rem);
+}
+
+[data-words] [data-word] {
+  transition: opacity 700ms var(--ease-spring);
+}
+
+[data-words="waiting"] [data-word] {
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  [data-words] [data-word] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

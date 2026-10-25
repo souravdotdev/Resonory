@@ -1,15 +1,13 @@
 import { ImageResponse } from "next/og";
 import { brandColors } from "@/brand/colors";
 import { loadGeistSemibold } from "@/brand/image-font";
+import { SymbolImage } from "@/brand/symbol-image";
 
 export const alt = "You saved it. Resonory brings it back. Join the waitlist at resonory.com.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/**
- * The link preview for social shares and chats. The wordmark is text until
- * logo files arrive in `public/`; swap it for an `<img>` then.
- */
+/** The link preview for social shares and chats, carrying the logo's mark. */
 export default async function OpengraphImage() {
   const font = await loadGeistSemibold();
 
@@ -28,9 +26,7 @@ export default async function OpengraphImage() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 36 }}>
-        <div
-          style={{ width: 16, height: 16, borderRadius: 9999, backgroundColor: brandColors.accent }}
-        />
+        <SymbolImage width={56} />
         Resonory
       </div>
       <div
@@ -54,8 +50,8 @@ export default async function OpengraphImage() {
             display: "flex",
             padding: "16px 24px",
             borderRadius: 16,
-            backgroundColor: brandColors.accent,
-            color: brandColors.text,
+            backgroundColor: brandColors.text,
+            color: brandColors.bg,
           }}
         >
           Join the waitlist
