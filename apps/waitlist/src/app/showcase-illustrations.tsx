@@ -1,4 +1,5 @@
 import { ArrowUpRight, LinkSimple, MagnifyingGlass, Sparkle } from "@phosphor-icons/react/dist/ssr";
+import { brandColors } from "@/brand/colors";
 
 /*
  * The four coded illustrations in the hero showcase. Each one is decorative
@@ -49,13 +50,13 @@ function Thumb({
     >
       {kind === "sail" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
-          <path d="M33 12 L33 44 L14 44 Z" fill="#D4621A" />
-          <path d="M36 18 L36 44 L50 44 Z" fill="#FAFAF7" fillOpacity="0.85" />
-          <path d="M10 47 L54 47 L48 53 L16 53 Z" fill="#313131" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
+          <path d="M33 12 L33 44 L14 44 Z" fill={brandColors.accent} />
+          <path d="M36 18 L36 44 L50 44 Z" fill={brandColors.text} fillOpacity="0.85" />
+          <path d="M10 47 L54 47 L48 53 L16 53 Z" fill={brandColors.border} />
           <path
             d="M0 57 Q8 54 16 57 T32 57 T48 57 T64 57"
-            stroke="#9B9B9B"
+            stroke={brandColors.muted}
             strokeOpacity="0.5"
             strokeWidth="2"
             fill="none"
@@ -64,63 +65,87 @@ function Thumb({
       )}
       {kind === "thread" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
-          <rect x="8" y="12" width="36" height="12" rx="6" fill="#313131" />
-          <rect x="20" y="28" width="36" height="12" rx="6" fill="#D4621A" />
-          <rect x="8" y="44" width="28" height="12" rx="6" fill="#313131" />
-          <circle cx="14" cy="18" r="2" fill="#9B9B9B" />
-          <circle cx="20" cy="18" r="2" fill="#9B9B9B" />
-          <circle cx="26" cy="18" r="2" fill="#9B9B9B" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
+          <rect x="8" y="12" width="36" height="12" rx="6" fill={brandColors.border} />
+          <rect x="20" y="28" width="36" height="12" rx="6" fill={brandColors.accent} />
+          <rect x="8" y="44" width="28" height="12" rx="6" fill={brandColors.border} />
+          <circle cx="14" cy="18" r="2" fill={brandColors.muted} />
+          <circle cx="20" cy="18" r="2" fill={brandColors.muted} />
+          <circle cx="26" cy="18" r="2" fill={brandColors.muted} />
         </>
       )}
       {kind === "board" && (
         <>
-          <rect width="64" height="64" fill="#1F1F1F" />
-          <rect x="6" y="10" width="15" height="46" rx="3" fill="#272727" />
-          <rect x="24.5" y="10" width="15" height="46" rx="3" fill="#272727" />
-          <rect x="43" y="10" width="15" height="46" rx="3" fill="#272727" />
-          <rect x="8.5" y="13" width="10" height="7" rx="1.5" fill="#FAFAF7" fillOpacity="0.8" />
-          <rect x="8.5" y="22" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="8.5" y="31" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="27" y="13" width="10" height="7" rx="1.5" fill="#D4621A" />
-          <rect x="27" y="22" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="45.5" y="13" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="45.5" y="22" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="45.5" y="31" width="10" height="7" rx="1.5" fill="#313131" />
-          <rect x="45.5" y="40" width="10" height="7" rx="1.5" fill="#313131" />
+          <rect width="64" height="64" fill={brandColors.card} />
+          <rect x="6" y="10" width="15" height="46" rx="3" fill={brandColors.cardRaised} />
+          <rect x="24.5" y="10" width="15" height="46" rx="3" fill={brandColors.cardRaised} />
+          <rect x="43" y="10" width="15" height="46" rx="3" fill={brandColors.cardRaised} />
+          <rect
+            x="8.5"
+            y="13"
+            width="10"
+            height="7"
+            rx="1.5"
+            fill={brandColors.text}
+            fillOpacity="0.8"
+          />
+          <rect x="8.5" y="22" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="8.5" y="31" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="27" y="13" width="10" height="7" rx="1.5" fill={brandColors.accent} />
+          <rect x="27" y="22" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="45.5" y="13" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="45.5" y="22" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="45.5" y="31" width="10" height="7" rx="1.5" fill={brandColors.border} />
+          <rect x="45.5" y="40" width="10" height="7" rx="1.5" fill={brandColors.border} />
         </>
       )}
       {kind === "paper" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
-          <rect x="14" y="8" width="36" height="48" rx="3" fill="#FAFAF7" fillOpacity="0.9" />
-          <rect x="19" y="14" width="20" height="3" rx="1.5" fill="#141414" />
-          <rect x="19" y="22" width="26" height="2" rx="1" fill="#9B9B9B" />
-          <rect x="19" y="27" width="26" height="2" rx="1" fill="#9B9B9B" />
-          <rect x="18" y="31" width="28" height="5" rx="1" fill="#D4621A" fillOpacity="0.7" />
-          <rect x="19" y="39" width="22" height="2" rx="1" fill="#9B9B9B" />
-          <rect x="19" y="44" width="26" height="2" rx="1" fill="#9B9B9B" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
+          <rect
+            x="14"
+            y="8"
+            width="36"
+            height="48"
+            rx="3"
+            fill={brandColors.text}
+            fillOpacity="0.9"
+          />
+          <rect x="19" y="14" width="20" height="3" rx="1.5" fill={brandColors.bg} />
+          <rect x="19" y="22" width="26" height="2" rx="1" fill={brandColors.muted} />
+          <rect x="19" y="27" width="26" height="2" rx="1" fill={brandColors.muted} />
+          <rect
+            x="18"
+            y="31"
+            width="28"
+            height="5"
+            rx="1"
+            fill={brandColors.accent}
+            fillOpacity="0.7"
+          />
+          <rect x="19" y="39" width="22" height="2" rx="1" fill={brandColors.muted} />
+          <rect x="19" y="44" width="26" height="2" rx="1" fill={brandColors.muted} />
         </>
       )}
       {kind === "bread" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
-          <ellipse cx="32" cy="38" rx="22" ry="14" fill="#D4621A" />
-          <ellipse cx="32" cy="34" rx="20" ry="11" fill="#E0712B" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
+          <ellipse cx="32" cy="38" rx="22" ry="14" fill={brandColors.accent} />
+          <ellipse cx="32" cy="34" rx="20" ry="11" fill={brandColors.accentHover} />
           <path
             d="M20 30 Q26 26 30 32 M30 27 Q36 23 40 29 M38 33 Q42 30 46 34"
-            stroke="#FAFAF7"
+            stroke={brandColors.text}
             strokeOpacity="0.75"
             strokeWidth="2"
             strokeLinecap="round"
             fill="none"
           />
-          <rect x="6" y="52" width="52" height="3" rx="1.5" fill="#313131" />
+          <rect x="6" y="52" width="52" height="3" rx="1.5" fill={brandColors.border} />
         </>
       )}
       {kind === "layout" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
           <rect
             x="10"
             y="10"
@@ -128,26 +153,34 @@ function Thumb({
             height="44"
             rx="4"
             fill="none"
-            stroke="#D4621A"
+            stroke={brandColors.accent}
             strokeWidth="1.5"
             strokeDasharray="3 2"
           />
-          <rect x="15" y="15" width="34" height="9" rx="2" fill="#FAFAF7" fillOpacity="0.85" />
-          <rect x="15" y="27" width="16" height="22" rx="2" fill="#313131" />
-          <rect x="33" y="27" width="16" height="22" rx="2" fill="#313131" />
-          <rect x="31" y="27" width="2" height="22" fill="#D4621A" fillOpacity="0.6" />
+          <rect
+            x="15"
+            y="15"
+            width="34"
+            height="9"
+            rx="2"
+            fill={brandColors.text}
+            fillOpacity="0.85"
+          />
+          <rect x="15" y="27" width="16" height="22" rx="2" fill={brandColors.border} />
+          <rect x="33" y="27" width="16" height="22" rx="2" fill={brandColors.border} />
+          <rect x="31" y="27" width="2" height="22" fill={brandColors.accent} fillOpacity="0.6" />
         </>
       )}
       {kind === "rules" && (
         <>
-          <rect width="64" height="64" fill="#272727" />
-          <rect x="10" y="12" width="20" height="18" rx="3" fill="#D4621A" />
-          <rect x="34" y="12" width="20" height="18" rx="3" fill="#313131" />
-          <rect x="10" y="34" width="20" height="18" rx="3" fill="#313131" />
-          <rect x="34" y="34" width="20" height="18" rx="3" fill="#313131" />
+          <rect width="64" height="64" fill={brandColors.cardRaised} />
+          <rect x="10" y="12" width="20" height="18" rx="3" fill={brandColors.accent} />
+          <rect x="34" y="12" width="20" height="18" rx="3" fill={brandColors.border} />
+          <rect x="10" y="34" width="20" height="18" rx="3" fill={brandColors.border} />
+          <rect x="34" y="34" width="20" height="18" rx="3" fill={brandColors.border} />
           <path
             d="M15 21 L19 25 L26 17"
-            stroke="#FAFAF7"
+            stroke={brandColors.text}
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -155,7 +188,7 @@ function Thumb({
           />
           <path
             d="M39 21 L43 21 M47 21 L49 21 M15 43 L25 43 M39 43 L49 43"
-            stroke="#9B9B9B"
+            stroke={brandColors.muted}
             strokeWidth="2.5"
             strokeLinecap="round"
           />
@@ -169,8 +202,8 @@ function Thumb({
 function Mark() {
   return (
     <svg viewBox="0 0 16 16" className="size-4 shrink-0" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.25" fill="none" stroke="#D4621A" strokeWidth="1.5" />
-      <circle cx="8" cy="8" r="2.5" fill="#D4621A" />
+      <circle cx="8" cy="8" r="6.25" fill="none" stroke={brandColors.accent} strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="2.5" fill={brandColors.accent} />
     </svg>
   );
 }

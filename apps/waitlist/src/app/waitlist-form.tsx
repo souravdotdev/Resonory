@@ -1,9 +1,13 @@
 "use client";
 
 import { useId, useState } from "react";
-import { WaitlistEmailSchema } from "@/waitlist/request";
-
-const FALLBACK_ERROR = "We could not add you right now. Please try again.";
+import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
+import {
+  HONEYPOT_FIELD,
+  INVALID_EMAIL_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  WaitlistEmailSchema,
+} from "@/waitlist/request";
 
 type Status = "idle" | "joining" | "joined";
 
@@ -23,22 +27,12 @@ function currentSource(): string | undefined {
 
 async function errorMessageFrom(response: Response): Promise<string> {
   try {
-    const body: unknown = await response.json();
-    if (
-      typeof body === "object" &&
-      body !== null &&
-      "error" in body &&
-      typeof body.error === "object" &&
-      body.error !== null &&
-      "message" in body.error &&
-      typeof body.error.message === "string"
-    ) {
-      return body.error.message;
-    }
+    const parsed = ErrorResponseSchema.safeParse(await response.json());
+    if (parsed.success) return parsed.data.error.message;
   } catch {
     // Not JSON: fall through to the generic message.
   }
-  return FALLBACK_ERROR;
+  return SERVER_ERROR_MESSAGE;
 }
 
 export function WaitlistForm() {
@@ -56,7 +50,7 @@ export function WaitlistForm() {
     // The same email rule the endpoint enforces, so a typo never leaves the page.
     const parsed = WaitlistEmailSchema.safeParse(email);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Enter a valid email address");
+      setError(parsed.error.issues[0]?.message ?? INVALID_EMAIL_MESSAGE);
       return;
     }
 
@@ -67,7 +61,11 @@ export function WaitlistForm() {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: parsed.data, source: currentSource(), company }),
+        body: JSON.stringify({
+          email: parsed.data,
+          source: currentSource(),
+          [HONEYPOT_FIELD]: company,
+        }),
       });
       if (!response.ok) {
         setError(await errorMessageFrom(response));
@@ -75,7 +73,7 @@ export function WaitlistForm() {
         return;
       }
     } catch {
-      setError(FALLBACK_ERROR);
+      setError(SERVER_ERROR_MESSAGE);
       setStatus("idle");
       return;
     }
@@ -126,7 +124,7 @@ export function WaitlistForm() {
           Company
           <input
             type="text"
-            name="company"
+            name={HONEYPOT_FIELD}
             tabIndex={-1}
             autoComplete="off"
             value={company}

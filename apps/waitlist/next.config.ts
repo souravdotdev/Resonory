@@ -11,7 +11,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@resonory/db"],
+  transpilePackages: ["@resonory/db", "@resonory/shared"],
   async headers() {
     return [
       {

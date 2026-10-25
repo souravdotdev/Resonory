@@ -30,7 +30,7 @@ The app runs as short lived serverless functions, so it uses the transaction poo
 
 ### 3. Run the Waitlist Entry migration against Supabase first
 
-Create the `waitlist_entries` table before the first deploy takes signups. From the monorepo root:
+Create the `waitlist_entries` table before the first deploy takes Waitlist Entries. From the monorepo root:
 
 ```sh
 DATABASE_URL='<session pooler or direct connection URI>' pnpm --filter @resonory/db db:migrate
