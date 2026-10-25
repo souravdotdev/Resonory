@@ -233,6 +233,33 @@ describe("landing page", () => {
     expect(within(hero).getByRole("img", { name: /search for agile retrospective/i })).toBeTruthy();
   });
 
+  describe("the drift layer", () => {
+    const FOCUSABLE = "a, button, input, select, textarea, [tabindex], [contenteditable]";
+
+    function driftLayer() {
+      return document.querySelector<HTMLElement>('[data-slot="drift-layer"]')!;
+    }
+
+    it("drifts saved things and Cue cards past the page, hidden from assistive technology", async () => {
+      await renderLandingPage();
+
+      const layer = driftLayer();
+      expect(layer.getAttribute("aria-hidden")).toBe("true");
+      expect(layer.querySelectorAll(FOCUSABLE)).toHaveLength(0);
+      expect(layer.querySelectorAll("[data-drift]").length).toBeGreaterThan(0);
+      expect(layer.querySelectorAll("[data-cue]").length).toBeGreaterThan(0);
+    });
+
+    it("keeps everything still under reduced motion", async () => {
+      stubMatchMedia(true);
+      await renderLandingPage();
+
+      const layer = driftLayer();
+      expect(layer.querySelectorAll("[data-cue]").length).toBeGreaterThan(0);
+      expect(layer.querySelectorAll("[data-drift]")).toHaveLength(0);
+    });
+  });
+
   it("answers when with the waitlist email", async () => {
     const user = userEvent.setup();
     await renderLandingPage();

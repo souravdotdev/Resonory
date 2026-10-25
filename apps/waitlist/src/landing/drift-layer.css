@@ -1,0 +1,72 @@
+/*
+ * The drift layer's motion, driven by `drift-layer.tsx` through the shared
+ * viewport observer. Transform and opacity only, so it stays on the
+ * compositor. Without JavaScript, and under reduced motion, every thread is
+ * drawn and nothing moves.
+ */
+
+@keyframes drift-layer-drift {
+  to {
+    transform: translate3d(var(--drift-x), var(--drift-y), 0);
+  }
+}
+
+[data-drift-group] [data-drift] {
+  animation: drift-layer-drift var(--drift-duration) var(--ease-spring) var(--drift-delay) infinite
+    alternate both;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+/* Only the groups on screen drift. */
+[data-drift-group][data-active] [data-drift] {
+  animation-play-state: running;
+}
+
+/* The thread draws down from the first card, its dots light as it passes, and
+   the Cue's dot rises out of its stack as the thread arrives. */
+[data-drift-group] [data-thread-line] {
+  transform-origin: top;
+  transition: transform 1800ms var(--ease-spring) 200ms;
+}
+
+[data-drift-group] [data-thread-node] {
+  transition:
+    opacity 900ms var(--ease-spring) var(--node-delay),
+    transform 900ms var(--ease-spring) var(--node-delay);
+}
+
+[data-drift-group] [data-rise] {
+  transform-box: fill-box;
+  transition:
+    opacity 900ms var(--ease-spring) 1200ms,
+    transform 900ms var(--ease-spring) 1200ms;
+}
+
+[data-drift-group][data-thread="waiting"] [data-thread-line] {
+  transform: scaleY(0);
+}
+
+[data-drift-group][data-thread="waiting"] [data-thread-node] {
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+[data-drift-group][data-thread="waiting"] [data-rise] {
+  opacity: 0;
+  transform: translateY(60%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-drift-group] [data-drift] {
+    animation: none;
+  }
+
+  [data-drift-group] [data-thread-line],
+  [data-drift-group] [data-thread-node],
+  [data-drift-group] [data-rise] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
