@@ -168,13 +168,4 @@ export function WayIllustration({ way }: { way: Way }) {
   );
 }
 
-/** The ambient layer of drifting saved things. Empty for now; decorative and never focusable. */
-export function DriftLayer() {
-  return (
-    <div
-      data-slot="drift-layer"
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-    />
-  );
-}
+export { DriftLayer } from "./drift-layer";
