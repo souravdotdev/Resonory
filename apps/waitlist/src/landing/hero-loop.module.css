@@ -1,0 +1,47 @@
+/*
+ * The hero loop's motion. `hero-loop.tsx` sets each piece's transform and
+ * opacity for the current frame; these rules only say how they travel there.
+ * Transform and opacity only, on the page's one spring curve.
+ */
+
+.moves {
+  transition:
+    transform 700ms var(--ease-spring),
+    opacity 700ms var(--ease-spring);
+}
+
+/* The save coming back rises slower than the rest, so the eye follows it. */
+.rises {
+  transition:
+    transform 1100ms var(--ease-spring),
+    opacity 700ms var(--ease-spring);
+}
+
+.fades {
+  transition: opacity 500ms var(--ease-spring);
+}
+
+/* A typed character appears at once, as a keystroke does. */
+.types {
+  transition: opacity 60ms var(--ease-spring);
+}
+
+/*
+ * The page arrives on the final frame, so it reads without JavaScript and
+ * under reduced motion. When the loop is about to play from the start, that
+ * frame stays hidden until the first beat takes over, instead of flashing.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-beat="still"] .stage {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moves,
+  .rises,
+  .fades,
+  .types {
+    transition: none;
+  }
+}
