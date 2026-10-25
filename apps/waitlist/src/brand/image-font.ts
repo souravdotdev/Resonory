@@ -12,13 +12,3 @@ export async function loadGeistSemibold() {
   );
   return { name: "Geist", data, weight: 600 as const, style: "normal" as const };
 }
-
-/** The theme colours, for generated images that can't read the CSS tokens. */
-export const brandColors = {
-  bg: "#141414",
-  card: "#1F1F1F",
-  border: "#313131",
-  text: "#FAFAF7",
-  muted: "#9B9B9B",
-  accent: "#D4621A",
-} as const;

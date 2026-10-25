@@ -1,11 +1,11 @@
-import { JoinWaitlistRequestSchema } from "./request";
+import type { ErrorCode, ErrorResponse } from "@resonory/shared/schemas/common";
+import { HONEYPOT_FIELD, JoinWaitlistRequestSchema, SERVER_ERROR_MESSAGE } from "./request";
 import type { WaitlistStore } from "./store";
 
-type ErrorCode = "validation_failed" | "internal";
-
-// Same envelope as @resonory/shared's ErrorResponseSchema.
+/** An error in the shared envelope (`ErrorResponseSchema` in @resonory/shared). */
 function errorResponse(status: number, code: ErrorCode, message: string) {
-  return Response.json({ error: { code, message } }, { status });
+  const body: ErrorResponse = { error: { code, message } };
+  return Response.json(body, { status });
 }
 
 function isJson(request: Request): boolean {
@@ -22,9 +22,9 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 function filledHoneypot(body: unknown): boolean {
-  if (typeof body !== "object" || body === null || !("company" in body)) return false;
-  const { company } = body;
-  return typeof company === "string" ? company.trim() !== "" : company != null;
+  if (typeof body !== "object" || body === null || !(HONEYPOT_FIELD in body)) return false;
+  const value = body[HONEYPOT_FIELD];
+  return typeof value === "string" ? value.trim() !== "" : value != null;
 }
 
 export function createJoinWaitlistHandler(store: WaitlistStore) {
@@ -57,7 +57,7 @@ export function createJoinWaitlistHandler(store: WaitlistStore) {
       await store.join({ email: parsed.data.email, source: parsed.data.source ?? null });
     } catch (error) {
       console.error("Could not add a Waitlist Entry", error);
-      return errorResponse(500, "internal", "We could not add you right now. Please try again.");
+      return errorResponse(500, "internal", SERVER_ERROR_MESSAGE);
     }
 
     return Response.json({ ok: true });

@@ -1,6 +1,6 @@
 # Security
 
-`apps/api` (the only HTTP-facing service besides `apps/web`) registers three plugins in `buildApp` (`src/app.ts`), all before any route: [`@fastify/cors`](https://github.com/fastify/fastify-cors), [`@fastify/helmet`](https://github.com/fastify/fastify-helmet), [`@fastify/rate-limit`](https://github.com/fastify/fastify-rate-limit). Errors are sent through one error middleware (`src/interface/middleware/error.middleware.ts`) that never puts a domain message, stack trace or internal detail in a response (see [API](./api.md#error-envelope)). `apps/worker` has no HTTP surface (it only consumes queue jobs), so no middleware applies there; it does make outbound requests for each Source URL (the page, at most one oEmbed call, and for an Image Item the image itself), all guarded (see [The worker's URL fetch](#the-workers-url-fetch)).
+`apps/api` (one of three HTTP-facing services, with `apps/web` and `apps/waitlist`; see [`apps/waitlist`](#appswaitlist) for the waitlist's own defences) registers three plugins in `buildApp` (`src/app.ts`), all before any route: [`@fastify/cors`](https://github.com/fastify/fastify-cors), [`@fastify/helmet`](https://github.com/fastify/fastify-helmet), [`@fastify/rate-limit`](https://github.com/fastify/fastify-rate-limit). Errors are sent through one error middleware (`src/interface/middleware/error.middleware.ts`) that never puts a domain message, stack trace or internal detail in a response (see [API](./api.md#error-envelope)). `apps/worker` has no HTTP surface (it only consumes queue jobs), so no middleware applies there; it does make outbound requests for each Source URL (the page, at most one oEmbed call, and for an Image Item the image itself), all guarded (see [The worker's URL fetch](#the-workers-url-fetch)).
 
 ## CORS
 
@@ -53,6 +53,17 @@ Thumbnails live in the **private** Supabase Storage bucket `thumbnails`, at `{us
 `next.config.ts`'s `headers()` sets, on every route: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`. Confirmed present on a real `next build` + `next start` response via `curl -I`.
 
 **No CSP here either, for now** — deliberately deferred, not forgotten. Unlike `apps/api`, a CSP on `apps/web` _would_ be meaningful (it serves real HTML), but getting one right for a Next.js app means handling nonces for inline scripts/hydration data correctly, and verifying it doesn't break the dev server, Turbopack, or the production build — real work that deserves its own dedicated pass with actual browser testing, not a policy added blind alongside unrelated middleware.
+
+## `apps/waitlist`
+
+The waitlist app has one write endpoint, `POST /api/waitlist`, open to anyone, which adds a Waitlist Entry. It doesn't go through `apps/api`, so none of the API's plugins apply; its defences are its own:
+
+- **Honeypot.** The form carries a field hidden from people and screen readers (`HONEYPOT_FIELD` in `src/waitlist/request.ts`). If it's filled, the handler answers `200 { ok: true }` and stores nothing, checked before validation so a bot gets the same answer whatever else it sent and no signal that it was caught.
+- **Validation.** Only `application/json` is accepted, and the body is parsed with `JoinWaitlistRequestSchema`: the email must be valid and is trimmed and lowercased, and `source` is cut to 100 characters. Anything else gets `400 validation_failed` in the shared error envelope. A store failure is logged on the server and answered with a generic `500 internal` that carries no internal detail.
+- **Unique email.** `waitlist_entries_email_unique` (see [Database](./database.md)) keeps an email on the list at most once; the insert uses `ON CONFLICT DO NOTHING`.
+- **Never reveals membership.** A new email and one already on the list get the same `200 { ok: true }`, so the endpoint can't be used to probe who has signed up. The proof line on the page shows only the total, and only once there are at least 100 Waitlist Entries.
+- **No rate limit, for now.** The endpoint stores at most one row per email and leaks nothing, so the worst case of abuse is junk rows, which the honeypot already filters from naive bots; a rate limit would need a shared store (Redis or the host's edge) that a serverless marketing page doesn't otherwise need. If junk entries appear, add a per-IP limit at the edge (the host's firewall or rate-limit rules) or in the route with a shared store, and consider double opt-in (`confirmed_at` is reserved for it).
+- **Response headers.** `next.config.ts` sets the same headers as [`apps/web`](#appsweb-response-headers) on every route, and no CSP yet, for the same reason.
 
 ## Dependency updates (Dependabot)
 

@@ -36,7 +36,7 @@ export const SLIDES: readonly Slide[] = [
   },
   {
     id: "search",
-    label: "Search",
+    label: "Meaning",
     caption: "Search agile and find the post about coding principles too.",
     description:
       "A Resonory search for agile. Next to the keyword matches, it finds a post about the four rules of simple design, marked related by meaning and tagged coding principles.",

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
-import { brandColors, loadGeistSemibold } from "@/brand/image-font";
+import { brandColors } from "@/brand/colors";
+import { loadGeistSemibold } from "@/brand/image-font";
 
 export const alt = "You saved it. Resonory brings it back. Join the waitlist at resonory.com.";
 export const size = { width: 1200, height: 630 };

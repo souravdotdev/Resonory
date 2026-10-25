@@ -33,7 +33,7 @@ describe("Showcase", () => {
     render(<Showcase />);
 
     const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cue", "Save", "Search", "Digest"]);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cue", "Save", "Meaning", "Digest"]);
     expect(selectedTab().textContent).toBe("Cue");
     expect(activePanel().textContent).toContain(
       "While you search, a small card says you already saved 2 things on this.",
@@ -44,9 +44,9 @@ describe("Showcase", () => {
     const user = userEvent.setup();
     render(<Showcase />);
 
-    await user.click(screen.getByRole("tab", { name: "Search" }));
+    await user.click(screen.getByRole("tab", { name: "Meaning" }));
 
-    expect(selectedTab().textContent).toBe("Search");
+    expect(selectedTab().textContent).toBe("Meaning");
     expect(activePanel().textContent).toContain(
       "Search agile and find the post about coding principles too.",
     );
@@ -106,7 +106,7 @@ describe("Showcase", () => {
       wait(100);
       expect(selectedTab().textContent).toBe("Save");
       wait(5000);
-      expect(selectedTab().textContent).toBe("Search");
+      expect(selectedTab().textContent).toBe("Meaning");
       wait(5000);
       expect(selectedTab().textContent).toBe("Digest");
       wait(5000);
@@ -136,7 +136,7 @@ describe("Showcase", () => {
 
       act(() => screen.getByRole("tab", { name: "Save" }).blur());
       wait(5000);
-      expect(selectedTab().textContent).toBe("Search");
+      expect(selectedTab().textContent).toBe("Meaning");
     });
 
     it("pauses while the showcase is off screen", () => {
@@ -185,6 +185,40 @@ describe("Showcase", () => {
       expect(selectedTab().textContent).toBe("Digest");
       wait(20000);
       expect(selectedTab().textContent).toBe("Digest");
+    });
+
+    it("goes back to the Cue and stops when reduced motion is switched on after load", () => {
+      const listeners = new Set<() => void>();
+      let reduced = false;
+      vi.stubGlobal(
+        "matchMedia",
+        (query: string) =>
+          ({
+            get matches() {
+              return query === "(prefers-reduced-motion: reduce)" && reduced;
+            },
+            media: query,
+            addEventListener(_type: string, listener: () => void) {
+              listeners.add(listener);
+            },
+            removeEventListener(_type: string, listener: () => void) {
+              listeners.delete(listener);
+            },
+          }) as unknown as MediaQueryList,
+      );
+      render(<Showcase />);
+
+      wait(5000);
+      wait(5000);
+      expect(selectedTab().textContent).toBe("Meaning");
+
+      act(() => {
+        reduced = true;
+        listeners.forEach((listener) => listener());
+      });
+      expect(selectedTab().textContent).toBe("Cue");
+      wait(20000);
+      expect(selectedTab().textContent).toBe("Cue");
     });
   });
 });

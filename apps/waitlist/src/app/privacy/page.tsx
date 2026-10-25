@@ -46,8 +46,8 @@ export default function PrivacyPage() {
                 you here, so we know which places people hear about Resonory.
               </li>
               <li>
-                <span className="text-text">When you joined</span>, so the first people in get their
-                spots first.
+                <span className="text-text">When you joined</span>, as a record of when you asked to
+                be on the list.
               </li>
             </ul>
             <p className="text-base text-pretty text-muted">
@@ -61,8 +61,7 @@ export default function PrivacyPage() {
               When we email you
             </h2>
             <p className="text-base text-pretty text-muted">
-              We send nothing until Resonory launches. Then we email you once to say your spot is
-              open, with your founding member price.
+              We email you when your spot opens, and nothing else.
             </p>
           </section>
 

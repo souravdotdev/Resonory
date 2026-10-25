@@ -120,6 +120,9 @@ importers:
       '@resonory/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@resonory/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3

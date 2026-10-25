@@ -30,7 +30,8 @@ function useReducedMotion() {
  *
  * It moves on every 5 seconds, pausing while it is hovered, holds focus or is
  * off screen; a pause keeps the time already spent on the slide. With reduced
- * motion it stays on the Cue and changes only when a tab is chosen.
+ * motion it stays on the Cue and changes only when a tab is chosen; if reduced
+ * motion is switched on after load, it goes back to the Cue and stops.
  */
 export function Showcase() {
   const baseId = useId();
@@ -41,6 +42,14 @@ export function Showcase() {
   const [focused, setFocused] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
   const reducedMotion = useReducedMotion();
+
+  // Reduced motion switched on after load: go back to the Cue and stay there.
+  const [wasReducedMotion, setWasReducedMotion] = useState(reducedMotion);
+  if (reducedMotion !== wasReducedMotion) {
+    setWasReducedMotion(reducedMotion);
+    if (reducedMotion) setActive(0);
+  }
+
   const rotating = !reducedMotion && !hovered && !focused && onScreen;
 
   // Time left on the current slide, carried across pauses.
