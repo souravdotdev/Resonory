@@ -1,5 +1,5 @@
 import { readProofLine, waitlistStore } from "@/waitlist";
-import { ShowcaseSlot } from "./showcase-slot";
+import { Showcase } from "./showcase";
 import { SiteFooter } from "./site-footer";
 import { SiteNav } from "./site-nav";
 import { WaitlistForm } from "./waitlist-form";
@@ -41,8 +41,8 @@ export default async function WaitlistPage() {
             <p className="text-sm text-muted">{proofLine}</p>
           </div>
         </section>
-        <div className="motion-safe:animate-rise motion-safe:[animation-delay:150ms]">
-          <ShowcaseSlot />
+        <div className="min-w-0 motion-safe:animate-rise motion-safe:[animation-delay:150ms]">
+          <Showcase />
         </div>
       </main>
       <SiteFooter />
