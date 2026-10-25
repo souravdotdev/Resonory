@@ -34,3 +34,8 @@ pnpm-debug.log*
 ## Next.js generated agent docs
 apps/*/AGENTS.md
 apps/*/CLAUDE.md
+
+## Impeccable session state (decision page logs, build phase state)
+.impeccable/build/
+.impeccable/questions/
+.impeccable/config.local.json
