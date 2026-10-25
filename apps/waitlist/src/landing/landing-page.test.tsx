@@ -233,6 +233,54 @@ describe("landing page", () => {
     expect(within(hero).getByRole("img", { name: /search for agile retrospective/i })).toBeTruthy();
   });
 
+  describe("the hero story", () => {
+    function hero() {
+      return screen.getByRole("region", { name: "You saved it. Resonory brings it back." });
+    }
+
+    function currentBeat() {
+      return within(hero()).getByRole("listitem", { current: "step" }).textContent;
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("labels its three beats", async () => {
+      await renderLandingPage();
+
+      const beats = within(hero()).getByRole("list", { name: "Story beats" });
+      expect(
+        within(beats)
+          .getAllByRole("listitem")
+          .map((beat) => beat.textContent),
+      ).toEqual(["Save", "Forget", "It comes back"]);
+    });
+
+    it("stands still on its final beat under reduced motion", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      stubMatchMedia(true);
+      await renderLandingPage();
+
+      expect(currentBeat()).toBe("It comes back");
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(currentBeat()).toBe("It comes back");
+    });
+
+    it("plays from Save through Forget to It comes back", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      await renderLandingPage();
+
+      expect(currentBeat()).toBe("Save");
+      const seen = new Set<string | null>([currentBeat()]);
+      for (let second = 0; second < 20; second++) {
+        act(() => vi.advanceTimersByTime(1_000));
+        seen.add(currentBeat());
+      }
+      expect([...seen]).toEqual(["Save", "Forget", "It comes back"]);
+    });
+  });
+
   describe("the drift layer", () => {
     const FOCUSABLE = "a, button, input, select, textarea, [tabindex], [contenteditable]";
 
