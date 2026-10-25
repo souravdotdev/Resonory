@@ -50,6 +50,13 @@
       "when": 1792060151155,
       "tag": "0006_rename_tweet_to_post_and_add_item_types",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792939833043,
+      "tag": "0007_create_waitlist_entries",
+      "breakpoints": true
     }
   ]
 }

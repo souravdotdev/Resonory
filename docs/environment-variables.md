@@ -12,6 +12,8 @@ Every app/package that reads `process.env` validates it through a Zod schema in 
 - `apps/worker` — no `env.ts` of its own: it reads `DATABASE_URL` and `REDIS_URL` through `@resonory/db`'s `client`/`redis` subpaths (via `src/infrastructure/database/db.ts` and the container), both of which validate themselves at import time. The optional Supabase Storage pair is read by `src/infrastructure/storage/supabaseEnv.ts`, called only by the container, by the same rules as the API's: an empty value counts as unset, either one unset means no Thumbnail store, and a `SUPABASE_URL` that is set but isn't an http(s) URL refuses to start. Its `dev` script loads `apps/worker/.env` with `tsx --env-file=.env`, like the API's.
 - `apps/web/src/env.ts` — `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:4000`). Imported as a side effect in `next.config.ts` so an invalid value fails `next dev`/`next build` immediately, before anything else runs.
 
+- `apps/waitlist/src/env.ts` — `DATABASE_URL` must be a valid URL. Unlike the other apps it validates lazily, through `getEnv()`, rather than at import time: `next.config.ts` calls it when `next dev` or `next start` starts, and the app's Postgres connection (`src/db.ts`) calls it on first use. `next build` skips it, so the app builds (in CI too) with no database configured. The app never imports `@resonory/db/client`, so the db package's own `DATABASE_URL` check doesn't apply here.
+
 One Next.js-specific detail: `apps/web/src/env.ts` reads `process.env.NEXT_PUBLIC_API_URL` as a single literal expression rather than spreading the whole `process.env` object into `safeParse`. Next.js statically replaces `process.env.NEXT_PUBLIC_*` expressions with their literal value at build time for anything that ends up in the client bundle — spreading the whole object would defeat that replacement and crash in the browser, where `process` doesn't exist.
 
 ## `packages/db/.env`
@@ -69,9 +71,17 @@ The Supabase pair is optional, read by the same rules as the API: with either on
 
 `NEXT_PUBLIC_*`-prefixed variables get inlined into the client-side JS bundle at build time — never put a secret behind that prefix.
 
+## `apps/waitlist/.env`
+
+| Variable       | Purpose                                                  | Local dev value                                        |
+| -------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| `DATABASE_URL` | Postgres connection string, to store Waitlist Entries in | `postgres://postgres:postgres@localhost:5433/resonory` |
+
+In production this is Supabase's **transaction pooler** connection string (port `6543`), not the direct connection (port `5432`) the API and worker use. The waitlist app runs as short-lived serverless functions on Vercel, so it opens its own connection with prepared statements disabled (the transaction pooler doesn't support them) and a pool of one. Set it in Vercel for Production and Preview; it's server only, so never behind a `NEXT_PUBLIC_` prefix.
+
 ## Duplication: `DATABASE_URL` / `REDIS_URL`
 
-`DATABASE_URL` is duplicated across `packages/db`, `apps/api`, and `apps/worker`; `REDIS_URL` across `apps/api` and `apps/worker`. This is real duplication, not an oversight — all three point at the same Docker Compose services.
+`DATABASE_URL` is duplicated across `packages/db`, `apps/api`, `apps/worker` and `apps/waitlist`; `REDIS_URL` across `apps/api` and `apps/worker`. This is real duplication, not an oversight — locally they all point at the same Docker Compose services.
 
 A single root `.env` was considered and intentionally not adopted, per Turborepo's own guidance against it:
 
