@@ -5,6 +5,7 @@ import { SiteNav } from "./site-nav";
 
 // next/font only works inside the Next compiler.
 vi.mock("geist/font/sans", () => ({ GeistSans: { variable: "font-geist-sans" } }));
+vi.mock("geist/font/mono", () => ({ GeistMono: { variable: "font-geist-mono" } }));
 
 describe("site metadata", () => {
   it("titles the page with the headline and makes it indexable", () => {

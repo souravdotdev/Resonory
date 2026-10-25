@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { Check, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   HONEYPOT_FIELD,
@@ -83,7 +84,11 @@ export function WaitlistForm() {
 
   if (status === "joined") {
     return (
-      <p role="status" className="text-base text-pretty text-text">
+      <p
+        role="status"
+        className="flex items-center gap-3 rounded-2xl border border-hairline bg-card px-4 py-3 text-base text-pretty text-text shadow-palette"
+      >
+        <Check aria-hidden="true" size={16} weight="bold" className="shrink-0 text-muted" />
         You&rsquo;re on the list. We&rsquo;ll email you when your spot opens.
       </p>
     );
@@ -93,10 +98,12 @@ export function WaitlistForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex w-full flex-col gap-2">
-      <label htmlFor={emailId} className="text-sm font-medium text-muted">
+      <label htmlFor={emailId} className="font-mono text-xs text-muted">
         Email
       </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      {/* The email field is a palette input: type, then press ↵. */}
+      <div className="flex items-center gap-2 rounded-2xl border border-hairline bg-card p-2 shadow-palette transition-colors duration-700 ease-spring has-[input:focus-visible]:border-muted has-[input[aria-invalid]]:border-error">
+        <EnvelopeSimple aria-hidden="true" size={16} className="ml-2 shrink-0 text-muted" />
         <input
           id={emailId}
           name="email"
@@ -108,14 +115,20 @@ export function WaitlistForm() {
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-base text-text placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="min-w-0 flex-1 bg-transparent py-2 text-base text-text caret-text outline-none placeholder:text-muted"
         />
         <button
           type="submit"
           disabled={joining}
-          className="rounded-lg bg-accent px-3 py-2 text-base font-semibold text-text transition-all duration-700 ease-spring hover:bg-accent-hover active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-text px-3 py-2 text-base font-semibold text-bg transition-all duration-700 ease-spring hover:bg-white active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:cursor-not-allowed disabled:opacity-60"
         >
           {joining ? "Joining…" : "Join the waitlist"}
+          <kbd
+            aria-hidden="true"
+            className="hidden h-5 min-w-5 items-center justify-center rounded-md bg-bg/10 px-1 font-mono text-xs sm:inline-flex"
+          >
+            ↵
+          </kbd>
         </button>
       </div>
       {/* Honeypot: hidden from people and screen readers, never focusable. */}

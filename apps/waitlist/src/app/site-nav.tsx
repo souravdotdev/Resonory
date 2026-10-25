@@ -1,24 +1,31 @@
 import Link from "next/link";
-import { Wordmark } from "./wordmark";
+import { LogoLockup } from "./logo";
 
 /**
- * The floating pill nav, detached from the top and centred. `onHome` marks the
- * wordmark link as the current page; other pages pass `false`.
+ * The floating pill nav: a small palette that stays at the top while the page
+ * scrolls, with the logo and a link to the final signup form. `onHome` marks
+ * the logo link as the current page; other pages pass `false`.
  */
 export function SiteNav({ onHome = true }: { onHome?: boolean }) {
   return (
-    <header className="px-4 pt-6">
+    <header className="sticky top-0 z-40 px-4 pt-6">
       <nav
         aria-label="Main"
-        className="mx-auto w-max rounded-full border border-border bg-card/80 px-6 py-2 backdrop-blur-xl"
+        className="mx-auto flex w-max items-center gap-6 rounded-full border border-hairline bg-card/80 py-2 pr-2 pl-6 shadow-palette backdrop-blur-xl"
       >
         <Link
           href="/"
           aria-current={onHome ? "page" : undefined}
-          className="block rounded-full transition-opacity duration-700 ease-spring hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="block rounded-sm transition-opacity duration-700 ease-spring hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text"
         >
-          <Wordmark />
+          <LogoLockup className="h-5 w-auto" />
         </Link>
+        <a
+          href={onHome ? "#join" : "/#join"}
+          className="rounded-full bg-text px-4 py-2 text-sm font-semibold text-bg transition-all duration-700 ease-spring hover:bg-white active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+        >
+          Join the waitlist
+        </a>
       </nav>
     </header>
   );
