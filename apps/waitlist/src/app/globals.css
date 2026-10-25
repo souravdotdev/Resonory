@@ -12,6 +12,25 @@
   --color-accent: #d4621a;
   --color-accent-hover: #e0712b;
   --color-error: #f28b82;
+
+  /* The one easing curve: every transition and animation uses it. */
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* A heavy fade up as the hero first appears. */
+  --animate-rise: rise 900ms var(--ease-spring) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(4rem);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateY(0);
+    }
+  }
 }
 
 :root {
