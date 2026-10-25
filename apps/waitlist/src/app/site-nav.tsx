@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Wordmark } from "./wordmark";
 
-/** The floating pill nav, detached from the top and centred. */
-export function SiteNav() {
+/**
+ * The floating pill nav, detached from the top and centred. `onHome` marks the
+ * wordmark link as the current page; other pages pass `false`.
+ */
+export function SiteNav({ onHome = true }: { onHome?: boolean }) {
   return (
     <header className="px-4 pt-6">
       <nav
@@ -11,7 +14,7 @@ export function SiteNav() {
       >
         <Link
           href="/"
-          aria-current="page"
+          aria-current={onHome ? "page" : undefined}
           className="block rounded-full transition-opacity duration-700 ease-spring hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
           <Wordmark />
