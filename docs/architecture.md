@@ -23,6 +23,7 @@ apps/
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory
               src/app/             the page, privacy page, 404, OG/icon images, the form, nav and footer
               src/screen/          the one-screen waitlist page: its composition, nav button and search demo
+              src/screen/wall/     the card wall behind it: content, the pure layout, cards and the client wall
               src/motion/          the reduced motion preference
               src/brand/           brand colors, the logo paths and the font for generated images
 
