@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   advance,
   holdFor,
+  isQueryTyped,
   LOOP_START,
   scanCandidate,
   stillFrame,
+  typedQuery,
   type LoopState,
 } from "./demo-loop";
 
@@ -29,6 +31,16 @@ describe("demo loop", () => {
       { step: 0, chars: 3, phase: "out" },
       { step: 1, chars: 0, phase: "type" },
     ]);
+  });
+
+  it("shows as much of the step's query as is typed, and knows when it's complete", () => {
+    const partly: LoopState = { step: 2, chars: 2, phase: "type" };
+    const fully: LoopState = { step: 2, chars: 4, phase: "type" };
+
+    expect(typedQuery(partly, QUERIES)).toBe("fg");
+    expect(isQueryTyped(partly, QUERIES)).toBe(false);
+    expect(typedQuery(fully, QUERIES)).toBe("fghi");
+    expect(isQueryTyped(fully, QUERIES)).toBe(true);
   });
 
   it("wraps around to the first search after the last one", () => {

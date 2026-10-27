@@ -32,7 +32,7 @@ OWN-WORLD: Ground #141414, a dimmed wall of saved cards (#1F1F1F, hairline borde
 
 STORY: The visitor sees their own forgotten saves, watches a search find one by meaning, believes Resonory brings things back unasked, and joins.
 
-FIRST VIEWPORT: A pill nav on top. Left: the headline, white to grey, with orange "saved" and "brings", the sub, and an email field styled as a search with an ↵ keycap. Right: a browser window searching "agile retrospective ideas" and the notification. A footer pill below.
+FIRST VIEWPORT: A pill nav on top. Left: the headline, white to grey, with orange "saved" and "brings", the sub, and an email field styled as a search with an ↵ keycap. Right: a browser window searching "agile retrospective ideas" and the Cue. A footer pill below.
 
 FORM: The founder's Claude Design single screen.
 

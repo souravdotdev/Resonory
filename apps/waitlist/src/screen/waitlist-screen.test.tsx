@@ -142,7 +142,7 @@ describe("waitlist screen", () => {
     const nav = screen.getByRole("navigation", { name: "Main" });
     const join = within(nav).getByRole("link", { name: "Join the waitlist" });
     const email = screen.getByLabelText("Email");
-    expect(join.getAttribute("href")).toBe(`#${email.id}`);
+    expect(join.getAttribute("href")).toBe(`/#${email.id}`);
 
     await user.click(join);
 
@@ -224,7 +224,7 @@ describe("waitlist screen", () => {
         stubMatchMedia(true);
       });
 
-      it("holds a still frame: the first search typed, its card lit and named in the notification", async () => {
+      it("holds a still frame: the first search typed, its card lit and named in the Cue", async () => {
         await renderScreen();
 
         const demo = screen.getByRole("img", { name: /search/ });

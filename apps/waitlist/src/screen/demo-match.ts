@@ -1,22 +1,27 @@
-import { KIND_LABEL, type Save } from "./wall/saves";
+import { CARD_STYLE_LABEL, savedLabel, type DemoItem } from "./wall/items";
 
 /**
  * One step of the search demo: a query typed in the browser, and the
- * forgotten save it finds. The query and the title share a meaning, never the
+ * forgotten Item it finds. The query and the title share a meaning, never the
  * same words, so the demo shows matching by meaning rather than keywords.
  */
 export type DemoMatch = {
   /** What the visitor "types" into the search bar. */
   query: string;
-  /** The save's title, as on its card and in the notification. */
+  /** The Item's title, as on its card and in the Cue. */
   title: string;
-  /** What kind of save it is, as the notification names it ("X post"). */
-  kind: string;
-  /** When it was saved, as the notification says it ("saved 3 months ago"). */
+  /** How the Cue names the Item's card style ("X post"). */
+  label: string;
+  /** When it was saved, as the Cue says it ("saved 3 months ago"). */
   saved: string;
 };
 
-/** The demo step that finds `save`. */
-export function demoMatchFor(save: Save): DemoMatch {
-  return { query: save.query, title: save.title, kind: KIND_LABEL[save.kind], saved: save.saved };
+/** The demo step that finds `item`. */
+export function demoMatchFor(item: DemoItem): DemoMatch {
+  return {
+    query: item.query,
+    title: item.title,
+    label: CARD_STYLE_LABEL[item.style],
+    saved: savedLabel(item),
+  };
 }

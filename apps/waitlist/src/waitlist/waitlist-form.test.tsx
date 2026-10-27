@@ -26,6 +26,24 @@ describe("WaitlistForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("clears the inline error once the visitor types again, bringing back the note", async () => {
+    const user = userEvent.setup();
+    render(<WaitlistForm note="Early access and a founding member price." />);
+    const field = screen.getByLabelText("Email");
+
+    await user.type(field, "ada@");
+    await user.click(screen.getByRole("button", { name: "Join the waitlist" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+
+    await user.type(field, "e");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(field.getAttribute("aria-invalid")).toBeNull();
+    expect(screen.getByText("Early access and a founding member price.")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("posts the email as JSON, shows the joining state, then the confirmation", async () => {
     let answer!: (response: Response) => void;
     fetchMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));

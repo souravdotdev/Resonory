@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { WallCard } from "./layout";
-import type { Save } from "./saves";
+import { savedLabel, type DemoItem } from "./items";
 import { thumbnailArt } from "./thumbnail-art";
 
 /*
- * One saved card on the wall, drawn the way the founder's design draws each
- * kind of save. The phone sizes come first; `lg:` carries the desktop ones,
+ * One Item's card on the wall, drawn the way the founder's design draws
+ * each card style. The phone sizes come first; `lg:` carries the desktop ones,
  * which switch at the same width as the wall's desktop layout. Every title
  * fits its card whole: text is never cut off mid-word.
  */
@@ -52,24 +52,24 @@ function Art({ seed, height }: { seed: number; height: number }) {
   );
 }
 
-function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
-  switch (save.kind) {
+function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode {
+  switch (item.style) {
     case "post":
       return (
         <>
           {/* When the name and the time don't both fit, the time wraps out of sight. */}
           <span className="flex h-[18px] min-w-0 shrink-0 flex-wrap items-center gap-x-1.5 overflow-hidden lg:h-5 lg:gap-x-[7px]">
-            <span className={AVATAR}>{save.initials}</span>
+            <span className={AVATAR}>{item.initials}</span>
             <span className="min-w-0 truncate text-[11px] leading-[18px] font-medium lg:text-[11.5px] lg:leading-5">
-              {save.author}
+              {item.author}
             </span>
             <span className="ml-auto font-mono text-[9px] leading-[18px] whitespace-nowrap text-faint lg:text-[9.5px] lg:leading-5">
-              {save.when}
+              {item.savedWhen}
             </span>
           </span>
-          <span className={`${TITLE} line-clamp-2 lg:line-clamp-3`}>{save.title}</span>
+          <span className={`${TITLE} line-clamp-2 lg:line-clamp-3`}>{item.title}</span>
           <span className="mt-auto flex items-center gap-[9px] font-mono text-[9px] text-faint lg:gap-2.5 lg:text-[9.5px]">
-            {[save.replies, save.reposts, save.likes].map((count, i) => (
+            {[item.replies, item.reposts, item.likes].map((count, i) => (
               <span
                 key={ENGAGEMENT_ICONS[i]}
                 className="inline-flex items-center gap-[3px] lg:gap-1"
@@ -97,31 +97,31 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
               </svg>
             </span>
             <span className="absolute right-[5px] bottom-1.5 rounded-[4px] bg-bg/72 px-1 py-px font-mono text-[8.5px] lg:right-1.5 lg:bottom-[7px] lg:text-[9px]">
-              {save.duration}
+              {item.duration}
             </span>
             <span className="absolute inset-x-0 bottom-0 h-[3px] bg-bg/60">
-              <ProgressFill percent={save.progress} />
+              <ProgressFill percent={item.progress} />
             </span>
           </span>
-          <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
-          <span className={`mt-auto ${META}`}>{save.meta}</span>
+          <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
+          <span className={`mt-auto ${META}`}>{item.meta ?? savedLabel(item)}</span>
         </>
       );
     case "article":
       return (
         <>
           <span className={SOURCE}>
-            <Favicon letter={save.favicon} />
-            {save.domain}
+            <Favicon letter={item.favicon} />
+            {item.domain}
           </span>
-          <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
+          <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
           <span className="mt-auto flex items-center gap-2 font-mono text-[9px] whitespace-nowrap text-faint lg:mt-0 lg:text-[9.5px]">
             <span className="h-0.5 flex-1 overflow-hidden rounded-[2px] bg-card-raised">
-              <ProgressFill percent={save.progress} />
+              <ProgressFill percent={item.progress} />
             </span>
-            {save.read}
+            {item.read}
           </span>
-          <span className={`hidden lg:block ${META}`}>{save.meta}</span>
+          <span className={`hidden lg:block ${META}`}>{savedLabel(item)}</span>
         </>
       );
     case "pdf":
@@ -137,12 +137,12 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
             ))}
           </span>
           <span className="flex min-w-0 flex-col gap-[3px] lg:gap-1">
-            <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
-            <span className={`mt-auto ${META}`}>{save.meta}</span>
+            <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
+            <span className={`mt-auto ${META}`}>{item.meta ?? savedLabel(item)}</span>
           </span>
         </span>
       );
-    case "insta":
+    case "instagram":
       return (
         <>
           <span className="relative grid min-h-0 flex-1 place-items-center overflow-hidden rounded-[7px] bg-card-raised lg:rounded-lg">
@@ -157,23 +157,23 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
             </span>
           </span>
           <span className="flex min-w-0 shrink-0 items-center gap-1.5 lg:gap-[7px]">
-            <span className={AVATAR}>{save.initials}</span>
+            <span className={AVATAR}>{item.initials}</span>
             <span className="line-clamp-2 min-w-0 text-[11px] leading-[1.36] lg:text-[11.5px]">
-              {save.title}
+              {item.title}
             </span>
           </span>
-          <span className={META}>{save.meta}</span>
+          <span className={META}>{savedLabel(item)}</span>
         </>
       );
     case "link":
       return (
         <>
           <span className={SOURCE}>
-            <Favicon letter={save.favicon} />
-            {save.domain}
+            <Favicon letter={item.favicon} />
+            {item.domain}
           </span>
-          <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
-          <span className={`mt-auto ${META}`}>{save.meta}</span>
+          <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
+          <span className={`mt-auto ${META}`}>{savedLabel(item)}</span>
         </>
       );
   }
@@ -200,7 +200,7 @@ function cardStateClasses(lit: boolean, scanning: boolean): string {
  * little; lit, it rises, turns orange and shows its rising dot. Every change
  * is an opacity or transform transition.
  */
-export function SaveCard({
+export function ItemCard({
   card,
   lit,
   scanning,
@@ -209,7 +209,7 @@ export function SaveCard({
   lit: boolean;
   scanning: boolean;
 }) {
-  const { save, box } = card;
+  const { item, box } = card;
   const opacity = lit ? 1 : scanning ? Math.min(1, card.opacity * SCAN_BRIGHTNESS) : card.opacity;
   const position: CSSProperties = {
     left: box.x,
@@ -218,7 +218,7 @@ export function SaveCard({
     height: box.height,
     opacity,
   };
-  const showsUnopened = save.unopened && save.kind !== "post" && save.kind !== "pdf";
+  const showsUnopened = item.unopened && item.style !== "post" && item.style !== "pdf";
 
   return (
     <div
@@ -232,7 +232,7 @@ export function SaveCard({
           card.stacked ? STACK_SHADOW : "overflow-hidden"
         }`}
       >
-        <Body save={save} artSeed={card.artSeed} />
+        <Body item={item} artSeed={card.artSeed} />
       </div>
       {/* The lit edge and glow, faded in over the card. */}
       <span

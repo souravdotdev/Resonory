@@ -53,11 +53,11 @@ Under the project's **Analytics** tab, click **Enable**. The app already renders
 - Paste `https://resonory.com` into a link preview tool (such as [opengraph.xyz](https://www.opengraph.xyz)) and check the title, description and image.
 - Share the link in a chat or on X and check the preview appears.
 - Open `https://resonory.com/does-not-exist` and check it shows the branded 404 with a link back to the main page.
-- Open `https://resonory.com` on a laptop and on a phone and check it fills the screen without scrolling, the search demo types and lights a card on the wall, and the notification names that card.
+- Open `https://resonory.com` on a laptop and on a phone and check it fills the screen without scrolling, the search demo types and lights a card on the wall, and the Cue names that card.
 - Join with a real address and check the success card shows and the row appears in Supabase's `waitlist_entries` table.
 
 ## What ships with the app
 
 - **Security headers**, set in `apps/waitlist/next.config.ts` and matching `apps/web`'s: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` denying camera, microphone and geolocation, and HSTS (see [Security](./security.md#appsweb-response-headers)).
 - **Metadata**: title, description, Open Graph and Twitter tags, `robots.txt` and `sitemap.xml`; the page is indexable.
-- **Generated images**: the Open Graph image (`src/app/opengraph-image.tsx`) and the favicon and home screen icon (`src/app/icon.tsx`, `src/app/apple-icon.tsx`), drawn from the logo paths in `src/brand/logo.ts` (copied from `assets/logo/` without their background). The nav and footer draw the same paths through `src/app/logo.tsx`.
+- **Generated images**: the Open Graph image (`src/app/opengraph-image.tsx`) and the favicon and home screen icon (`src/app/icon.tsx`, `src/app/apple-icon.tsx`), drawn from the logo paths in `src/brand/logo.ts` (copied from `assets/logo/` without their background). The nav and footer draw the same paths through `src/brand/logo-svg.tsx`.

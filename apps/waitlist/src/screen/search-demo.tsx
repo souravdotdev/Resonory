@@ -9,7 +9,7 @@ import {
   Shield,
   X,
 } from "@phosphor-icons/react/dist/ssr";
-import { LogoSymbol } from "@/app/logo";
+import { LogoSymbol } from "@/brand/logo-svg";
 import { useDemoView } from "./demo-stage";
 import { WALL_ANCHOR, WALL_DEMO } from "./wall/markers";
 
@@ -119,10 +119,10 @@ function SearchResults({ query }: { query: string }) {
 
 /**
  * The search demo: the visitor's own browser, searching, with Resonory's
- * notification that they already saved something like this. On desktop it's
+ * Cue that they already saved something like this. On desktop it's
  * a browser window with its tab, toolbar and page (the start page while the
  * query types, results once it's complete); on a phone, just the search bar.
- * It follows the demo loop, so the notification names the card lit on the
+ * It follows the demo loop, so the Cue names the card lit on the
  * wall.
  *
  * To assistive technology it's one image with a text description.
@@ -197,12 +197,12 @@ export function SearchDemo() {
               now
             </span>
           </div>
-          {/* A long title takes a second line on desktop, where the notice floats over the page. */}
+          {/* A long title takes a second line on desktop, where the Cue floats over the page. */}
           <p className="truncate text-xs leading-[1.4] text-text/82 lg:line-clamp-2 lg:text-[12.5px] lg:whitespace-normal">
             “{match.title}”
           </p>
           <p className="mt-px truncate font-mono text-[9.5px] text-faint lg:text-[10px]">
-            {match.kind} · {match.saved}
+            {match.label} · {match.saved}
           </p>
         </div>
       </div>

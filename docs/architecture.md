@@ -20,13 +20,14 @@ apps/
               src/infrastructure/  adapters: the Drizzle database and Item repository
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
   waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
-              src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory
-              src/app/             the routes (page, privacy page, 404), OG/icon images, the signup form,
+              src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory,
+                                   the signup form and its email field id
+              src/app/             the routes (page, privacy page, 404), OG/icon images,
                                    and the nav and footer of the privacy page and 404
               src/screen/          the one-screen waitlist page: its composition, nav button, search demo and the demo loop
-              src/screen/wall/     the card wall behind it: content, the pure layout, cards and the client wall
-              src/motion/          the reduced motion preference
-              src/brand/           brand colors, the logo paths and the font for generated images
+              src/screen/wall/     the card wall behind it: its demo Items, the pure layout, Item cards and the client wall
+              src/motion/          the reduced motion preference (reduced-motion.ts)
+              src/brand/           brand colors, the logo paths and SVG components, the font for generated images
 
 packages/
   shared/             zod request/response schemas for web <-> api; depends only on zod

@@ -6,3 +6,6 @@
  * read the value itself.
  */
 export const EMAIL_FIELD_ID = "email";
+
+/** Where every "Join the waitlist" link points: the email field on the main page. */
+export const JOIN_WAITLIST_HREF = `/#${EMAIL_FIELD_ID}`;

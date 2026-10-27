@@ -1,6 +1,6 @@
 "use client";
 
-import { EMAIL_FIELD_ID } from "@/app/email-field";
+import { EMAIL_FIELD_ID, JOIN_WAITLIST_HREF } from "@/waitlist/email-field";
 
 /**
  * The nav's "Join the waitlist" button: it moves focus straight to the email
@@ -17,7 +17,7 @@ export function JoinButton() {
 
   return (
     <a
-      href={`#${EMAIL_FIELD_ID}`}
+      href={JOIN_WAITLIST_HREF}
       onClick={focusEmailField}
       className="inline-flex h-9 items-center gap-2.5 rounded-full bg-text px-3.5 text-[13.5px] font-medium whitespace-nowrap text-bg transition-[transform,opacity] duration-600 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:scale-97 lg:pr-[5px] lg:pl-[15px] lg:text-sm"
     >

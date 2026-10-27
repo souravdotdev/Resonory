@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDemoView, useSetDemoSequence } from "../demo-stage";
 import { layoutWall, type Box, type ThreadRoute, type WallScene } from "./layout";
-import { SaveCard } from "./save-card";
+import { ItemCard } from "./item-card";
 
 /**
  * `element`'s layout box inside `root`, by offsets rather than the client
@@ -105,7 +105,7 @@ function Thread({
 }
 
 /**
- * The wall of saved cards behind the screen: dimmed, drifting, never behind
+ * The wall of Item cards behind the screen: dimmed, drifting, never behind
  * the copy, form, demo, nav or footer. It lays itself out once the page has
  * hydrated (measuring the screen, and again whenever a measured part
  * resizes) and fades in, so the server renders an empty layer and nothing
@@ -148,7 +148,7 @@ export function CardWall() {
   useEffect(() => {
     if (!layout || layout.sequence.length === 0) return;
     const cards = new Map(layout.cards.map((card) => [card.id, card]));
-    setSequence(layout.sequence.map((cardId) => ({ cardId, save: cards.get(cardId)!.save })));
+    setSequence(layout.sequence.map((cardId) => ({ cardId, item: cards.get(cardId)!.item })));
   }, [layout, setSequence]);
 
   const found = layout?.cards.find((card) => card.id === view.cardId);
@@ -165,7 +165,7 @@ export function CardWall() {
         <div className="absolute inset-0 animate-wall-in">
           <div className="absolute inset-0 animate-wall-drift [--wall-drift-x:-5px] [--wall-drift-y:-4px] lg:[--wall-drift-x:-9px] lg:[--wall-drift-y:-6px]">
             {layout.cards.map((card) => (
-              <SaveCard
+              <ItemCard
                 key={card.id}
                 card={card}
                 lit={view.matched && card === found}

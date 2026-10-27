@@ -1,4 +1,4 @@
-import { PROMISED_SAVES, WALL_SAVES, type Save, type SaveKind } from "./saves";
+import { PROMISED_ITEMS, WALL_ITEMS, type CardStyle, type DemoItem } from "./items";
 
 /** A rectangle on the screen, in CSS pixels from its top left corner. */
 export type Box = { x: number; y: number; width: number; height: number };
@@ -21,7 +21,7 @@ export type ThreadRoute = { path: string; end: Point };
 
 export type WallCard = {
   id: string;
-  save: Save;
+  item: DemoItem;
   box: Box;
   /** Drawn as a small pile, which hangs `STACK_DEPTH` below the box. */
   stacked: boolean;
@@ -37,7 +37,7 @@ export type WallLayout = {
   cards: WallCard[];
   /**
    * The cards the demo finds, in order, by id: every fully visible card, once
-   * per title. On desktop the four promised saves are spread through it,
+   * per title. On desktop the four promised Items are spread through it,
    * starting with the first.
    */
   sequence: string[];
@@ -59,10 +59,14 @@ const DESKTOP = {
   cardWidth: 184,
   /** Column to column: the card width plus the gap. */
   pitch: 200,
-  heights: { post: 120, video: 146, article: 124, pdf: 78, insta: 196, link: 104 } satisfies Record<
-    SaveKind,
-    number
-  >,
+  heights: {
+    post: 120,
+    video: 146,
+    article: 124,
+    pdf: 78,
+    instagram: 196,
+    link: 104,
+  } satisfies Record<CardStyle, number>,
   /** Where each column's first card starts, so the rows never line up. */
   columnStarts: [-70, -20, -110, -40, -90, -10, -60, -30],
   /** Kept-clear boxes grow by this much before cards are placed around them. */
@@ -71,7 +75,7 @@ const DESKTOP = {
   demoShadow: 24,
   fade: { distance: 240, min: 0.16, range: 0.26 },
   /**
-   * Where the design puts the promised saves at 1440×900, by column (0 is the
+   * Where the design puts the promised Items at 1440×900, by column (0 is the
    * first column right of the demo) and offset from the demo's top or bottom.
    */
   promisedSlots: [
@@ -94,14 +98,14 @@ const MOBILE = {
    * finds them, each `top` below the demo (the rows 12px apart).
    */
   slots: [
-    { save: PROMISED_SAVES[0], column: 0, row: 0, height: 108, top: 36, stacked: false },
-    { save: PROMISED_SAVES[1], column: 1, row: 1, height: 90, top: 164, stacked: false },
-    { save: PROMISED_SAVES[2], column: 1, row: 0, height: 120, top: 32, stacked: false },
-    { save: PROMISED_SAVES[3], column: 0, row: 1, height: 66, top: 156, stacked: true },
+    { item: PROMISED_ITEMS[0], column: 0, row: 0, height: 108, top: 36, stacked: false },
+    { item: PROMISED_ITEMS[1], column: 1, row: 1, height: 90, top: 164, stacked: false },
+    { item: PROMISED_ITEMS[2], column: 1, row: 0, height: 120, top: 32, stacked: false },
+    { item: PROMISED_ITEMS[3], column: 0, row: 1, height: 66, top: 156, stacked: true },
   ],
 } as const;
 
-/** How many saves past the next one the wall looks through to fill a gap. */
+/** How many Items past the next one the wall looks through to fill a gap. */
 const GAP_FILLERS = 5;
 
 /** Thread corners are rounded up to this radius. */
@@ -241,7 +245,7 @@ function desktopRoute(box: Box, demo: Box, anchor: Point): ThreadRoute {
 
 /**
  * The design's desktop wall, generalised: columns of cards lined up on the
- * demo's right edge, the four promised saves in reserved slots as near the
+ * demo's right edge, the four promised Items in reserved slots as near the
  * design's places beside and below the demo as the screen allows, and the
  * rest of the wall filled from a repeating pool around them.
  */
@@ -261,18 +265,18 @@ function layoutDesktop(scene: WallScene): WallLayout {
     columns.push({ x: firstColumn + index * DESKTOP.pitch, index });
   }
 
-  const placed: { box: Box; stacked: boolean; save: Save; artSeed: number }[] = [];
+  const placed: { box: Box; stacked: boolean; item: DemoItem; artSeed: number }[] = [];
 
-  // The promised saves: each in the free, fully visible spot nearest its design slot.
+  // The promised Items: each in the free, fully visible spot nearest its design slot.
   const promised: typeof placed = [];
-  PROMISED_SAVES.forEach((save, n) => {
+  PROMISED_ITEMS.forEach((item, n) => {
     const slot = DESKTOP.promisedSlots[n]!;
     const want = {
       x: firstColumn + slot.column * DESKTOP.pitch,
       y: slot.from === "top" ? demo.y + slot.offset : bottom(demo) + slot.offset,
     };
-    const h = DESKTOP.heights[save.kind];
-    const stacked = save.stacked ?? false;
+    const h = DESKTOP.heights[item.style];
+    const stacked = item.stacked ?? false;
     let best: { box: Box; score: number } | null = null;
     for (const column of columns) {
       for (let y = SCREEN_INSET; y + h <= height; y++) {
@@ -285,17 +289,17 @@ function layoutDesktop(scene: WallScene): WallLayout {
         if (!best || score < best.score) best = { box, score };
       }
     }
-    if (best) promised.push({ box: best.box, stacked, save, artSeed: 50 + n });
+    if (best) promised.push({ box: best.box, stacked, item, artSeed: 50 + n });
   });
 
-  // The rest of the wall: down each column, from a repeating pool of saves.
-  // Where the next save won't fit before something kept clear, one of the
+  // The rest of the wall: down each column, from a repeating pool of Items.
+  // Where the next Item won't fit before something kept clear, one of the
   // few after it may fill the gap; failing that the column steps past.
   const obstacles = [...zones, ...promised.map(footprint)];
-  const upcoming: Save[] = [];
+  const upcoming: DemoItem[] = [];
   let fed = 0;
   const peek = (k: number) => {
-    while (upcoming.length <= k) upcoming.push(WALL_SAVES[fed++ % WALL_SAVES.length]!);
+    while (upcoming.length <= k) upcoming.push(WALL_ITEMS[fed++ % WALL_ITEMS.length]!);
     return upcoming[k]!;
   };
   let drawn = 0;
@@ -303,12 +307,12 @@ function layoutDesktop(scene: WallScene): WallLayout {
     let y = DESKTOP.columnStarts[mod(column.index - 1, DESKTOP.columnStarts.length)]!;
     for (let guard = 0; y < height && guard < 80; guard++) {
       const fitting = (k: number) => {
-        const save = peek(k);
-        const stacked = save.stacked ?? false;
-        const box = { x: column.x, y, width: w, height: DESKTOP.heights[save.kind] };
+        const item = peek(k);
+        const stacked = item.stacked ?? false;
+        const box = { x: column.x, y, width: w, height: DESKTOP.heights[item.style] };
         const space = footprint({ box, stacked });
         return {
-          save,
+          item,
           stacked,
           box,
           space,
@@ -326,11 +330,11 @@ function layoutDesktop(scene: WallScene): WallLayout {
         }
         card = filler;
       }
-      upcoming.splice(upcoming.indexOf(card.save), 1);
+      upcoming.splice(upcoming.indexOf(card.item), 1);
       drawn++;
       // A card wholly above the screen still takes its turn from the pool, as in the design.
       if (bottom(card.space) > 0) {
-        placed.push({ box: card.box, stacked: card.stacked, save: card.save, artSeed: drawn });
+        placed.push({ box: card.box, stacked: card.stacked, item: card.item, artSeed: drawn });
       }
       y = bottom(card.space) + GAP;
     }
@@ -349,9 +353,9 @@ function layoutDesktop(scene: WallScene): WallLayout {
   const promisedIds: string[] = [];
   const rest: WallCard[] = [];
   for (const card of cards) {
-    if (!isFullyVisible(footprint(card), width, height) || seen.has(card.save.title)) continue;
-    seen.add(card.save.title);
-    if (PROMISED_SAVES.includes(card.save)) promisedIds.push(card.id);
+    if (!isFullyVisible(footprint(card), width, height) || seen.has(card.item.title)) continue;
+    seen.add(card.item.title);
+    if (PROMISED_ITEMS.includes(card.item)) promisedIds.push(card.id);
     else rest.push(card);
   }
   // A scattered order, so one match and the next sit apart on the wall.
@@ -372,7 +376,7 @@ function layoutDesktop(scene: WallScene): WallLayout {
 /**
  * The design's phone wall: its four cards in two columns under the demo,
  * risen toward the demo on a short screen and left out where even that
- * doesn't clear the footer. Threads come out from under the notification.
+ * doesn't clear the footer. Threads come out from under the Cue.
  */
 function layoutMobile(scene: WallScene): WallLayout {
   const { width, height, demo } = scene;
@@ -423,7 +427,7 @@ function layoutMobile(scene: WallScene): WallLayout {
           ]);
     cards.push({
       id: `card-${i}`,
-      save: slot.save,
+      item: slot.item,
       box,
       stacked: slot.stacked,
       opacity: edgeOpacity(box, width, height, MOBILE.fade),
@@ -436,7 +440,7 @@ function layoutMobile(scene: WallScene): WallLayout {
 }
 
 /**
- * Lays the wall of saved cards out around the screen's content: positioned
+ * Lays the wall of Item cards out around the screen's content: positioned
  * cards that never sit behind a kept-clear box, each dimmer toward the edges
  * and with its thread route, and the order the demo finds them in.
  */
