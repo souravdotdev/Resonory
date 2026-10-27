@@ -177,6 +177,27 @@ describe("landing page", () => {
     expect(within(tile("Rediscover digest")).queryByText("Next")).toBeNull();
   });
 
+  it("pictures each way a save comes back, described in text", async () => {
+    await renderLandingPage();
+
+    const ways = screen.getByRole("region", { name: "Four ways a save comes back" });
+    const tile = (name: string) =>
+      within(ways).getByRole("heading", { name, level: 3 }).closest("li")!;
+
+    expect(
+      within(tile("Related Items")).getByRole("img", { name: /3 saves that belong with it/i }),
+    ).toBeTruthy();
+    expect(
+      within(tile("Rediscover digest")).getByRole("img", { name: /weekly email/i }),
+    ).toBeTruthy();
+    expect(
+      within(tile("Reminder")).getByRole("img", { name: /remind me about this in 2 weeks/i }),
+    ).toBeTruthy();
+    expect(
+      within(tile("Cue")).getByRole("img", { name: /you saved 2 things on this/i }),
+    ).toBeTruthy();
+  });
+
   it("makes the exact privacy promise and links it to the privacy page", async () => {
     await renderLandingPage();
 
