@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DemoMatch } from "../demo-match";
+import { useDemoView, useSetDemoSequence } from "../demo-stage";
 import { layoutWall, type Box, type ThreadRoute, type WallScene } from "./layout";
 import { SaveCard } from "./save-card";
 
@@ -46,23 +46,33 @@ function measureScene(wall: HTMLElement): WallScene | null {
   };
 }
 
-const THREAD_PATH =
-  "animate-thread-draw fill-none stroke-accent [stroke-dasharray:1] [stroke-linecap:round] [stroke-linejoin:round]";
+/** Draws in along its length (with pathLength="1") and fades out, both ways. */
+const THREAD_LINE =
+  "fill-none stroke-accent [stroke-dasharray:1] [stroke-linecap:round] [stroke-linejoin:round] [transition:stroke-dashoffset_1.1s_var(--ease-spring),opacity_0.5s_var(--ease-spring)]";
 
-/** The lit card's thread: a soft glow, the line itself, and a dot where it meets the card. */
+/**
+ * The thread from the Resonory icon to the demo's card: a soft glow, the
+ * line itself, a spark travelling along it, and a dot where it meets the
+ * card. Drawn while the match is on; otherwise it draws back and fades.
+ */
 function Thread({
   route,
   width,
   height,
+  drawn,
   desktop,
 }: {
   route: ThreadRoute;
   width: number;
   height: number;
+  drawn: boolean;
   desktop: boolean;
 }) {
+  const line = `${THREAD_LINE} ${drawn ? "[stroke-dashoffset:0]" : "[stroke-dashoffset:1] opacity-0"}`;
   return (
     <svg
+      data-wall-thread=""
+      data-drawn={drawn ? "" : undefined}
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
@@ -71,14 +81,24 @@ function Thread({
       <path
         pathLength={1}
         d={route.path}
-        className={`${THREAD_PATH} stroke-6 opacity-60 blur-[4px] lg:stroke-7 lg:blur-[5px]`}
+        className={`${line} stroke-6 blur-[4px] lg:stroke-7 lg:blur-[5px] ${drawn ? "opacity-60" : ""}`}
       />
-      <path pathLength={1} d={route.path} className={`${THREAD_PATH} stroke-[1.6]`} />
+      <path pathLength={1} d={route.path} className={`${line} stroke-[1.6]`} />
+      {/* Held still, the spark would sit at the thread's start: reduced motion has none. */}
+      <path
+        pathLength={1}
+        d={route.path}
+        className={`fill-none stroke-text stroke-2 drop-shadow-[0_0_3px_var(--color-accent)] transition-opacity duration-400 ease-spring [stroke-dasharray:0.1_0.9] [stroke-dashoffset:1] [stroke-linecap:round] motion-reduce:hidden lg:stroke-[2.2] lg:[stroke-dasharray:0.07_0.93] ${
+          drawn ? "animate-thread-spark opacity-95 lg:[animation-duration:1.5s]" : "opacity-0"
+        }`}
+      />
       <circle
         cx={route.end.x}
         cy={route.end.y}
         r={desktop ? 3.5 : 2.5}
-        className="animate-thread-dot fill-accent drop-shadow-[0_0_4px_var(--color-accent)] lg:drop-shadow-[0_0_5px_var(--color-accent)]"
+        className={`fill-accent drop-shadow-[0_0_4px_var(--color-accent)] transition-opacity duration-400 ease-spring lg:drop-shadow-[0_0_5px_var(--color-accent)] ${
+          drawn ? "opacity-100 delay-700" : "opacity-0"
+        }`}
       />
     </svg>
   );
@@ -91,11 +111,14 @@ function Thread({
  * resizes) and fades in, so the server renders an empty layer and nothing
  * shifts.
  *
- * `match` is the demo's current match: its card is lit, with the thread to it
- * from the Resonory icon. Decorative throughout: hidden from assistive
- * technology, unfocusable and ignoring the pointer.
+ * It follows the demo loop: it hands the loop its match sequence, flickers
+ * the card being scanned, and lights the card the search finds, with the
+ * thread to it from the Resonory icon. Decorative throughout: hidden from
+ * assistive technology, unfocusable and ignoring the pointer.
  */
-export function CardWall({ match }: { match: DemoMatch | null }) {
+export function CardWall() {
+  const view = useDemoView();
+  const setSequence = useSetDemoSequence();
   const wallRef = useRef<HTMLDivElement>(null);
   const [scene, setScene] = useState<WallScene | null>(null);
 
@@ -121,12 +144,14 @@ export function CardWall({ match }: { match: DemoMatch | null }) {
   }, []);
 
   const layout = useMemo(() => scene && layoutWall(scene), [scene]);
-  const lit =
-    layout && match
-      ? layout.cards.find(
-          (card) => card.save.title === match.title && layout.sequence.includes(card.id),
-        )
-      : undefined;
+
+  useEffect(() => {
+    if (!layout || layout.sequence.length === 0) return;
+    const cards = new Map(layout.cards.map((card) => [card.id, card]));
+    setSequence(layout.sequence.map((cardId) => ({ cardId, save: cards.get(cardId)!.save })));
+  }, [layout, setSequence]);
+
+  const found = layout?.cards.find((card) => card.id === view.cardId);
 
   return (
     <div
@@ -140,14 +165,19 @@ export function CardWall({ match }: { match: DemoMatch | null }) {
         <div className="absolute inset-0 animate-wall-in">
           <div className="absolute inset-0 animate-wall-drift [--wall-drift-x:-5px] [--wall-drift-y:-4px] lg:[--wall-drift-x:-9px] lg:[--wall-drift-y:-6px]">
             {layout.cards.map((card) => (
-              <SaveCard key={card.id} card={card} lit={card === lit} />
+              <SaveCard
+                key={card.id}
+                card={card}
+                lit={view.matched && card === found}
+                scanning={card.id === view.scanningCardId}
+              />
             ))}
-            {lit && (
+            {found && (
               <Thread
-                key={lit.id}
-                route={lit.route}
+                route={found.route}
                 width={scene.width}
                 height={scene.height}
+                drawn={view.matched}
                 desktop={layout.mode === "desktop"}
               />
             )}

@@ -1,4 +1,4 @@
-import { KIND_LABEL, PROMISED_SAVES, type Save } from "./wall/saves";
+import { KIND_LABEL, type Save } from "./wall/saves";
 
 /**
  * One step of the search demo: a query typed in the browser, and the
@@ -20,6 +20,3 @@ export type DemoMatch = {
 export function demoMatchFor(save: Save): DemoMatch {
   return { query: save.query, title: save.title, kind: KIND_LABEL[save.kind], saved: save.saved };
 }
-
-/** The demo's first example, and the one its still frame shows. */
-export const FIRST_MATCH: DemoMatch = demoMatchFor(PROMISED_SAVES[0]);

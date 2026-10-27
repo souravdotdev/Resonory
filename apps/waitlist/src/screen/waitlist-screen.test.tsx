@@ -159,22 +159,13 @@ describe("waitlist screen", () => {
     expect(within(footer).getByText(/^© \d{4} Resonory$/)).toBeTruthy();
   });
 
-  it("describes the search demo in words and shows its finished search", async () => {
+  it("describes the search demo in words", async () => {
     await renderScreen();
 
-    const demo = screen.getByRole("img", { name: /agile retrospective ideas/ });
+    const demo = screen.getByRole("img", { name: /search/ });
     expect(demo.getAttribute("aria-label")).toBe(
-      "A browser search for agile retrospective ideas. A notice says you saved something like this: “Five retro formats your team won’t dread”, X post, saved 3 months ago.",
+      "A browser types a search by itself. When the search is complete, a related save on the wall lights up, and a notice says you saved something like this, with its title, what kind of save it is and when you saved it.",
     );
-  });
-
-  it("shows the notification for the first example's match", async () => {
-    await renderScreen();
-
-    const demo = screen.getByRole("img", { name: /agile retrospective ideas/ });
-    expect(within(demo).getByText("You saved something like this")).toBeTruthy();
-    expect(within(demo).getByText("“Five retro formats your team won’t dread”")).toBeTruthy();
-    expect(within(demo).getByText("X post · saved 3 months ago")).toBeTruthy();
   });
 
   describe("over the wall of saved cards", () => {
@@ -222,15 +213,41 @@ describe("waitlist screen", () => {
       );
     });
 
-    it("lights the demo's match on the wall", async () => {
+    it("lights no card before the first search is typed", async () => {
       await renderScreen();
 
-      const lit = screen
-        .getAllByText("Five retro formats your team won’t dread")
-        .map((title) => title.closest("[data-lit]"))
-        .filter((card) => card !== null);
-      expect(lit).toHaveLength(1);
-      expect(lit[0]!.closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(document.querySelectorAll("[data-wall-card][data-lit]")).toHaveLength(0);
+    });
+
+    describe("under reduced motion", () => {
+      beforeEach(() => {
+        stubMatchMedia(true);
+      });
+
+      it("holds a still frame: the first search typed, its card lit and named in the notification", async () => {
+        await renderScreen();
+
+        const demo = screen.getByRole("img", { name: /search/ });
+        expect(within(demo).getAllByText("agile retrospective ideas").length).toBeGreaterThan(0);
+
+        const lit = [...document.querySelectorAll<HTMLElement>("[data-wall-card][data-lit]")];
+        expect(lit).toHaveLength(1);
+        expect(lit[0]!.closest('[aria-hidden="true"]')).not.toBeNull();
+
+        expect(within(demo).getByText("You saved something like this")).toBeTruthy();
+        const title = within(demo)
+          .getByText(/^“.+”$/)
+          .textContent!.slice(1, -1);
+        expect(title).toBe("Five retro formats your team won’t dread");
+        expect(within(lit[0]!).getByText(title)).toBeTruthy();
+        expect(within(demo).getByText("X post · saved 3 months ago")).toBeTruthy();
+      });
+
+      it("draws the lit card's thread", async () => {
+        await renderScreen();
+
+        expect(document.querySelectorAll("[data-wall-thread][data-drawn]")).toHaveLength(1);
+      });
     });
   });
 });

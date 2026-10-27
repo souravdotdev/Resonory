@@ -181,17 +181,39 @@ const STACK_SHADOW =
   "shadow-[0_5px_0_-2px_var(--color-card),0_5px_0_-1px_rgb(250_250_247/0.1),0_10px_0_-5px_var(--color-card),0_10px_0_-4px_rgb(250_250_247/0.08)]";
 
 /**
- * A card at its place on the wall. Lit, it rises, turns orange and shows its
- * rising dot; every change is an opacity or transform transition.
+ * How bright a card flickers while Resonory scans it: the design brightens it
+ * 2.2 times, which on the dark wall is about as much more opaque.
  */
-export function SaveCard({ card, lit }: { card: WallCard; lit: boolean }) {
+const SCAN_BRIGHTNESS = 2.2;
+
+function cardStateClasses(lit: boolean, scanning: boolean): string {
+  if (lit) return "z-3 -translate-y-1 scale-103 lg:-translate-y-1.5 lg:scale-[1.035]";
+  if (scanning) return "-translate-y-0.5 [transition-duration:500ms,900ms]";
+  return "";
+}
+
+/**
+ * A card at its place on the wall. Scanned, it flickers brighter and lifts a
+ * little; lit, it rises, turns orange and shows its rising dot. Every change
+ * is an opacity or transform transition.
+ */
+export function SaveCard({
+  card,
+  lit,
+  scanning,
+}: {
+  card: WallCard;
+  lit: boolean;
+  scanning: boolean;
+}) {
   const { save, box } = card;
+  const opacity = lit ? 1 : scanning ? Math.min(1, card.opacity * SCAN_BRIGHTNESS) : card.opacity;
   const position: CSSProperties = {
     left: box.x,
     top: box.y,
     width: box.width,
     height: box.height,
-    opacity: lit ? 1 : card.opacity,
+    opacity,
   };
   const showsUnopened = save.unopened && save.kind !== "post" && save.kind !== "pdf";
 
@@ -200,9 +222,7 @@ export function SaveCard({ card, lit }: { card: WallCard; lit: boolean }) {
       data-wall-card=""
       data-lit={lit ? "" : undefined}
       style={position}
-      className={`absolute transition-[opacity,transform] duration-900 ease-spring ${
-        lit ? "z-3 -translate-y-1 scale-103 lg:-translate-y-1.5 lg:scale-[1.035]" : ""
-      }`}
+      className={`absolute transition-[opacity,transform] duration-900 ease-spring ${cardStateClasses(lit, scanning)}`}
     >
       <div
         className={`flex size-full flex-col gap-1.5 rounded-[11px] border border-line bg-card p-2.5 lg:gap-[7px] lg:rounded-xl lg:px-3 lg:py-[11px] ${
