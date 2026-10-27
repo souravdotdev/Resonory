@@ -14,13 +14,39 @@
   --color-muted: #9b9b9b;
   --color-accent: #d4621a;
   --color-accent-hover: #e0712b;
-  --color-error: #f28b82;
+  /* The single screen's text and edges: the off-white at set strengths. */
+  --color-mute: rgb(250 250 247 / 0.66);
+  --color-faint: rgb(250 250 247 / 0.56);
+  --color-line: rgb(250 250 247 / 0.09);
+  --color-line-strong: rgb(250 250 247 / 0.16);
 
   /* A palette floats: a soft drop well below it, a tight one close in. */
   --shadow-palette: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35);
 
   /* The one easing curve: every transition and animation uses it. */
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* The screen's parts rise in on load, one after another. */
+  --animate-fade-up: fade-up 1.2s var(--ease-spring) both;
+  /* The demo's text caret. */
+  --animate-blink: blink 1.1s steps(1, end) infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
 }
 
 :root {
@@ -46,35 +72,12 @@ body {
   color: var(--color-text);
 }
 
-/*
- * Scroll in reveals, driven by `src/motion/reveal.tsx` through the shared
- * viewport observer. Only elements that start below the fold are ever put in
- * the waiting state, and never under reduced motion.
- */
-[data-reveal] {
-  transition:
-    opacity 900ms var(--ease-spring),
-    transform 900ms var(--ease-spring);
-}
-
-[data-reveal="waiting"] {
-  opacity: 0;
-  transform: translateY(4rem);
-}
-
-[data-words] [data-word] {
-  transition: opacity 700ms var(--ease-spring);
-}
-
-[data-words="waiting"] [data-word] {
-  opacity: 0.3;
-}
-
+/* Reduced motion: nothing animates or transitions, and every part shows in its final state. */
 @media (prefers-reduced-motion: reduce) {
-  [data-reveal],
-  [data-words] [data-word] {
-    opacity: 1;
-    transform: none;
-    transition: none;
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

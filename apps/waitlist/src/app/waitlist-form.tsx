@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Check, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
+import { Check, EnvelopeSimple, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   HONEYPOT_FIELD,
@@ -9,6 +9,7 @@ import {
   SERVER_ERROR_MESSAGE,
   WaitlistEmailSchema,
 } from "@/waitlist/request";
+import { EMAIL_FIELD_ID } from "./email-field";
 
 type Status = "idle" | "joining" | "joined";
 
@@ -36,9 +37,12 @@ async function errorMessageFrom(response: Response): Promise<string> {
   return SERVER_ERROR_MESSAGE;
 }
 
-export function WaitlistForm() {
-  const emailId = useId();
-  const errorId = useId();
+/**
+ * The signup form, a search-style field with an ↵ keycap. `note` (the proof
+ * line) sits in the message row under the field, which an error takes over.
+ */
+export function WaitlistForm({ note }: { note?: string }) {
+  const messageId = useId();
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -84,28 +88,42 @@ export function WaitlistForm() {
 
   if (status === "joined") {
     return (
-      <p
+      <div
         role="status"
-        className="flex items-center gap-3 rounded-2xl border border-hairline bg-card px-4 py-3 text-base text-pretty text-text shadow-palette"
+        className="flex w-full max-w-[520px] items-start gap-3 rounded-[13px] border border-line-strong bg-card px-3.5 py-[13px] lg:rounded-[14px] lg:px-4 lg:py-[15px]"
       >
-        <Check aria-hidden="true" size={16} weight="bold" className="shrink-0 text-muted" />
-        You&rsquo;re on the list. We&rsquo;ll email you when your spot opens.
-      </p>
+        <span className="grid size-[22px] shrink-0 place-items-center rounded-[7px] bg-text text-bg lg:size-6">
+          <Check aria-hidden="true" size={16} />
+        </span>
+        <p>
+          <strong className="block text-[14.5px] font-medium lg:text-[15px]">
+            You&rsquo;re on the list.
+          </strong>{" "}
+          <span className="block text-[13.5px] text-mute lg:text-sm">
+            We&rsquo;ll email you when your spot opens.
+          </span>
+        </p>
+      </div>
     );
   }
 
   const joining = status === "joining";
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex w-full flex-col gap-2">
-      <label htmlFor={emailId} className="font-mono text-xs text-muted">
+    <form onSubmit={handleSubmit} noValidate className="w-full">
+      <label htmlFor={EMAIL_FIELD_ID} className="sr-only">
         Email
       </label>
-      {/* The email field is a palette input: type, then press ↵. */}
-      <div className="flex items-center gap-2 rounded-2xl border border-hairline bg-card p-2 shadow-palette transition-colors duration-700 ease-spring has-[input:focus-visible]:border-muted has-[input[aria-invalid]]:border-error">
-        <EnvelopeSimple aria-hidden="true" size={16} className="ml-2 shrink-0 text-muted" />
+      <div
+        className={`flex w-full max-w-[520px] items-center gap-2 rounded-[13px] border bg-card py-[5px] pr-[5px] pl-3.5 shadow-[inset_0_1px_0_rgb(250_250_247/0.04),0_24px_48px_-28px_rgb(0_0_0/0.8)] transition-[border-color,box-shadow] duration-500 ease-spring focus-within:shadow-[0_0_0_4px_rgb(250_250_247/0.07)] lg:gap-2.5 lg:rounded-[14px] lg:py-1.5 lg:pr-1.5 lg:pl-4 ${error ? "border-text/72" : "border-line-strong hover:border-text/26 focus-within:border-text/44"}`}
+      >
+        <EnvelopeSimple
+          aria-hidden="true"
+          size={16}
+          className="hidden shrink-0 text-faint lg:block"
+        />
         <input
-          id={emailId}
+          id={EMAIL_FIELD_ID}
           name="email"
           type="email"
           autoComplete="email"
@@ -114,21 +132,23 @@ export function WaitlistForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className="min-w-0 flex-1 bg-transparent py-2 text-base text-text caret-text outline-none placeholder:text-muted"
+          aria-describedby={error || note ? messageId : undefined}
+          className="h-10 min-w-0 flex-1 bg-transparent text-[15px] text-text caret-text outline-none placeholder:text-faint lg:text-[15.5px]"
         />
         <button
           type="submit"
           disabled={joining}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-text px-3 py-2 text-base font-semibold text-bg transition-all duration-700 ease-spring hover:bg-white active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-text pr-1.5 pl-3 text-sm font-medium whitespace-nowrap text-bg transition-[transform,opacity] duration-600 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:scale-97 disabled:cursor-default disabled:px-3.5 disabled:opacity-72 disabled:active:scale-100 lg:gap-2.5 lg:pr-2 lg:pl-4 lg:text-[14.5px] lg:disabled:px-4"
         >
           {joining ? "Joining…" : "Join the waitlist"}
-          <kbd
-            aria-hidden="true"
-            className="hidden h-5 min-w-5 items-center justify-center rounded-md bg-bg/10 px-1 font-mono text-xs sm:inline-flex"
-          >
-            ↵
-          </kbd>
+          {!joining && (
+            <kbd
+              aria-hidden="true"
+              className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-bg/18 bg-bg/7 px-[5px] font-mono text-[11px] leading-none text-bg lg:h-[22px] lg:min-w-[22px] lg:px-1.5 lg:text-[11.5px]"
+            >
+              ↵
+            </kbd>
+          )}
         </button>
       </div>
       {/* Honeypot: hidden from people and screen readers, never focusable. */}
@@ -145,10 +165,24 @@ export function WaitlistForm() {
           />
         </label>
       </div>
-      {error && (
-        <p id={errorId} role="alert" className="text-sm text-error">
+      {error ? (
+        <p
+          id={messageId}
+          role="alert"
+          className="mt-2.5 flex min-h-[18px] items-center gap-2 text-[13px] text-text lg:mt-3 lg:min-h-5 lg:text-[13.5px]"
+        >
+          <WarningCircle aria-hidden="true" size={16} className="shrink-0" />
           {error}
         </p>
+      ) : (
+        note && (
+          <p
+            id={messageId}
+            className="mt-2.5 flex min-h-[18px] items-center font-mono text-[11.5px] text-mute tabular-nums lg:mt-3 lg:min-h-5 lg:text-[12.5px]"
+          >
+            {note}
+          </p>
+        )
       )}
     </form>
   );
