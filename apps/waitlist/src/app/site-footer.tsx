@@ -1,6 +1,13 @@
 import Link from "next/link";
-import { LogoLockup } from "./logo";
+import { LogoLockup } from "@/brand/logo-svg";
 
+/**
+ * The footer of the pages other than the waitlist screen (privacy, 404): the
+ * logo, the Privacy link and the © line across a full-width bar.
+ *
+ * Not shared with the waitlist screen's footer: that one is a floating pill
+ * without the logo, so one component would change a look.
+ */
 export function SiteFooter() {
   return (
     <footer className="border-t border-hairline px-4 py-8">

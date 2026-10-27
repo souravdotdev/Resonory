@@ -14,7 +14,7 @@ const contactEmail = "hello@resonory.com";
 const removalHref = `mailto:${contactEmail}?subject=${encodeURIComponent("Remove me from the waitlist")}`;
 
 const linkClass =
-  "rounded-sm text-text underline decoration-border underline-offset-4 transition-colors duration-700 ease-spring hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent";
+  "rounded-sm text-text underline decoration-border underline-offset-4 transition-colors duration-700 ease-spring hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text";
 
 export default function PrivacyPage() {
   return (
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
       <main id="main" className="mx-auto w-full max-w-2xl flex-1 px-4 py-12">
         <article className="flex flex-col gap-8">
           <header className="flex flex-col gap-3">
-            <h1 className="bg-linear-to-r from-white to-muted bg-clip-text pb-1 text-4xl font-semibold tracking-tight text-balance text-transparent">
+            <h1 className="bg-linear-to-r from-text to-muted bg-clip-text pb-1 text-4xl font-semibold tracking-tight text-balance text-transparent">
               Privacy
             </h1>
             <p className="text-sm text-muted">Last updated October 25, 2026</p>
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
 
           <Link
             href="/"
-            className="w-max rounded-lg border border-border bg-card px-3 py-2 text-base font-semibold text-text transition-all duration-700 ease-spring hover:bg-card-raised active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="w-max rounded-lg border border-border bg-card px-3 py-2 text-base font-semibold text-text transition-all duration-700 ease-spring hover:bg-card-raised active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
           >
             Back to the main page
           </Link>

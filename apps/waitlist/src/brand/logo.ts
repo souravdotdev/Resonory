@@ -1,18 +1,18 @@
 /**
  * The Resonory logo, from the founder's vector files in `assets/logo/`, with
  * their baked in #141414 background removed so the mark sits on any ground.
- * The page (`logo.tsx`) and the generated images (icons, OG image) both draw
+ * The page (`logo-svg.tsx`) and the generated images (icons, OG image) both draw
  * from these paths, so the mark is the same everywhere.
  */
 
 /** The symbol's frame: the stacked bars and the dot, cropped to the mark. */
 export const SYMBOL_VIEW_BOX = "4 6 40 36";
 
-/** The stacked off-white bars: the pile of saves. */
+/** The stacked off-white bars: the pile of Items. */
 export const SYMBOL_BARS_PATH =
   "M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z";
 
-/** The orange dot rising above the stack: a save coming back. */
+/** The orange dot rising above the stack: an Item coming back. */
 export const SYMBOL_DOT_PATH = "M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z";
 
 /** The lockup's frame, in the horizontal file's units, cropped to the artwork. */

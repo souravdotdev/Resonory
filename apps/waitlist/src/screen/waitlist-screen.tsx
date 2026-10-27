@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { LogoLockup } from "@/app/logo";
-import { WaitlistForm } from "@/app/waitlist-form";
+import { LogoLockup } from "@/brand/logo-svg";
+import { WaitlistForm } from "@/waitlist/waitlist-form";
 import { readProofLine } from "@/waitlist/proof-line";
 import type { WaitlistStore } from "@/waitlist/store";
 import { DemoStage } from "./demo-stage";
@@ -14,9 +14,9 @@ const HIGHLIGHT = "text-accent not-italic [-webkit-text-fill-color:var(--color-a
 /**
  * The waitlist home page, one screen: the pill nav, the headline and the
  * signup form beside a search demo, and the footer pill, over a wall of
- * saved cards. On desktop the copy sits left of the demo; below 1024px the
+ * Item cards. On desktop the copy sits left of the demo; below 1024px the
  * demo follows the form. The demo and the wall share one demo loop, so the
- * card lit on the wall is always the one the notification names.
+ * card lit on the wall is always the one the Cue names.
  *
  * It fills one dynamic viewport and grows (so the page scrolls) only when the
  * screen is too short for the form.
@@ -40,7 +40,7 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
             <Link
               href="/"
               aria-current="page"
-              className="rounded-lg transition-opacity duration-300 hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text"
+              className="rounded-lg transition-opacity duration-300 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text"
             >
               <LogoLockup className="h-5 w-auto lg:h-[22px]" />
             </Link>
@@ -82,7 +82,7 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
         >
           <Link
             href="/privacy"
-            className="rounded-lg text-text underline decoration-text/35 underline-offset-3 transition-[text-decoration-color,opacity] duration-300 hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:opacity-70"
+            className="rounded-lg text-text underline decoration-text/35 underline-offset-3 transition-[text-decoration-color,opacity] duration-300 ease-spring hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:opacity-70"
           >
             Privacy
           </Link>

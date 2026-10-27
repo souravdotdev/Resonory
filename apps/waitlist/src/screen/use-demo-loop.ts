@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useReducedMotion } from "@/motion/viewport";
+import { useReducedMotion } from "@/motion/reduced-motion";
 import { advance, holdFor, LOOP_START, stillFrame, type LoopState } from "./demo-loop";
 
 function subscribeToVisibility(onChange: () => void) {

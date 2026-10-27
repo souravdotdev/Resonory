@@ -13,13 +13,13 @@ describe("readProofLine", () => {
     );
   });
 
-  it("promises early access and the founding member price while fewer than 100 are waiting", async () => {
+  it("shows the offer line while fewer than 100 are waiting", async () => {
     expect(await readProofLine(storeWithCount(async () => 99))).toBe(
       "Early access and a founding member price.",
     );
   });
 
-  it("falls back to the early access line when the count can't be read", async () => {
+  it("falls back to the offer line when the count can't be read", async () => {
     const unreachable = storeWithCount(async () => {
       throw new Error("connect ECONNREFUSED 127.0.0.1:6543");
     });

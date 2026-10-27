@@ -101,13 +101,13 @@ components:
     textColor: "{colors.faint}"
     rounded: "{rounded.pill}"
     padding: "6px 14px"
-  save-card:
+  item-card:
     backgroundColor: "{colors.card}"
     textColor: "{colors.text}"
     typography: "{typography.card-title}"
     rounded: "{rounded.card}"
     padding: "11px 12px"
-  notification:
+  cue:
     backgroundColor: "{colors.card-raised}"
     textColor: "{colors.text}"
     rounded: "{rounded.panel}"
@@ -120,9 +120,9 @@ components:
 
 **Creative North Star: "The Pile That Answers Back"**
 
-Resonory is drawn as a dark, quiet archive: a wall of the visitor's own saved cards, dimmed almost to nothing on a near-black ground, with the product's interface floating over it as a few frosted palettes. Nothing on the screen is loud except the one thing the product exists to do. When a save comes back, it lights up orange, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment is the whole visual identity; everything else is held in greys so it can land.
+Resonory is drawn as a dark, quiet archive: a wall of the visitor's own saved cards, dimmed almost to nothing on a near-black ground, with the product's interface floating over it as a few frosted palettes. Nothing on the screen is loud except the one thing the product exists to do. When an Item comes back, its card lights up orange, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment is the whole visual identity; everything else is held in greys so it can land.
 
-The system is monochrome by construction. Off-white (#FAFAF7) is the only bright neutral and is set at fixed strengths (66%, 56%, 16%, 9%) for secondary text, meta and edges, rather than introducing more greys. Surfaces separate by small tonal steps (ground, card, card-raised) and hairline borders, and depth comes from long, soft, dark drops under the floating palettes. Type is Geist throughout, with Geist Mono for everything the product "knows" about a save: when, where from, how much was read, the keycap.
+The system is monochrome by construction. Off-white (#FAFAF7) is the only bright neutral and is set at fixed strengths (66%, 56%, 16%, 9%) for secondary text, meta and edges, rather than introducing more greys. Surfaces separate by small tonal steps (ground, card, card-raised) and hairline borders, and depth comes from long, soft, dark drops under the floating palettes. Type is Geist throughout, with Geist Mono for everything the product "knows" about an Item: when, where from, how much was read, the keycap.
 
 Density is high but calm. The screen is a single viewport, the wall supplies texture and proof at once, and motion is slow and springy: parts rise in on load, the wall drifts a few pixels over 44 seconds, and the only fast thing is the spark that runs along the orange thread.
 
@@ -131,7 +131,7 @@ Density is high but calm. The screen is a single viewport, the wall supplies tex
 - Near-black ground with a dimmed wall of saved cards as the backdrop, never an empty field or a gradient.
 - One accent, orange, reserved for resurfacing: the logo dot, the two verbs of the headline, the lit card, its thread and its rising dot.
 - Primary actions are off-white fills with dark text; orange never fills a button.
-- Floating palettes: pill nav, search-style field, browser window, notification, all on tonal surfaces with hairline edges and soft drops.
+- Floating palettes: pill nav, search-style field, browser window, Cue, all on tonal surfaces with hairline edges and soft drops.
 - Geist for language, Geist Mono for metadata and keycaps.
 - One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change; every animation has a still state under reduced motion.
 
@@ -142,24 +142,24 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 ### Primary
 
 - **Resurfacing Orange** (accent): the brand accent, fixed by PRODUCT.md. On the screen it appears only where something resurfaces: the logo's rising dot, the two highlighted verbs in the headline ("saved", "brings"), the lit card's 1px edge and its 28px orange glow at 38%, the thread that draws from the demo to that card, and the small dot that rises on its corner.
-- **Ember Orange** (accent-hover): the lighter step of the accent, defined for hover on an accent-coloured element. The waitlist screen itself never needs it.
+- **Ember Orange** (accent-hover): the lighter step of the accent, defined for hover on an accent-coloured element. Nothing on the waitlist uses it.
 
 ### Neutral
 
-- **Archive Black** (ground): the page ground, fixed by PRODUCT.md. Also the footer pill's fill, the inside of the browser page, the icon tile in the notification, and the text colour on off-white buttons.
+- **Archive Black** (ground): the page ground, fixed by PRODUCT.md. Also the footer pill's fill, the inside of the browser page, the icon tile in the Cue, and the text colour on off-white buttons.
 - **Card Grey** (card): the saved cards on the wall, the email field, the browser window chrome, the nav pill (at 90% with a 14px backdrop blur).
-- **Raised Grey** (card-raised): one step up: the active browser tab, the toolbar, the notification (at 94% with a 16px blur), avatars, favicons, skeleton text bars and progress tracks.
+- **Raised Grey** (card-raised): one step up: the active browser tab, the toolbar, the Cue (at 94% with a 16px blur), avatars, favicons, skeleton text bars and progress tracks.
 - **Border Grey** (border): an opaque edge, used for the scrollbar thumb and the secondary pages' outline button and link underlines.
 - **Paper White** (text): all primary text and the logo's bars, fixed by PRODUCT.md. As a fill it is the primary button. The headline runs a left-to-right gradient from Paper White to Ash.
 - **Ash** (muted): the end of the headline gradient, and body text on the secondary (privacy, 404) pages.
 - **Mute** (mute, Paper White at 66%): the lead paragraph, the proof line under the field, the "We'll email you" confirmation line, the "unopened" badge.
 - **Faint** (faint, Paper White at 56%): meta in mono (sites, dates, counts), placeholders, idle icons, the footer's copyright.
 - **Line** (line, Paper White at 9%): the default hairline on cards, the nav and footer pills, tiles and dividers.
-- **Line Strong** (line-strong, Paper White at 16%): the edge of anything the visitor acts on or should read first: the email field, the browser window, the notification, avatar and favicon rings. The field brightens its edge on hover (26%) and focus (44%), and turns to 72% on error.
+- **Line Strong** (line-strong, Paper White at 16%): the edge of anything the visitor acts on or should read first: the email field, the browser window, the Cue, avatar and favicon rings. The field brightens its edge on hover (26%) and focus (44%), and turns to 72% on error.
 
 ### Named Rules
 
-**The One Signal Rule.** Orange means a save came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.
+**The One Signal Rule.** Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.
 
 **The One White Rule.** Secondary text and edges are the same off-white at fixed strengths (66, 56, 16, 9 percent), not new greys. A new tier of emphasis takes a new opacity of Paper White, not a new hex.
 
@@ -179,13 +179,13 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 - **Body lead** (400, 15px on phones, 17px on desktop, line-height 1.5 to 1.55, Mute): the sub under the headline, capped at 30em and set with pretty wrapping.
 - **Body** (400, 15 to 15.5px): the email input and general running text.
 - **Label** (500, 13.5 to 14.5px): button text and the confirmation heading.
-- **Card title** (400, 12 to 12.5px, line-height 1.36 to 1.38): titles on saved cards and the notification; clamped to two or three whole lines, never cut mid-word.
+- **Card title** (400, 12 to 12.5px, line-height 1.36 to 1.38): titles on Item cards and the Cue; clamped to two or three whole lines, never cut mid-word.
 - **Meta** (Geist Mono 400, 9.5 to 10px, Faint): sites, dates, read progress, durations, counts, the "now" stamp, the "unopened" badge.
 - **Note** (Geist Mono 400, 11.5 to 12.5px, tabular figures, Mute): the proof line under the signup field and the footer's copyright.
 
 ### Named Rules
 
-**The Machine Speaks Mono Rule.** Anything the product records about a save (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are never mono.
+**The Machine Speaks Mono Rule.** Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the offer, "Early access and a founding member price.", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.
 
 **The Colour, Not Slant Rule.** Emphasis inside the headline is an `em` coloured orange with the italic removed. Use it only for the verbs of saving and bringing back.
 
@@ -201,17 +201,17 @@ Spacing is tight and concentric: elements nested inside a rounded container sit 
 
 ## Elevation & Depth
 
-Depth is a hybrid of tonal steps and soft drops. At rest, surfaces separate by tone (ground, card, card-raised) and hairline edges. Anything that floats over the wall gets a long, low, very dark drop with a heavy negative spread, so it reads as lifted without a visible halo, often paired with a 1px black ring to cut it from the wall. Frosted backgrounds (90 to 94% fills with 14 to 16px backdrop blur) on the nav and notification let the wall show through faintly. The only light in the system is the orange glow of a lit card.
+Depth is a hybrid of tonal steps and soft drops. At rest, surfaces separate by tone (ground, card, card-raised) and hairline edges. Anything that floats over the wall gets a long, low, very dark drop with a heavy negative spread, so it reads as lifted without a visible halo, often paired with a 1px black ring to cut it from the wall. Frosted backgrounds (90 to 94% fills with 14 to 16px backdrop blur) on the nav and the Cue let the wall show through faintly. The only light in the system is the orange glow of a lit card.
 
 ### Shadow Vocabulary
 
 - **Field rest** (`box-shadow: inset 0 1px 0 rgb(250 250 247 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.8)`): the signup field: a faint top highlight and a drop beneath.
 - **Field focus** (`box-shadow: 0 0 0 4px rgb(250 250 247 / 0.07)`): replaces the drop when the field has focus; a soft off-white halo rather than a coloured ring.
 - **Window** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45), 0 30px 60px -30px rgb(0 0 0 / 0.9)`): the browser window in the demo.
-- **Notification** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)`): the resurfacing notice, the highest surface on the screen.
+- **Cue** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)`): the Cue, the highest surface on the screen.
 - **Palette** (`box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35)`): the floating nav on the secondary pages.
 - **Lit glow** (`box-shadow: 0 0 0 1px #d4621a, 0 0 28px rgb(212 98 26 / 0.38)`; 22px blur on phones): a resurfaced card. The only coloured light in the system.
-- **Pile edges** (`box-shadow: 0 5px 0 -2px #1f1f1f, 0 5px 0 -1px rgb(250 250 247 / 0.1), 0 10px 0 -5px #1f1f1f, 0 10px 0 -4px rgb(250 250 247 / 0.08)`): a stacked card on the wall, showing two card edges peeking out below it. This depicts the pile of saves (the same stack as the logo's bars); it is not a decorative offset shadow and is only used on stacked save cards.
+- **Pile edges** (`box-shadow: 0 5px 0 -2px #1f1f1f, 0 5px 0 -1px rgb(250 250 247 / 0.1), 0 10px 0 -5px #1f1f1f, 0 10px 0 -4px rgb(250 250 247 / 0.08)`): a stacked card on the wall, showing two card edges peeking out below it. This depicts the pile of Items (the same stack as the logo's bars); it is not a decorative offset shadow and is only used on stacked Item cards.
 
 ### Named Rules
 
@@ -219,7 +219,7 @@ Depth is a hybrid of tonal steps and soft drops. At rest, surfaces separate by t
 
 ## Shapes
 
-Everything is rounded and soft-cornered, nested concentrically. Pills (fully rounded) are for things that frame the screen: the nav, the footer, the nav's join button, the nav's keycap and the browser's address bar. Panels the visitor reads or types into use a 13px radius on phones and 14px on desktop (the email field, the confirmation, the notification, the browser window at 12 to 13px). Inside a 14px panel with a 6px inset, the button takes 10px, so the curves stay parallel. Saved cards use 11px on phones and 12px on desktop. Small tiles (icon tiles, frequently visited tiles, favourites at 11px) sit at 8 to 11px, keycaps at 6px, favicons at 4px, and skeleton bars at 2 to 3px. Borders are always 1px. Imagery inside cards is a flat, seeded "sun over a ridge" placeholder in off-white at 20% and 9% on raised grey: thumbnails are stand-ins, never photographs.
+Everything is rounded and soft-cornered, nested concentrically. Pills (fully rounded) are for things that frame the screen: the nav, the footer, the nav's join button, the nav's keycap and the browser's address bar. Panels the visitor reads or types into use a 13px radius on phones and 14px on desktop (the email field, the confirmation, the Cue, the browser window at 12 to 13px). Inside a 14px panel with a 6px inset, the button takes 10px, so the curves stay parallel. Item cards use 11px on phones and 12px on desktop. Small tiles (icon tiles, frequently visited tiles, favourites at 11px) sit at 8 to 11px, keycaps at 6px, favicons at 4px, and skeleton bars at 2 to 3px. Borders are always 1px. Imagery inside cards is a flat, seeded "sun over a ridge" placeholder in off-white at 20% and 9% on raised grey: thumbnails are stand-ins, never photographs.
 
 ## Components
 
@@ -231,7 +231,7 @@ Quiet, solid and tactile: the brightest thing on the screen that is not orange.
 - **Primary:** Paper White fill, Archive Black text, weight 500 at 14 to 14.5px, 40px tall inside the field, 36px in the nav. Carries a trailing ↵ keycap.
 - **Hover / Focus:** hover drops to 88% opacity; press scales to 0.97; both use the spring curve over 600ms. Focus is a 2px Paper White outline offset 3px.
 - **Disabled / Busy:** reads "Joining…", drops the keycap, 72% opacity, no press scale.
-- **Secondary (privacy and 404 pages):** a card-grey outline button with a 1px border, lifting to raised grey on hover.
+- **On the secondary pages:** the 404's "Back to the main page" is a Primary without the keycap; the privacy page's is a Secondary: a card-grey outline button with a 1px border, lifting to raised grey on hover.
 
 ### Keycap
 
@@ -254,17 +254,17 @@ Quiet, solid and tactile: the brightest thing on the screen that is not orange.
 
 - **Style:** a small content-sized pill, Archive Black with a Line edge, floating at the bottom centre: an underlined "Privacy" link (underline at 35% brightening to full on hover) and the copyright in mono, 11.5 to 12px, Faint.
 
-### Save Card (signature)
+### Item Card (signature)
 
 The unit of the wall and the brand's main material.
 
 - **Shape:** 11 to 12px radius, Card Grey fill, 1px Line edge, 10 to 12px padding.
-- **Kinds:** post (avatar, author, time, title, mono counts with stroked icons), video (placeholder thumbnail with duration and a watched-progress bar), article and link (favicon, domain in mono, title, reading progress), PDF (a Paper White page glyph with skeleton lines), Instagram (tall placeholder with carousel dots). Each ends in a mono meta line ("saved in March", "stopped at 6:40").
+- **Card styles** (how a card is drawn, not its Item type: an Instagram card shows a Post): post (avatar, author, time, title, mono counts with stroked icons), video (placeholder thumbnail with duration and a watched-progress bar), article and link (favicon, domain in mono, title, reading progress), PDF (a Paper White page glyph with skeleton lines), Instagram (tall placeholder with carousel dots). Each ends in a mono meta line ("saved in March", "stopped at 6:40").
 - **States:** at rest each card sits at its own low opacity on the wall. Scanned, it flickers brighter and lifts slightly. Lit, it goes fully opaque, gains the orange 1px edge and Lit glow, its "unopened" badge fades out, and an orange dot rises into its corner. All changes are opacity or transform, over 900ms on the spring curve.
 
-### Resurfacing Notification (signature)
+### Cue (signature)
 
-- **Style:** Raised Grey at 94% with a 16px blur, Line Strong edge, 13 to 14px radius, the Notification shadow. A 32 to 34px Archive Black tile holds the logo symbol; beside it "You saved something like this" (semibold), a mono "now" stamp, the quoted title at 82% Paper White, and a mono kind-and-date line.
+- **Style:** Raised Grey at 94% with a 16px blur, Line Strong edge, 13 to 14px radius, the Cue shadow. A 32 to 34px Archive Black tile holds the logo symbol; beside it "You saved something like this" (semibold), a mono "now" stamp, the quoted title at 82% Paper White, and a mono card-style-and-date line ("X post · saved 3 months ago").
 - **Entry:** fades in with a short delay and slides in from the right on desktop (from above on phones); 500ms for opacity, 900ms for movement.
 
 ### Browser Demo
@@ -288,7 +288,7 @@ The unit of the wall and the brand's main material.
 
 - **Don't** fill a button, colour a link, draw a focus ring or set a label in orange.
 - **Don't** signal errors in red or orange; errors stay in Paper White.
-- **Don't** set human-facing sentences in mono, or slant the headline's highlighted verbs.
+- **Don't** set human-facing sentences in mono (the proof line under the form is the one exception), or slant the headline's highlighted verbs.
 - **Don't** add blurred white or coloured glows; the only light is the orange glow of a resurfaced card and its thread.
-- **Don't** use photographs in save cards; thumbnails are the seeded sun-over-ridge placeholder.
+- **Don't** use photographs in Item cards; thumbnails are the seeded sun-over-ridge placeholder.
 - **Don't** place a small label or kicker above a headline; the headline stands alone.

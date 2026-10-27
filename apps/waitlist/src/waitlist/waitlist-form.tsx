@@ -8,7 +8,7 @@ import {
   INVALID_EMAIL_MESSAGE,
   SERVER_ERROR_MESSAGE,
   WaitlistEmailSchema,
-} from "@/waitlist/request";
+} from "./request";
 import { EMAIL_FIELD_ID } from "./email-field";
 
 type Status = "idle" | "joining" | "joined";
@@ -130,7 +130,11 @@ export function WaitlistForm({ note }: { note?: string }) {
           inputMode="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            // Fixing the address takes the error away; the next submit checks it again.
+            setError(null);
+          }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error || note ? messageId : undefined}
           className="h-10 min-w-0 flex-1 bg-transparent text-[15px] text-text caret-text outline-none placeholder:text-faint lg:text-[15.5px]"

@@ -1,346 +1,337 @@
 /**
- * The wall's content: synthetic saves, as the founder's design has them. No
- * real brands or people. Every save carries the query that finds it, so any
+ * The wall's content: synthetic Items, as the founder's design has them. No
+ * real brands or people. Every Item carries the query that finds it, so any
  * card on the wall can be a demo match.
  */
 
-/** What a save is, as its card is drawn. */
-export type SaveKind = "post" | "video" | "article" | "pdf" | "insta" | "link";
+/**
+ * How an Item's card is drawn: one of the founder's six card styles. A card
+ * style is not an Item type (an Instagram card and an X post card both show a
+ * Post); it picks the card's look and how the Cue names it.
+ */
+export type CardStyle = "post" | "video" | "article" | "pdf" | "instagram" | "link";
 
-type SaveBase = {
+type DemoItemBase = {
   title: string;
-  /** The search that finds this save by meaning, never by its words. */
+  /** The search that finds this Item by meaning, never by its words. */
   query: string;
-  /** When it was saved, as the notification says it ("saved 3 months ago"). */
-  saved: string;
-  /** Drawn as a small pile of the same kind. */
+  /** When it was saved, as its card and the Cue say it after "saved" ("3 months ago"). */
+  savedWhen: string;
+  /** Drawn as a small pile of cards in the same style. */
   stacked?: boolean;
   /** Carries an "unopened" badge (never drawn on posts or PDFs). */
   unopened?: boolean;
 };
 
-export type Save = SaveBase &
+/** An Item on the demo wall, with what its card style draws. */
+export type DemoItem = DemoItemBase &
   (
     | {
-        kind: "post";
+        style: "post";
         author: string;
         initials: string;
-        when: string;
         replies: string;
         reposts: string;
         likes: string;
       }
-    | { kind: "video"; duration: string; progress: number; meta: string }
     | {
-        kind: "article";
-        domain: string;
-        favicon: string;
-        read: string;
+        style: "video";
+        duration: string;
         progress: number;
-        meta: string;
+        /** The card's last line when it says something other than when it was saved. */
+        meta?: string;
       }
-    | { kind: "pdf"; meta: string }
-    | { kind: "insta"; author: string; initials: string; meta: string }
-    | { kind: "link"; domain: string; favicon: string; meta: string }
+    | { style: "article"; domain: string; favicon: string; read: string; progress: number }
+    | {
+        style: "pdf";
+        /** The card's last line when it says something other than when it was saved. */
+        meta?: string;
+      }
+    | { style: "instagram"; author: string; initials: string }
+    | { style: "link"; domain: string; favicon: string }
   );
 
-/** How the notification names each kind of save. */
-export const KIND_LABEL: Record<SaveKind, string> = {
+/** How the Cue names each card style. */
+export const CARD_STYLE_LABEL: Record<CardStyle, string> = {
   post: "X post",
   video: "Video",
   article: "Article",
   pdf: "PDF",
-  insta: "Instagram post",
+  instagram: "Instagram post",
   link: "Link",
 };
 
-/** The four saves the demo promises to find, in the order it finds them. */
-export const PROMISED_SAVES: readonly [Save, Save, Save, Save] = [
+/** When `item` was saved, as its card and the Cue say it ("saved 3 months ago"). */
+export function savedLabel(item: DemoItem): string {
+  return `saved ${item.savedWhen}`;
+}
+
+/** The four Items the demo promises to find, in the order it finds them. */
+export const PROMISED_ITEMS: readonly [DemoItem, DemoItem, DemoItem, DemoItem] = [
   {
-    kind: "post",
+    style: "post",
     title: "Five retro formats your team won’t dread",
     author: "Dana Whitfield",
     initials: "DW",
-    when: "3 months ago",
     replies: "42",
     reposts: "318",
     likes: "2.6k",
     query: "agile retrospective ideas",
-    saved: "saved 3 months ago",
+    savedWhen: "3 months ago",
   },
   {
-    kind: "article",
+    style: "article",
     title: "Charge more than feels comfortable",
     domain: "makerledger.blog",
     favicon: "M",
     read: "read 6%",
     progress: 6,
-    meta: "saved 7 weeks ago",
     query: "how to price a side project",
-    saved: "saved 7 weeks ago",
+    savedWhen: "7 weeks ago",
   },
   {
-    kind: "video",
+    style: "video",
     title: "The only starter guide you need",
     duration: "14:08",
     progress: 12,
-    meta: "saved last spring",
     query: "sourdough starter ratio",
-    saved: "saved last spring",
+    savedWhen: "last spring",
   },
   {
-    kind: "pdf",
+    style: "pdf",
     title: "Naming tokens that scale.pdf",
-    meta: "saved 5 months ago",
     query: "design system tokens",
-    saved: "saved 5 months ago",
+    savedWhen: "5 months ago",
   },
 ];
 
-/** Everything else on the wall, repeated as often as the screen needs. */
-export const WALL_SAVES: readonly Save[] = [
+/** Every other Item on the wall, repeated as often as the screen needs. */
+export const WALL_ITEMS: readonly DemoItem[] = [
   {
-    kind: "article",
+    style: "article",
     title: "How we cut our deploy time in half",
     domain: "buildlog.dev",
     favicon: "B",
     read: "read 18%",
     progress: 18,
-    meta: "saved in February",
     query: "speed up ci pipeline",
-    saved: "saved 8 months ago",
+    savedWhen: "8 months ago",
   },
   {
-    kind: "video",
+    style: "video",
     title: "Lighting a small room for video calls",
     duration: "12:40",
     progress: 22,
     meta: "stopped at 2:47",
     query: "look better on webcam",
-    saved: "saved in June",
+    savedWhen: "in June",
   },
   {
-    kind: "post",
+    style: "post",
     title: "Nobody reads the doc you wrote. Here is what works instead",
     author: "Ines Okafor",
     initials: "IO",
-    when: "in April",
     replies: "24",
     reposts: "180",
     likes: "1.2k",
     query: "technical writing tips",
-    saved: "saved in April",
+    savedWhen: "in April",
   },
   {
-    kind: "pdf",
+    style: "pdf",
     title: "Lease checklist for renters.pdf",
     meta: "page 1 of 12",
     stacked: true,
     query: "first apartment rental tips",
-    saved: "saved last year",
+    savedWhen: "last year",
   },
   {
-    kind: "insta",
+    style: "instagram",
     title: "Balcony herb garden, month three",
     author: "Tara Mehta",
     initials: "TM",
-    meta: "saved in May",
     query: "growing basil indoors",
-    saved: "saved in May",
+    savedWhen: "in May",
   },
   {
-    kind: "link",
+    style: "link",
     title: "The quiet power of checklists",
     domain: "fieldnotes.blog",
     favicon: "F",
-    meta: "saved in March",
     unopened: true,
     query: "reduce mistakes at work",
-    saved: "saved 7 months ago",
+    savedWhen: "7 months ago",
   },
   {
-    kind: "post",
+    style: "post",
     title: "Seven questions that make 1:1s useful",
     author: "Leo Brandt",
     initials: "LB",
-    when: "in July",
     replies: "12",
     reposts: "96",
     likes: "640",
     query: "manager meeting agenda",
-    saved: "saved in July",
+    savedWhen: "in July",
   },
   {
-    kind: "article",
+    style: "article",
     title: "The case for boring technology choices",
     domain: "slowcode.net",
     favicon: "S",
     read: "unread",
     progress: 0,
-    meta: "saved 4 months ago",
     unopened: true,
     stacked: true,
     query: "choosing a tech stack",
-    saved: "saved 4 months ago",
+    savedWhen: "4 months ago",
   },
   {
-    kind: "video",
+    style: "video",
     title: "How film editors cut a scene",
     duration: "18:02",
     progress: 8,
     meta: "stopped at 1:26",
     query: "video editing rhythm",
-    saved: "saved in January",
+    savedWhen: "in January",
   },
   {
-    kind: "insta",
+    style: "instagram",
     title: "Studio desk setup, small apartment",
     author: "Kai Ren",
     initials: "KR",
-    meta: "saved in March",
     query: "minimal workspace ideas",
-    saved: "saved in March",
+    savedWhen: "in March",
   },
   {
-    kind: "pdf",
+    style: "pdf",
     title: "Quarterly planning template.pdf",
     meta: "page 2 of 9",
     query: "okr template for teams",
-    saved: "saved in April",
+    savedWhen: "in April",
   },
   {
-    kind: "post",
+    style: "post",
     title: "Write the README before the code. You will thank yourself later.",
     author: "Asha Varma",
     initials: "AV",
-    when: "2 weeks ago",
     replies: "31",
     reposts: "402",
     likes: "3.1k",
     query: "documenting a new project",
-    saved: "saved 2 weeks ago",
+    savedWhen: "2 weeks ago",
   },
   {
-    kind: "link",
+    style: "link",
     title: "Palettes for dark interfaces",
     domain: "colorweek.dev",
     favicon: "C",
-    meta: "saved in August",
     stacked: true,
     query: "dark mode colours",
-    saved: "saved in August",
+    savedWhen: "in August",
   },
   {
-    kind: "article",
+    style: "article",
     title: "Onboarding that new hires remember",
     domain: "peoplenotes.co",
     favicon: "P",
     read: "read 40%",
     progress: 40,
-    meta: "saved in May",
     query: "first week for new employees",
-    saved: "saved in May",
+    savedWhen: "in May",
   },
   {
-    kind: "video",
+    style: "video",
     title: "Weeknight noodles in 15 minutes",
     duration: "9:15",
     progress: 0,
     meta: "never watched",
     unopened: true,
     query: "quick dinner recipes",
-    saved: "saved last month",
+    savedWhen: "last month",
   },
   {
-    kind: "post",
+    style: "post",
     title: "Every keyboard shortcut I use daily, in one thread",
     author: "Jon Ellis",
     initials: "JE",
-    when: "in June",
     replies: "58",
     reposts: "1.1k",
     likes: "8.4k",
     query: "work faster on a laptop",
-    saved: "saved in June",
+    savedWhen: "in June",
   },
   {
-    kind: "insta",
+    style: "instagram",
     title: "Film photos from the coast",
     author: "Noor Haddad",
     initials: "NH",
-    meta: "saved last year",
     query: "35mm beach photography",
-    saved: "saved last year",
+    savedWhen: "last year",
   },
   {
-    kind: "pdf",
+    style: "pdf",
     title: "Interview rubric v2.pdf",
     meta: "page 4 of 6",
     query: "how to evaluate candidates",
-    saved: "saved in September",
+    savedWhen: "in September",
   },
   {
-    kind: "article",
+    style: "article",
     title: "What I learned shipping alone for a year",
     domain: "soloship.blog",
     favicon: "S",
     read: "read 9%",
     progress: 9,
-    meta: "saved in March",
     stacked: true,
     query: "indie hacker lessons",
-    saved: "saved in March",
+    savedWhen: "in March",
   },
   {
-    kind: "link",
+    style: "link",
     title: "Ten small apps worth keeping",
     domain: "tinytools.page",
     favicon: "T",
-    meta: "saved in July",
     unopened: true,
     query: "best utility apps for mac",
-    saved: "saved in July",
+    savedWhen: "in July",
   },
   {
-    kind: "video",
+    style: "video",
     title: "A beginner guide to bouldering",
     duration: "21:47",
     progress: 31,
     meta: "stopped at 6:40",
     query: "indoor climbing for beginners",
-    saved: "saved in May",
+    savedWhen: "in May",
   },
   {
-    kind: "post",
+    style: "post",
     title: "The best career advice I got this year was boring",
     author: "Mira Kapoor",
     initials: "MK",
-    when: "in January",
     replies: "9",
     reposts: "77",
     likes: "512",
     query: "how to grow in my career",
-    saved: "saved in January",
+    savedWhen: "in January",
   },
   {
-    kind: "insta",
+    style: "instagram",
     title: "Weeknight dal, three ways",
     author: "Ravi Iyer",
     initials: "RI",
-    meta: "saved in May",
     query: "easy lentil curry",
-    saved: "saved in May",
+    savedWhen: "in May",
   },
   {
-    kind: "article",
+    style: "article",
     title: "A calmer way to plan your week",
     domain: "deskdays.co",
     favicon: "D",
     read: "unread",
     progress: 0,
-    meta: "saved in August",
     unopened: true,
     query: "sunday planning routine",
-    saved: "saved in August",
+    savedWhen: "in August",
   },
 ];

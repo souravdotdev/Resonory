@@ -6,7 +6,7 @@
  * 1. type: the query appears a character at a time while Resonory scans,
  *    flickering other cards;
  * 2. match: the card the query finds is lit, its thread drawn, the
- *    notification shown;
+ *    Cue shown;
  * 3. out: all of that fades away;
  *
  * and then the next search, wrapping around after the last one.
@@ -39,9 +39,24 @@ const TIMING = {
   out: 800,
 } as const;
 
+/** `state`'s query: the one its step is on. */
+function queryOf(state: LoopState, queries: readonly string[]): string {
+  return queries[state.step % queries.length] ?? "";
+}
+
 /** How many characters `state`'s query has. */
 function queryLength(state: LoopState, queries: readonly string[]): number {
-  return queries[state.step % queries.length]?.length ?? 0;
+  return queryOf(state, queries).length;
+}
+
+/** As much of `state`'s query as is typed. */
+export function typedQuery(state: LoopState, queries: readonly string[]): string {
+  return queryOf(state, queries).slice(0, state.chars);
+}
+
+/** Whether `state`'s query is typed in full. */
+export function isQueryTyped(state: LoopState, queries: readonly string[]): boolean {
+  return state.chars >= queryLength(state, queries);
 }
 
 /**
@@ -57,7 +72,7 @@ export function holdFor(
   switch (state.phase) {
     case "type": {
       if (state.chars === 0) return TIMING.beforeTyping;
-      if (state.chars >= queryLength(state, queries)) return TIMING.beforeMatch;
+      if (isQueryTyped(state, queries)) return TIMING.beforeMatch;
       const { min, max } = TIMING.keystroke;
       return min + random() * (max - min);
     }
@@ -72,7 +87,7 @@ export function holdFor(
 export function advance(state: LoopState, queries: readonly string[]): LoopState {
   switch (state.phase) {
     case "type":
-      return state.chars < queryLength(state, queries)
+      return !isQueryTyped(state, queries)
         ? { ...state, chars: state.chars + 1 }
         : { ...state, phase: "match" };
     case "match":

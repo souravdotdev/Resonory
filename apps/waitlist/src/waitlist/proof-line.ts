@@ -3,7 +3,8 @@ import type { WaitlistStore } from "./store";
 /** Below this many Waitlist Entries the count is hidden, so a tiny number never puts people off. */
 export const PROOF_COUNT_THRESHOLD = 100;
 
-export const FOUNDING_PRICE_LINE = "Early access and a founding member price.";
+/** The proof line while the count is hidden: the offer itself. */
+export const OFFER_LINE = "Early access and a founding member price.";
 
 const countFormat = new Intl.NumberFormat("en-US");
 
@@ -19,8 +20,8 @@ export async function readProofLine(store: WaitlistStore): Promise<string> {
     count = await store.count();
   } catch (error) {
     console.error("Could not read the Waitlist Entry count", error);
-    return FOUNDING_PRICE_LINE;
+    return OFFER_LINE;
   }
-  if (count < PROOF_COUNT_THRESHOLD) return FOUNDING_PRICE_LINE;
+  if (count < PROOF_COUNT_THRESHOLD) return OFFER_LINE;
   return `${countFormat.format(count)} people are waiting · founding member price`;
 }

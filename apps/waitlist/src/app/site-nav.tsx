@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { LogoLockup } from "./logo";
-import { EMAIL_FIELD_ID } from "./email-field";
+import { LogoLockup } from "@/brand/logo-svg";
+import { JOIN_WAITLIST_HREF } from "@/waitlist/email-field";
 
 /**
  * The floating pill nav of the pages other than the waitlist screen (privacy,
  * 404): a small palette that stays at the top while the page scrolls, with the
  * logo and a link to the signup form on the main page.
+ *
+ * Not shared with the waitlist screen's nav: that one is an absolutely placed,
+ * taller pill with a keycap join button, so one component would change a look.
  */
 export function SiteNav() {
   return (
@@ -21,7 +24,7 @@ export function SiteNav() {
           <LogoLockup className="h-5 w-auto" />
         </Link>
         <a
-          href={`/#${EMAIL_FIELD_ID}`}
+          href={JOIN_WAITLIST_HREF}
           className="rounded-full bg-text px-4 py-2 text-sm font-semibold text-bg transition-all duration-700 ease-spring hover:bg-white active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
         >
           Join the waitlist

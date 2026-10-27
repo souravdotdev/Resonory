@@ -16,8 +16,7 @@ export default function NotFound() {
         id="main"
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-6 px-4 py-12 text-center"
       >
-        <p className="text-sm font-semibold text-accent">404</p>
-        <h1 className="max-w-170 bg-linear-to-r from-white to-muted bg-clip-text pb-1 text-4xl font-semibold tracking-tight text-balance text-transparent">
+        <h1 className="max-w-170 bg-linear-to-r from-text to-muted bg-clip-text pb-1 text-4xl font-semibold tracking-tight text-balance text-transparent">
           We could not find that page
         </h1>
         <p className="max-w-lg text-lg text-pretty text-muted">
@@ -25,7 +24,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/"
-          className="rounded-lg bg-accent px-3 py-2 text-base font-semibold text-text transition-all duration-700 ease-spring hover:bg-accent-hover active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="inline-flex h-10 items-center rounded-[10px] bg-text px-4 text-[14.5px] font-medium text-bg transition-[transform,opacity] duration-600 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:scale-97"
         >
           Back to the main page
         </Link>

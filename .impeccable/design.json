@@ -174,11 +174,11 @@
       },
       "card-title": {
         "displayName": "Card title",
-        "purpose": "Save card and notification titles, clamped to whole lines."
+        "purpose": "Item card and Cue titles, clamped to whole lines."
       },
       "meta": {
         "displayName": "Meta",
-        "purpose": "Mono record of a save: site, date, progress, counts, keycaps. In Faint."
+        "purpose": "Mono record of an Item: site, date, progress, counts, keycaps. In Faint."
       },
       "note": {
         "displayName": "Note",
@@ -202,9 +202,9 @@
         "purpose": "The browser window in the demo."
       },
       {
-        "name": "notification",
+        "name": "cue",
         "value": "0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)",
-        "purpose": "The resurfacing notice, highest surface."
+        "purpose": "The Cue, highest surface."
       },
       {
         "name": "palette",
@@ -219,7 +219,7 @@
       {
         "name": "pile-edges",
         "value": "0 5px 0 -2px var(--color-card), 0 5px 0 -1px rgb(250 250 247 / 0.1), 0 10px 0 -5px var(--color-card), 0 10px 0 -4px rgb(250 250 247 / 0.08)",
-        "purpose": "A stacked save card: two card edges peeking out below. Stacked save cards only."
+        "purpose": "A stacked Item card: two card edges peeking out below. Stacked Item cards only."
       }
     ],
     "motion": [
@@ -251,7 +251,7 @@
       {
         "name": "duration-move",
         "value": "900ms",
-        "purpose": "Card lift and notification movement."
+        "purpose": "Card lift and Cue movement."
       },
       {
         "name": "wall-drift",
@@ -318,18 +318,18 @@
       "css": ".ds-footer{display:inline-flex;align-items:center;gap:16px;padding:6px 14px;border:1px solid rgb(250 250 247/.09);border-radius:9999px;background:#141414;color:rgb(250 250 247/.56);font-size:12px;white-space:nowrap}.ds-footer-link{color:#fafaf7;text-decoration:underline;text-decoration-color:rgb(250 250 247/.35);text-underline-offset:3px;border-radius:8px;transition:text-decoration-color .3s}.ds-footer-link:hover{text-decoration-color:#fafaf7}.ds-footer-link:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}.ds-footer-copy{font-family:'Geist Mono',ui-monospace,monospace}"
     },
     {
-      "name": "Save Card",
+      "name": "Item Card",
       "kind": "card",
-      "refersTo": "save-card",
-      "description": "A saved link on the wall; hover previews the lit (resurfaced) state.",
+      "refersTo": "item-card",
+      "description": "An Item's card on the wall; hover previews the lit (resurfaced) state.",
       "html": "<div class=\"ds-save\"><span class=\"ds-save-src\"><i class=\"ds-save-fav\">S</i>soloship.blog</span><span class=\"ds-save-title\">What I learned shipping alone for a year</span><span class=\"ds-save-meta\">saved in March</span><span class=\"ds-save-dot\"></span></div>",
       "css": ".ds-save{position:relative;display:flex;flex-direction:column;gap:7px;width:180px;padding:11px 12px;border:1px solid rgb(250 250 247/.09);border-radius:12px;background:#1f1f1f;transition:box-shadow .6s cubic-bezier(.32,.72,0,1),border-color .6s cubic-bezier(.32,.72,0,1),transform .9s cubic-bezier(.32,.72,0,1)}.ds-save:hover{border-color:#d4621a;box-shadow:0 0 0 1px #d4621a,0 0 28px rgb(212 98 26/.38);transform:translateY(-2px)}.ds-save-src,.ds-save-meta{display:flex;align-items:center;gap:6px;font:10px 'Geist Mono',ui-monospace,monospace;color:rgb(250 250 247/.56)}.ds-save-fav{display:grid;place-items:center;width:15px;height:15px;border:1px solid rgb(250 250 247/.16);border-radius:4px;background:#272727;font:normal 8.5px Geist,sans-serif;color:#fafaf7}.ds-save-title{font:12.5px/1.38 Geist,ui-sans-serif,system-ui,sans-serif;color:#fafaf7}.ds-save-dot{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:9999px;background:#d4621a;opacity:0;transform:translateY(5px);transition:opacity .9s cubic-bezier(.32,.72,0,1),transform .9s cubic-bezier(.32,.72,0,1)}.ds-save:hover .ds-save-dot{opacity:1;transform:none}"
     },
     {
-      "name": "Resurfacing Notification",
+      "name": "Cue",
       "kind": "custom",
-      "refersTo": "notification",
-      "description": "The notice that you already saved something like this.",
+      "refersTo": "cue",
+      "description": "The Cue that you already saved something like this.",
       "html": "<div class=\"ds-notice\"><span class=\"ds-notice-tile\"><svg viewBox=\"4 6 40 36\" height=\"17\"><path fill=\"#fafaf7\" d=\"M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z\"/><path fill=\"#d4621a\" d=\"M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z\"/></svg></span><div class=\"ds-notice-body\"><div class=\"ds-notice-head\"><span>You saved something like this</span><span class=\"ds-notice-mono\">now</span></div><p class=\"ds-notice-title\">“Five retro formats your team won't dread”</p><p class=\"ds-notice-mono\">X post · saved 3 months ago</p></div></div>",
       "css": ".ds-notice{display:flex;align-items:center;gap:11px;width:344px;padding:10px 12px;border:1px solid rgb(250 250 247/.16);border-radius:14px;background:rgb(39 39 39/.94);backdrop-filter:blur(16px);box-shadow:0 0 0 1px rgb(0 0 0/.4),0 30px 60px -24px rgb(0 0 0/.95);font-family:Geist,ui-sans-serif,system-ui,sans-serif;color:#fafaf7}.ds-notice-tile{display:grid;place-items:center;flex-shrink:0;width:34px;height:34px;border:1px solid rgb(250 250 247/.16);border-radius:9px;background:#141414}.ds-notice-body{display:flex;flex-direction:column;min-width:0;flex:1}.ds-notice-head{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}.ds-notice-head .ds-notice-mono{margin-left:auto}.ds-notice-title{margin:0;font-size:12.5px;line-height:1.4;color:rgb(250 250 247/.82)}.ds-notice-mono{margin:1px 0 0;font:10px 'Geist Mono',ui-monospace,monospace;color:rgb(250 250 247/.56)}"
     }
@@ -341,14 +341,14 @@
       "Near-black ground with a dimmed wall of saved cards as the backdrop, never an empty field or a gradient.",
       "One accent, orange, reserved for resurfacing: the logo dot, the two verbs of the headline, the lit card, its thread and its rising dot.",
       "Primary actions are off-white fills with dark text; orange never fills a button.",
-      "Floating palettes: pill nav, search-style field, browser window, notification, all on tonal surfaces with hairline edges and soft drops.",
+      "Floating palettes: pill nav, search-style field, browser window, Cue, all on tonal surfaces with hairline edges and soft drops.",
       "Geist for language, Geist Mono for metadata and keycaps.",
       "One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change; every animation has a still state under reduced motion."
     ],
     "rules": [
       {
         "name": "The One Signal Rule",
-        "body": "Orange means a save came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.",
+        "body": "Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.",
         "section": "colors"
       },
       {
@@ -363,7 +363,7 @@
       },
       {
         "name": "The Machine Speaks Mono Rule",
-        "body": "Anything the product records about a save (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are never mono.",
+        "body": "Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the offer, \"Early access and a founding member price.\", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.",
         "section": "typography"
       },
       {
@@ -390,9 +390,9 @@
     "donts": [
       "**Don't** fill a button, colour a link, draw a focus ring or set a label in orange.",
       "**Don't** signal errors in red or orange; errors stay in Paper White.",
-      "**Don't** set human-facing sentences in mono, or slant the headline's highlighted verbs.",
+      "**Don't** set human-facing sentences in mono (the proof line under the form is the one exception), or slant the headline's highlighted verbs.",
       "**Don't** add blurred white or coloured glows; the only light is the orange glow of a resurfaced card and its thread.",
-      "**Don't** use photographs in save cards; thumbnails are the seeded sun-over-ridge placeholder.",
+      "**Don't** use photographs in Item cards; thumbnails are the seeded sun-over-ridge placeholder.",
       "**Don't** place a small label or kicker above a headline; the headline stands alone."
     ]
   }

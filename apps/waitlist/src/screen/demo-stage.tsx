@@ -1,13 +1,13 @@
 "use client";
 
 import { createContext, use, useMemo, useState, type ReactNode } from "react";
-import { scanCandidate } from "./demo-loop";
+import { isQueryTyped, scanCandidate, typedQuery } from "./demo-loop";
 import { demoMatchFor, type DemoMatch } from "./demo-match";
 import { useDemoLoop } from "./use-demo-loop";
-import { PROMISED_SAVES, type Save } from "./wall/saves";
+import { PROMISED_ITEMS, type DemoItem } from "./wall/items";
 
-/** A card the demo can find: its id on the wall, and its save. */
-export type DemoEntry = { cardId: string; save: Save };
+/** A card the demo can find: its id on the wall, and its Item. */
+export type DemoEntry = { cardId: string; item: DemoItem };
 
 /** What the demo shows at this moment, the same for the search demo and the wall. */
 export type DemoView = {
@@ -18,7 +18,7 @@ export type DemoView = {
   typed: string;
   /** The query is complete, so the browser shows results. */
   searched: boolean;
-  /** The match is on: its card lit, its thread drawn, the notification shown. */
+  /** The match is on: its card lit, its thread drawn, the Cue shown. */
   matched: boolean;
   /** The card flickering as Resonory scans, never the match's own. */
   scanningCardId: string | null;
@@ -33,22 +33,22 @@ type DemoStageValue = {
 const DemoStageContext = createContext<DemoStageValue | null>(null);
 
 /**
- * Until the wall is laid out, the demo searches for the promised saves; the
+ * Until the wall is laid out, the demo searches for the promised Items; the
  * wall's sequence starts with the same one, so nothing jumps when it arrives.
  */
-const BEFORE_LAYOUT: readonly DemoEntry[] = PROMISED_SAVES.map((save, i) => ({
+const BEFORE_LAYOUT: readonly DemoEntry[] = PROMISED_ITEMS.map((item, i) => ({
   cardId: `promised-${i}`,
-  save,
+  item,
 }));
 
 /**
  * Runs the one demo loop for everything inside it: the search demo types and
  * the wall lights the card it finds, from the same state, so the lit card,
- * the notification and the thread always agree.
+ * the Cue and the thread always agree.
  */
 export function DemoStage({ children }: { children: ReactNode }) {
   const [sequence, setSequence] = useState(BEFORE_LAYOUT);
-  const queries = useMemo(() => sequence.map((entry) => entry.save.query), [sequence]);
+  const queries = useMemo(() => sequence.map((entry) => entry.item.query), [sequence]);
   const loop = useDemoLoop(queries);
 
   const value = useMemo((): DemoStageValue => {
@@ -57,9 +57,9 @@ export function DemoStage({ children }: { children: ReactNode }) {
     return {
       view: {
         cardId: entry.cardId,
-        match: demoMatchFor(entry.save),
-        typed: entry.save.query.slice(0, loop.chars),
-        searched: loop.chars >= entry.save.query.length,
+        match: demoMatchFor(entry.item),
+        typed: typedQuery(loop, queries),
+        searched: isQueryTyped(loop, queries),
         matched: loop.phase === "match",
         scanningCardId: scan === null ? null : sequence[scan]!.cardId,
       },

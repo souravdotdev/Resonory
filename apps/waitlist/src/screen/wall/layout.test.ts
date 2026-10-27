@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { footprint, layoutWall, type Box, type WallCard, type WallScene } from "./layout";
-import { PROMISED_SAVES } from "./saves";
+import { PROMISED_ITEMS } from "./items";
 
 const box = (x: number, y: number, width: number, height: number): Box => ({ x, y, width, height });
 
@@ -80,7 +80,7 @@ describe.each(SCREENS)("the wall at $name", ({ scene }) => {
   it("never puts a card behind the copy, form, demo, nav or footer", () => {
     for (const card of layout.cards) {
       for (const kept of [scene.demo, ...scene.keepClear]) {
-        expect(intersects(footprint(card), kept), `${card.save.title} under a kept-clear box`).toBe(
+        expect(intersects(footprint(card), kept), `${card.item.title} under a kept-clear box`).toBe(
           false,
         );
       }
@@ -90,7 +90,7 @@ describe.each(SCREENS)("the wall at $name", ({ scene }) => {
   it("keeps every card on the screen or bleeding off its edge", () => {
     const screen = box(0, 0, scene.width, scene.height);
     for (const card of layout.cards) {
-      expect(intersects(footprint(card), screen), card.save.title).toBe(true);
+      expect(intersects(footprint(card), screen), card.item.title).toBe(true);
     }
   });
 
@@ -100,19 +100,19 @@ describe.each(SCREENS)("the wall at $name", ({ scene }) => {
     for (const id of layout.sequence) {
       const card = byId.get(id);
       expect(card, id).toBeDefined();
-      expect(insideScreen(card!, scene), card!.save.title).toBe(true);
+      expect(insideScreen(card!, scene), card!.item.title).toBe(true);
     }
-    const titles = layout.sequence.map((id) => byId.get(id)!.save.title);
+    const titles = layout.sequence.map((id) => byId.get(id)!.item.title);
     expect(new Set(titles).size).toBe(titles.length);
   });
 
   it("starts the sequence with the demo's first match", () => {
-    expect(byId.get(layout.sequence[0]!)!.save).toBe(PROMISED_SAVES[0]);
+    expect(byId.get(layout.sequence[0]!)!.item).toBe(PROMISED_ITEMS[0]);
   });
 
   it("ends every thread route on its card's edge", () => {
     for (const card of layout.cards) {
-      expect(onEdge(card.route.end, card.box), card.save.title).toBe(true);
+      expect(onEdge(card.route.end, card.box), card.item.title).toBe(true);
       expect(card.route.path.endsWith(`L${card.route.end.x} ${card.route.end.y}`)).toBe(true);
     }
   });
@@ -137,16 +137,16 @@ describe.each(SCREENS)("the wall at $name", ({ scene }) => {
 describe.each(DESKTOP_SCREENS)("the desktop wall at $name", ({ scene }) => {
   const layout = layoutWall(scene);
 
-  it("places all four promised saves, fully visible and in the sequence", () => {
-    for (const save of PROMISED_SAVES) {
-      const card = layout.cards.find((c) => c.save === save);
-      expect(card, save.title).toBeDefined();
-      expect(insideScreen(card!, scene), save.title).toBe(true);
+  it("places all four promised Items, fully visible and in the sequence", () => {
+    for (const item of PROMISED_ITEMS) {
+      const card = layout.cards.find((c) => c.item === item);
+      expect(card, item.title).toBeDefined();
+      expect(insideScreen(card!, scene), item.title).toBe(true);
       expect(layout.sequence).toContain(card!.id);
     }
   });
 
-  it("keeps the promised saves near the demo", () => {
+  it("keeps the promised Items near the demo", () => {
     const demoCentre = {
       x: scene.demo.x + scene.demo.width / 2,
       y: scene.demo.y + scene.demo.height / 2,
@@ -156,9 +156,9 @@ describe.each(DESKTOP_SCREENS)("the desktop wall at $name", ({ scene }) => {
         card.box.x + card.box.width / 2 - demoCentre.x,
         card.box.y + card.box.height / 2 - demoCentre.y,
       );
-    const promised = layout.cards.filter((card) => PROMISED_SAVES.includes(card.save));
+    const promised = layout.cards.filter((card) => PROMISED_ITEMS.includes(card.item));
     const visible = layout.cards.filter(
-      (card) => !PROMISED_SAVES.includes(card.save) && insideScreen(card, scene),
+      (card) => !PROMISED_ITEMS.includes(card.item) && insideScreen(card, scene),
     );
     const median = visible.map(distance).sort((a, b) => a - b)[Math.floor(visible.length / 2)]!;
     const mean = promised.reduce((sum, card) => sum + distance(card), 0) / promised.length;
@@ -179,18 +179,18 @@ describe.each(DESKTOP_SCREENS)("the desktop wall at $name", ({ scene }) => {
 describe("the desktop wall at 1440×900", () => {
   const layout = layoutWall(SCREENS[0]!.scene);
 
-  it("puts the promised saves where the design does", () => {
-    const at = (n: number) => layout.cards.find((c) => c.save === PROMISED_SAVES[n])!.box;
+  it("puts the promised Items where the design does", () => {
+    const at = (n: number) => layout.cards.find((c) => c.item === PROMISED_ITEMS[n])!.box;
     expect(at(0)).toEqual(box(1048, 695, 184, 120));
     expect(at(1)).toEqual(box(1248, 465, 184, 124));
     expect(at(2)).toEqual(box(1248, 291, 184, 146));
     expect(at(3)).toEqual(box(848, 711, 184, 78));
   });
 
-  it("matches every fully visible save, promised ones spread through", () => {
+  it("matches every fully visible Item, promised ones spread through", () => {
     const promisedAt = layout.sequence
       .map((id, i) => [i, layout.cards.find((c) => c.id === id)!] as const)
-      .filter(([, card]) => PROMISED_SAVES.includes(card.save))
+      .filter(([, card]) => PROMISED_ITEMS.includes(card.item))
       .map(([i]) => i);
     expect(promisedAt).toHaveLength(4);
     expect(promisedAt[3]! - promisedAt[0]!).toBeGreaterThan(layout.sequence.length / 2);
@@ -203,7 +203,7 @@ describe("the phone wall at 375×812", () => {
 
   it("fills the bottom of the screen with the design's four cards, in the demo's order", () => {
     expect(layout.mode).toBe("mobile");
-    expect(layout.cards.map((card) => card.save)).toEqual([...PROMISED_SAVES]);
+    expect(layout.cards.map((card) => card.item)).toEqual([...PROMISED_ITEMS]);
     expect(layout.sequence).toEqual(layout.cards.map((card) => card.id));
     for (const card of layout.cards) {
       expect(card.box.y).toBeGreaterThan(scene.demo.y + scene.demo.height);
@@ -211,7 +211,7 @@ describe("the phone wall at 375×812", () => {
   });
 
   it("draws the tokens PDF as a stack, as the design does", () => {
-    expect(layout.cards.find((card) => card.save === PROMISED_SAVES[3])!.stacked).toBe(true);
+    expect(layout.cards.find((card) => card.item === PROMISED_ITEMS[3])!.stacked).toBe(true);
   });
 
   it("leaves out a card that can't clear the footer on a short screen", () => {
