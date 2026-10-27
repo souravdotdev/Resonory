@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { LogoLockup } from "./logo";
+import { EMAIL_FIELD_ID } from "./email-field";
 
 /**
- * The floating pill nav: a small palette that stays at the top while the page
- * scrolls, with the logo and a link to the final signup form. `onHome` marks
- * the logo link as the current page; other pages pass `false`.
+ * The floating pill nav of the pages other than the waitlist screen (privacy,
+ * 404): a small palette that stays at the top while the page scrolls, with the
+ * logo and a link to the signup form on the main page.
  */
-export function SiteNav({ onHome = true }: { onHome?: boolean }) {
+export function SiteNav() {
   return (
     <header className="sticky top-0 z-40 px-4 pt-6">
       <nav
@@ -15,13 +16,12 @@ export function SiteNav({ onHome = true }: { onHome?: boolean }) {
       >
         <Link
           href="/"
-          aria-current={onHome ? "page" : undefined}
           className="block rounded-sm transition-opacity duration-700 ease-spring hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text"
         >
           <LogoLockup className="h-5 w-auto" />
         </Link>
         <a
-          href={onHome ? "#join" : "/#join"}
+          href={`/#${EMAIL_FIELD_ID}`}
           className="rounded-full bg-text px-4 py-2 text-sm font-semibold text-bg transition-all duration-700 ease-spring hover:bg-white active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
         >
           Join the waitlist

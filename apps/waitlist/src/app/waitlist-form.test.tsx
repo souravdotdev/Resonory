@@ -51,9 +51,9 @@ describe("WaitlistForm", () => {
 
     answer(Response.json({ ok: true }));
 
-    expect(
-      await screen.findByText("You’re on the list. We’ll email you when your spot opens."),
-    ).toBeTruthy();
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "You’re on the list. We’ll email you when your spot opens.",
+    );
     expect(screen.queryByLabelText("Email")).toBeNull();
     window.history.replaceState(null, "", "/");
   });
@@ -85,9 +85,9 @@ describe("WaitlistForm", () => {
     fetchMock.mockResolvedValue(Response.json({ ok: true }));
     await user.click(button);
 
-    expect(
-      await screen.findByText("You’re on the list. We’ll email you when your spot opens."),
-    ).toBeTruthy();
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "You’re on the list. We’ll email you when your spot opens.",
+    );
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

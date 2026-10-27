@@ -19,7 +19,7 @@ const linkClass =
 export default function PrivacyPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteNav onHome={false} />
+      <SiteNav />
       <main id="main" className="mx-auto w-full max-w-2xl flex-1 px-4 py-12">
         <article className="flex flex-col gap-8">
           <header className="flex flex-col gap-3">

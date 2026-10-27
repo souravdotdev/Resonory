@@ -22,8 +22,8 @@ apps/
   waitlist/ Next.js marketing page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory
               src/app/             the page, privacy page, 404, OG/icon images, the form, nav and footer
-              src/landing/         the landing page's sections, palette pieces, FAQ and visual slots
-              src/motion/          the shared viewport observer and the scroll in reveal
+              src/screen/          the one-screen waitlist page: its composition, nav button and search demo
+              src/motion/          the reduced motion preference
               src/brand/           brand colors, the logo paths and the font for generated images
 
 packages/

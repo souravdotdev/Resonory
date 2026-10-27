@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteNav onHome={false} />
+      <SiteNav />
       <main
         id="main"
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-6 px-4 py-12 text-center"
