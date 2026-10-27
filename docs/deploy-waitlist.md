@@ -1,6 +1,6 @@
 # Deploying the waitlist page
 
-`apps/waitlist` is the one screen waitlist at `resonory.com`: the page and its `POST /api/waitlist` endpoint, deployed together as one Vercel project on the free tier. It is independent of `apps/web`, `apps/api` and `apps/worker`; it only uses `@resonory/db`'s schema and the shared config packages. This is the checklist for setting it up on Vercel by hand.
+`apps/waitlist` is the one-screen waitlist at `resonory.com`: the page and its `POST /api/waitlist` endpoint, deployed together as one Vercel project on the free tier. It is independent of `apps/web`, `apps/api` and `apps/worker`; it only uses `@resonory/db`'s schema and the shared config packages. This is the checklist for setting it up on Vercel by hand.
 
 ## Before you start
 
@@ -53,7 +53,8 @@ Under the project's **Analytics** tab, click **Enable**. The app already renders
 - Paste `https://resonory.com` into a link preview tool (such as [opengraph.xyz](https://www.opengraph.xyz)) and check the title, description and image.
 - Share the link in a chat or on X and check the preview appears.
 - Open `https://resonory.com/does-not-exist` and check it shows the branded 404 with a link back to the main page.
-- Join with a real address and check the row appears in Supabase's `waitlist_entries` table.
+- Open `https://resonory.com` on a laptop and on a phone and check it fills the screen without scrolling, the search demo types and lights a card on the wall, and the notification names that card.
+- Join with a real address and check the success card shows and the row appears in Supabase's `waitlist_entries` table.
 
 ## What ships with the app
 

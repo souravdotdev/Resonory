@@ -6,8 +6,8 @@ import { thumbnailArt } from "./thumbnail-art";
 /*
  * One saved card on the wall, drawn the way the founder's design draws each
  * kind of save. The phone sizes come first; `lg:` carries the desktop ones,
- * which switch at the same width as the wall's desktop layout. A link's
- * title keeps to one line: two don't fit its card's height.
+ * which switch at the same width as the wall's desktop layout. Every title
+ * fits its card whole: text is never cut off mid-word.
  */
 
 const META = "truncate font-mono text-[9.5px] text-faint lg:text-[10px]";
@@ -57,12 +57,13 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
     case "post":
       return (
         <>
-          <span className="flex min-w-0 items-center gap-1.5 lg:gap-[7px]">
+          {/* When the name and the time don't both fit, the time wraps out of sight. */}
+          <span className="flex h-[18px] min-w-0 shrink-0 flex-wrap items-center gap-x-1.5 overflow-hidden lg:h-5 lg:gap-x-[7px]">
             <span className={AVATAR}>{save.initials}</span>
-            <span className="min-w-0 truncate text-[11px] font-medium lg:text-[11.5px]">
+            <span className="min-w-0 truncate text-[11px] leading-[18px] font-medium lg:text-[11.5px] lg:leading-5">
               {save.author}
             </span>
-            <span className="ml-auto shrink-0 font-mono text-[9px] whitespace-nowrap text-faint lg:text-[9.5px]">
+            <span className="ml-auto font-mono text-[9px] leading-[18px] whitespace-nowrap text-faint lg:text-[9.5px] lg:leading-5">
               {save.when}
             </span>
           </span>
@@ -88,7 +89,7 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
     case "video":
       return (
         <>
-          <span className="relative grid h-[46px] shrink-0 place-items-center overflow-hidden rounded-[7px] bg-card-raised text-text lg:h-16 lg:rounded-lg">
+          <span className="relative grid h-10 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-card-raised text-text lg:h-16 lg:rounded-lg">
             <Art seed={artSeed} height={56} />
             <span className="relative grid size-[22px] place-items-center rounded-full bg-bg/60 lg:size-6">
               <svg viewBox="0 0 16 16" className="size-2.5 fill-current lg:size-[11px]">
@@ -102,7 +103,7 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
               <ProgressFill percent={save.progress} />
             </span>
           </span>
-          <span className={`${TITLE} line-clamp-1 lg:line-clamp-2`}>{save.title}</span>
+          <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
           <span className={`mt-auto ${META}`}>{save.meta}</span>
         </>
       );
@@ -125,8 +126,8 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
       );
     case "pdf":
       return (
-        <span className="flex h-full min-w-0 items-stretch gap-[9px] lg:gap-2.5">
-          <span className="flex h-10 w-[30px] shrink-0 flex-col gap-[3px] rounded-[3px] bg-text px-[5px] py-1.5">
+        <span className="@container flex h-full min-w-0 items-stretch gap-2 lg:gap-2.5">
+          <span className="flex h-9 w-[26px] shrink-0 flex-col gap-[3px] rounded-[3px] bg-text px-1 py-1.5 @max-[130px]:hidden lg:h-10 lg:w-[30px] lg:px-[5px]">
             {[72, 100, 100, 100, 100, 50].map((width, i) => (
               <i
                 key={i}
@@ -155,9 +156,11 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
               ))}
             </span>
           </span>
-          <span className="flex min-w-0 items-center gap-1.5 lg:gap-[7px]">
+          <span className="flex min-w-0 shrink-0 items-center gap-1.5 lg:gap-[7px]">
             <span className={AVATAR}>{save.initials}</span>
-            <span className="min-w-0 truncate text-[11px] lg:text-[11.5px]">{save.title}</span>
+            <span className="line-clamp-2 min-w-0 text-[11px] leading-[1.36] lg:text-[11.5px]">
+              {save.title}
+            </span>
           </span>
           <span className={META}>{save.meta}</span>
         </>
@@ -169,7 +172,7 @@ function Body({ save, artSeed }: { save: Save; artSeed: number }): ReactNode {
             <Favicon letter={save.favicon} />
             {save.domain}
           </span>
-          <span className={`${TITLE} line-clamp-1`}>{save.title}</span>
+          <span className={`${TITLE} line-clamp-2`}>{save.title}</span>
           <span className={`mt-auto ${META}`}>{save.meta}</span>
         </>
       );

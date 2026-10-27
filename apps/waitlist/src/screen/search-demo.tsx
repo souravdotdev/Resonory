@@ -181,7 +181,7 @@ export function SearchDemo() {
       </div>
 
       <div
-        className={`mt-2 flex h-[72px] items-center gap-2.5 rounded-[13px] border border-line-strong bg-card-raised/94 px-3 py-[9px] shadow-[0_0_0_1px_rgb(0_0_0/0.4),0_30px_60px_-24px_rgb(0_0_0/0.95)] backdrop-blur-[16px] transition-[opacity,transform] ease-spring [transition-duration:500ms,900ms] lg:absolute lg:top-[100px] lg:left-[144px] lg:mt-0 lg:h-[76px] lg:w-[344px] lg:gap-[11px] lg:rounded-[14px] lg:py-2.5 ${
+        className={`mt-2 flex h-[72px] items-center gap-2.5 rounded-[13px] border border-line-strong bg-card-raised/94 px-3 py-[9px] shadow-[0_0_0_1px_rgb(0_0_0/0.4),0_30px_60px_-24px_rgb(0_0_0/0.95)] backdrop-blur-[16px] transition-[opacity,transform] ease-spring [transition-duration:500ms,900ms] lg:absolute lg:top-[100px] lg:left-[144px] lg:mt-0 lg:h-auto lg:min-h-[76px] lg:w-[344px] lg:gap-[11px] lg:rounded-[14px] lg:py-2.5 ${
           matched
             ? "opacity-100 delay-200"
             : "-translate-y-2 scale-[0.985] opacity-0 lg:translate-x-[18px] lg:translate-y-0 lg:scale-100"
@@ -197,7 +197,8 @@ export function SearchDemo() {
               now
             </span>
           </div>
-          <p className="truncate text-xs leading-[1.4] text-text/82 lg:text-[12.5px]">
+          {/* A long title takes a second line on desktop, where the notice floats over the page. */}
+          <p className="truncate text-xs leading-[1.4] text-text/82 lg:line-clamp-2 lg:text-[12.5px] lg:whitespace-normal">
             “{match.title}”
           </p>
           <p className="mt-px truncate font-mono text-[9.5px] text-faint lg:text-[10px]">
