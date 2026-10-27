@@ -6,13 +6,17 @@ import { prefersReducedMotion, watchViewport } from "./viewport";
 /**
  * Holds the element behind `ref` back (`data-<name>="waiting"`) until the
  * shared observer sees it enter the viewport, then marks it `shown` for good.
- * `globals.css` draws both states.
+ * `globals.css` draws both states for `reveal` and `words`; a `play` element
+ * draws its own, with `group-data-[play=waiting]` variants.
  *
  * Only elements that start below the fold are held back: what is on screen at
  * load, everything under reduced motion, and everything without JavaScript
  * stays visible from the start.
  */
-export function useRevealOnEnter(ref: RefObject<HTMLElement | null>, name: "reveal" | "words") {
+export function useRevealOnEnter(
+  ref: RefObject<HTMLElement | null>,
+  name: "reveal" | "words" | "play",
+) {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element || prefersReducedMotion()) return;
