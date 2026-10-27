@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { LogoSymbol } from "@/app/logo";
 import type { DemoMatch } from "./demo-match";
+import { WALL_ANCHOR, WALL_DEMO } from "./wall/markers";
 
 /** The search engine's answer to a query: three results and a count, all made up. */
 function resultsFor(query: string) {
@@ -53,6 +54,7 @@ export function SearchDemo({ match }: { match: DemoMatch }) {
 
   return (
     <div
+      {...WALL_DEMO}
       role="img"
       aria-label={describeDemo(match)}
       className="relative w-full max-w-[343px] animate-fade-up [animation-delay:340ms] lg:w-[488px] lg:max-w-none"
@@ -82,7 +84,10 @@ export function SearchDemo({ match }: { match: DemoMatch }) {
               <span className="ml-px inline-block h-4 w-[1.5px] shrink-0 animate-blink bg-text lg:h-[17px]" />
             </span>
           </span>
-          <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-line bg-card lg:size-[30px]">
+          <span
+            {...WALL_ANCHOR}
+            className="grid size-7 shrink-0 place-items-center rounded-lg border border-line bg-card lg:size-[30px]"
+          >
             <LogoSymbol className="h-[13px] w-auto lg:h-[15px]" />
           </span>
         </div>

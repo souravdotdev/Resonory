@@ -23,13 +23,19 @@
   /* A palette floats: a soft drop well below it, a tight one close in. */
   --shadow-palette: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35);
 
-  /* The one easing curve: every transition and animation uses it. */
+  /* The one easing curve: every transition and animation uses it, but the wall's slow drift. */
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* The screen's parts rise in on load, one after another. */
   --animate-fade-up: fade-up 1.2s var(--ease-spring) both;
   /* The demo's text caret. */
   --animate-blink: blink 1.1s steps(1, end) infinite;
+  /* The card wall: it fades in once laid out, then drifts a few pixels, to and fro. */
+  --animate-wall-in: fade-in 0.9s var(--ease-spring) both;
+  --animate-wall-drift: wall-drift 44s ease-in-out infinite alternate;
+  /* A thread to a lit card draws itself in, then its end dot appears. */
+  --animate-thread-draw: thread-draw 1.1s var(--ease-spring) both;
+  --animate-thread-dot: fade-in 0.4s var(--ease-spring) 0.7s both;
 
   @keyframes fade-up {
     from {
@@ -44,6 +50,27 @@
 
   @keyframes blink {
     50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* How far it drifts is set where it's used, smaller on a phone. */
+  @keyframes wall-drift {
+    to {
+      transform: translate3d(var(--wall-drift-x), var(--wall-drift-y), 0);
+    }
+  }
+
+  /* For a path with pathLength="1" and a stroke-dasharray of 1. */
+  @keyframes thread-draw {
+    from {
+      stroke-dashoffset: 1;
       opacity: 0;
     }
   }

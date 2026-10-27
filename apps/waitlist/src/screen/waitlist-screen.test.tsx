@@ -37,6 +37,54 @@ async function renderScreen(store = fakeStore(0)) {
   render(await WaitlistScreen({ store }));
 }
 
+const LAYOUT_PROPERTIES = [
+  "offsetParent",
+  "offsetLeft",
+  "offsetTop",
+  "offsetWidth",
+  "offsetHeight",
+];
+
+/**
+ * jsdom does no layout, so the card wall would never lay itself out. This
+ * gives every element a box: the wall a 1440×900 screen, the parts it keeps
+ * clear of small boxes in its top left corner.
+ */
+function layOutAsDesktop() {
+  const saved = LAYOUT_PROPERTIES.map(
+    (name) => [name, Object.getOwnPropertyDescriptor(HTMLElement.prototype, name)!] as const,
+  );
+  const size = (element: HTMLElement, wall: number, other: number) =>
+    element.hasAttribute("data-card-wall") ? wall : other;
+  Object.defineProperties(HTMLElement.prototype, {
+    offsetParent: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.parentElement;
+      },
+    },
+    offsetLeft: { configurable: true, get: () => 0 },
+    offsetTop: { configurable: true, get: () => 0 },
+    offsetWidth: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return size(this, 1440, 100);
+      },
+    },
+    offsetHeight: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return size(this, 900, 40);
+      },
+    },
+  });
+  return () => {
+    for (const [name, descriptor] of saved) {
+      Object.defineProperty(HTMLElement.prototype, name, descriptor);
+    }
+  };
+}
+
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", StubResizeObserver);
   stubMatchMedia(false);
@@ -127,5 +175,62 @@ describe("waitlist screen", () => {
     expect(within(demo).getByText("You saved something like this")).toBeTruthy();
     expect(within(demo).getByText("“Five retro formats your team won’t dread”")).toBeTruthy();
     expect(within(demo).getByText("X post · saved 3 months ago")).toBeTruthy();
+  });
+
+  describe("over the wall of saved cards", () => {
+    let restoreLayout: () => void;
+
+    beforeEach(() => {
+      restoreLayout = layOutAsDesktop();
+    });
+
+    afterEach(() => {
+      restoreLayout();
+    });
+
+    it("keeps the wall out of the accessibility tree", async () => {
+      await renderScreen();
+
+      const wallCards = screen.getAllByText("How we cut our deploy time in half");
+      for (const card of wallCards) {
+        expect(card.closest('[aria-hidden="true"]')).not.toBeNull();
+        expect(card.closest("[inert]")).not.toBeNull();
+      }
+    });
+
+    it("never moves keyboard focus onto the wall", async () => {
+      const user = userEvent.setup();
+      await renderScreen();
+      const wall = screen
+        .getAllByText("How we cut our deploy time in half")[0]!
+        .closest("[inert]")!;
+
+      const reached = new Set<Element>();
+      for (
+        let i = 0;
+        i < 20 && document.activeElement && !reached.has(document.activeElement);
+        i++
+      ) {
+        if (document.activeElement !== document.body) reached.add(document.activeElement);
+        await user.tab();
+      }
+
+      expect(reached.size).toBeGreaterThan(0);
+      for (const element of reached) expect(wall.contains(element)).toBe(false);
+      expect(wall.querySelectorAll("a, button, input, select, textarea, [tabindex]")).toHaveLength(
+        0,
+      );
+    });
+
+    it("lights the demo's match on the wall", async () => {
+      await renderScreen();
+
+      const lit = screen
+        .getAllByText("Five retro formats your team won’t dread")
+        .map((title) => title.closest("[data-lit]"))
+        .filter((card) => card !== null);
+      expect(lit).toHaveLength(1);
+      expect(lit[0]!.closest('[aria-hidden="true"]')).not.toBeNull();
+    });
   });
 });
