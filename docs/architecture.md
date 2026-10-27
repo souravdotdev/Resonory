@@ -19,9 +19,10 @@ apps/
               src/interface/       itemsWorker.ts (BullMQ Worker + job switch), itemsJobFailed.ts (failed handler), processors/
               src/infrastructure/  adapters: the Drizzle database and Item repository
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
-  waitlist/ Next.js marketing page and POST /api/waitlist, organised by feature (ADR 0005):
+  waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory
-              src/app/             the page, privacy page, 404, OG/icon images, the form, nav and footer
+              src/app/             the routes (page, privacy page, 404), OG/icon images, the signup form,
+                                   and the nav and footer of the privacy page and 404
               src/screen/          the one-screen waitlist page: its composition, nav button, search demo and the demo loop
               src/screen/wall/     the card wall behind it: content, the pure layout, cards and the client wall
               src/motion/          the reduced motion preference

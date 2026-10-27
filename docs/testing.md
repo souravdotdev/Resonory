@@ -65,6 +65,8 @@ pnpm test   # vitest run in every package, via Turborepo
 
 The Drizzle-backed store (`src/waitlist/drizzle-store.ts`) isn't unit-tested, like the API's Drizzle repositories: it's checked by hand with curl against the local Docker Postgres. The generated images (OG image, icons) aren't tested either; `next build` renders them.
 
+What jsdom can't show is checked in a real browser against `next build` + `next start` (with `DATABASE_URL` pointing at the local Docker Postgres, never a `.env` file): screenshots at 1440×900, 1280×800, 1024×768 and 375×812, mid-match and under reduced motion, confirm the screen doesn't scroll, no card sits under the copy, form, demo, nav or footer, and no text in a card or the notification is cut off mid-word; a 4× CPU-throttled capture of the loop checks its frame times and that the page doesn't shift on load; and one signup through the form stores a Waitlist Entry and shows the success card (the test row is deleted afterwards).
+
 **`packages/ui`** — `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
 
 ## Fakes over mocking libraries

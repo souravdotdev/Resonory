@@ -59,7 +59,7 @@ const DESKTOP = {
   cardWidth: 184,
   /** Column to column: the card width plus the gap. */
   pitch: 200,
-  heights: { post: 120, video: 146, article: 124, pdf: 78, insta: 196, link: 92 } satisfies Record<
+  heights: { post: 120, video: 146, article: 124, pdf: 78, insta: 196, link: 104 } satisfies Record<
     SaveKind,
     number
   >,

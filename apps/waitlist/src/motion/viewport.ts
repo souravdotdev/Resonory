@@ -16,7 +16,7 @@ function subscribeToReducedMotion(onChange: () => void) {
 }
 
 /** Whether the visitor asked for reduced motion, read once, outside React. */
-export function prefersReducedMotion(): boolean {
+function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(REDUCED_MOTION).matches;
 }
 
