@@ -97,7 +97,7 @@ export function WaitlistForm({ note }: { note?: string }) {
         Email
       </label>
       <div
-        className={`flex w-full max-w-[520px] items-center gap-2 rounded-[13px] border bg-card py-[5px] pr-[5px] pl-3.5 shadow-[inset_0_1px_0_rgb(250_250_247/0.04),0_24px_48px_-28px_rgb(0_0_0/0.8)] transition-[border-color,box-shadow] duration-500 ease-spring focus-within:shadow-[0_0_0_4px_rgb(250_250_247/0.07)] sm:gap-2.5 sm:rounded-[14px] sm:py-1.5 sm:pr-1.5 sm:pl-4 ${error ? "border-text/72" : "border-line-strong hover:border-text/26 focus-within:border-text/44"}`}
+        className={`flex w-full max-w-[520px] items-center gap-2 rounded-[13px] border bg-card py-[5px] pr-[5px] pl-3.5 shadow-[inset_0_1px_0_rgb(250_250_247/0.04),0_24px_48px_-28px_rgb(0_0_0/0.8)] transition-[border-color,box-shadow] duration-500 ease-spring focus-within:shadow-[0_0_0_4px_rgb(250_250_247/0.07)] sm:gap-2.5 sm:rounded-[14px] sm:py-1.5 sm:pr-1.5 sm:pl-4 ${error ? "border-error/70" : "border-line-strong hover:border-text/26 focus-within:border-text/44"}`}
       >
         <EnvelopeSimple
           aria-hidden="true"
@@ -156,7 +156,7 @@ export function WaitlistForm({ note }: { note?: string }) {
         <p
           id={messageId}
           role="alert"
-          className="mt-2.5 flex min-h-[18px] items-center gap-2 text-[13px] text-text sm:mt-3 sm:min-h-5 sm:text-[13.5px]"
+          className="mt-2.5 flex min-h-[18px] items-center gap-2 text-[13px] text-error sm:mt-3 sm:min-h-5 sm:text-[13.5px]"
         >
           <WarningCircle aria-hidden="true" size={16} className="shrink-0" />
           {error}

@@ -163,7 +163,7 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 **The One White Rule.** Secondary text and edges are the same off-white at fixed strengths (66, 56, 16, 9 percent), not new greys. A new tier of emphasis takes a new opacity of Paper White, not a new hex.
 
-**The Error Is Not Red Rule.** Errors stay in the monochrome: the field's edge goes to Paper White at 72% and the message is Paper White text with a warning icon. Neither red nor orange signals an error.
+**The Error Is Red Rule.** Errors are red, at the founder's request: the field's edge goes to the error red (`#FF6B6B`) at 70% and the message is set in that red with a warning icon. Red is used for errors and nothing else; it never competes with the orange, which still means an Item came back.
 
 ## Typography
 
