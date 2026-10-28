@@ -21,6 +21,8 @@
   --color-accent-hover: #e0712b;
   /* Success: used only for the check on the signup's success card. */
   --color-success: #3fb26b;
+  /* Error: used only for the signup form's error message and its field's border. */
+  --color-error: #ff6b6b;
   /* The single screen's text and edges: the off-white at set strengths. */
   --color-mute: rgb(250 250 247 / 0.66);
   --color-faint: rgb(250 250 247 / 0.56);

@@ -357,8 +357,8 @@
         "section": "colors"
       },
       {
-        "name": "The Error Is Not Red Rule",
-        "body": "Errors stay in the monochrome: the field's edge goes to Paper White at 72% and the message is Paper White text with a warning icon. Neither red nor orange signals an error.",
+        "name": "The Error Is Red Rule",
+        "body": "Errors are red, at the founder's request: the field's edge goes to the error red (#FF6B6B) at 70% and the message is set in that red with a warning icon. Red is used for errors and nothing else; it never competes with the orange, which still means an Item came back.",
         "section": "colors"
       },
       {
