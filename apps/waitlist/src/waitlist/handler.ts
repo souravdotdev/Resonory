@@ -1,6 +1,8 @@
 import type { ErrorCode, ErrorResponse } from "@resonory/shared/schemas/common";
 import { HONEYPOT_FIELD, JoinWaitlistRequestSchema, SERVER_ERROR_MESSAGE } from "./request";
+import type { EmailSender } from "./email-sender";
 import type { WaitlistStore } from "./store";
+import { buildWelcomeEmail } from "./welcome-email";
 
 /** An error in the shared envelope (`ErrorResponseSchema` in @resonory/shared). */
 function errorResponse(status: number, code: ErrorCode, message: string) {
@@ -27,7 +29,40 @@ function filledHoneypot(body: unknown): boolean {
   return typeof value === "string" ? value.trim() !== "" : value != null;
 }
 
-export function createJoinWaitlistHandler(store: WaitlistStore) {
+export interface JoinWaitlistDependencies {
+  store: WaitlistStore;
+  emailSender: EmailSender;
+  /** Runs work after the response has gone back (Next's `after`). */
+  defer: (task: () => Promise<void>) => void;
+}
+
+/**
+ * Sends the Welcome email and records that the provider accepted it. Runs
+ * after the response, so a failure is logged and goes no further: the visitor
+ * is already on the list, and an unrecorded send can be re-sent later.
+ */
+async function sendWelcomeEmail(
+  { store, emailSender }: JoinWaitlistDependencies,
+  email: string,
+): Promise<void> {
+  try {
+    // A skipped send (no provider configured) is not recorded as sent.
+    if ((await emailSender.send(buildWelcomeEmail(email))) === "skipped") return;
+  } catch (error) {
+    console.error("Could not send the welcome email", error);
+    return;
+  }
+
+  try {
+    await store.markWelcomeEmailed(email);
+  } catch (error) {
+    console.error("Could not record the welcome email as sent", error);
+  }
+}
+
+export function createJoinWaitlistHandler(dependencies: JoinWaitlistDependencies) {
+  const { store, defer } = dependencies;
+
   return async function handleJoinWaitlist(request: Request): Promise<Response> {
     if (!isJson(request)) {
       return errorResponse(400, "validation_failed", "Send the request as application/json");
@@ -53,11 +88,22 @@ export function createJoinWaitlistHandler(store: WaitlistStore) {
       );
     }
 
+    let created: boolean;
     try {
-      await store.join({ email: parsed.data.email, source: parsed.data.source ?? null });
+      ({ created } = await store.join({
+        email: parsed.data.email,
+        source: parsed.data.source ?? null,
+      }));
     } catch (error) {
       console.error("Could not add a Waitlist Entry", error);
       return errorResponse(500, "internal", SERVER_ERROR_MESSAGE);
+    }
+
+    // Only a new entry is emailed, so the form can't be used to fill someone
+    // else's inbox. The response is the same either way.
+    if (created) {
+      const { email } = parsed.data;
+      defer(() => sendWelcomeEmail(dependencies, email));
     }
 
     return Response.json({ ok: true });

@@ -26,7 +26,10 @@ function stubMatchMedia(reducedMotion: boolean) {
 /** An in-memory Waitlist store holding `count` Waitlist Entries. */
 function fakeStore(count: number): WaitlistStore {
   return {
-    async join() {},
+    async join() {
+      return { created: true };
+    },
+    async markWelcomeEmailed() {},
     async count() {
       return count;
     },

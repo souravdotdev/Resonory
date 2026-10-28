@@ -57,6 +57,13 @@
       "when": 1792939833043,
       "tag": "0007_create_waitlist_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793171888924,
+      "tag": "0008_add_welcome_emailed_at_to_waitlist_entries",
+      "breakpoints": true
     }
   ]
 }
