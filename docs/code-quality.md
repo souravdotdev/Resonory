@@ -10,7 +10,7 @@ Shared config lives in `packages/typescript-config`, three bases:
 - `library.json` — extends `base`, adds `declaration`/`declarationMap` (for editor go-to-definition into internal packages)
 - `nextjs.json` — extends `base`, adds JSX/Next.js plugin settings
 
-Every app/package has its own `tsconfig.json` extending one of these (never a root-level `tsconfig.json` — each package's config stays local so a change to one package's types doesn't invalidate every other package's Turborepo cache). Internal packages use Node.js subpath-style resolution (`moduleResolution: "bundler"`) rather than TS path aliases, so JIT-imported packages resolve correctly without a build step. The one alias is inside `apps/api`: `@/*` points at its own `src/` (so `@/domain/errors` rather than long relative paths), and `apps/api/vitest.config.ts` repeats it for tests; `tsx` and `tsup` read it from `tsconfig.json`. `apps/api` also turns on `experimentalDecorators` for InversifyJS, deliberately without `emitDecoratorMetadata` (see [Clean Architecture](./clean-architecture.md#tokens-the-container-and-scopes)).
+Every app/package has its own `tsconfig.json` extending one of these (never a root-level `tsconfig.json` — each package's config stays local so a change to one package's types doesn't invalidate every other package's Turborepo cache). Internal packages use Node.js subpath-style resolution (`moduleResolution: "bundler"`) rather than TS path aliases, so JIT-imported packages resolve correctly without a build step. The one alias is inside the apps (`apps/api`, `apps/web` and `apps/waitlist`): `@/*` points at the app's own `src/` (so `@/domain/errors` rather than long relative paths), and each app's `vitest.config.ts` repeats it for tests; `tsx` and `tsup` (api) and Next.js (web, waitlist) read it from `tsconfig.json`. `apps/api` also turns on `experimentalDecorators` for InversifyJS, deliberately without `emitDecoratorMetadata` (see [Clean Architecture](./clean-architecture.md#tokens-the-container-and-scopes)).
 
 Pinned to `typescript@^6.0.3` everywhere — not `latest` (TypeScript 7 is out but `typescript-eslint` doesn't support it yet as a peer dependency; pinning avoids the peer-dependency conflict rather than fighting it per-install).
 
@@ -18,7 +18,7 @@ Pinned to `typescript@^6.0.3` everywhere — not `latest` (TypeScript 7 is out b
 pnpm check-types   # tsc --noEmit in every package, via Turborepo
 ```
 
-`apps/web`'s `check-types` runs `next typegen` first (route types into `.next/types`, and `next-env.d.ts`), and `next build` empties and rewrites the same `.next` and `next-env.d.ts`. Run side by side (as in `turbo run lint check-types test build`, worst with `--force`), tsc could find `.next/types` gone halfway through. So `apps/web/turbo.json` makes the web `build` depend on its own `check-types`: the two never overlap, and `turbo run build` type-checks the web app first. The Next.js ESLint config ignores the generated `next-env.d.ts` for the same reason.
+`apps/web`'s and `apps/waitlist`'s `check-types` runs `next typegen` first (route types into `.next/types`, and `next-env.d.ts`), and `next build` empties and rewrites the same `.next` and `next-env.d.ts`. Run side by side (as in `turbo run lint check-types test build`, worst with `--force`), tsc could find `.next/types` gone halfway through. So `apps/web/turbo.json` and `apps/waitlist/turbo.json` make each Next.js app's `build` depend on its own `check-types`: the two never overlap, and `turbo run build` type-checks those apps first. The Next.js ESLint config ignores the generated `next-env.d.ts` for the same reason.
 
 ## ESLint
 
@@ -26,7 +26,7 @@ Shared config lives in `packages/eslint-config` (ESLint 9, flat config format):
 
 - `base.js` — `@eslint/js` recommended + `typescript-eslint` recommended + `eslint-config-prettier` (disables any ESLint rule that would conflict with Prettier's formatting)
 - `node-library.js` — thin wrapper around `base.js`; used by `apps/api`, `apps/worker`, and every `packages/*` package
-- `next.js` — `base.js`'s rules plus `eslint-config-next`'s React/JSX-a11y/Next-specific rules (core-web-vitals); used only by `apps/web`
+- `next.js` — `base.js`'s rules plus `eslint-config-next`'s React/JSX-a11y/Next-specific rules (core-web-vitals); used by `apps/web` and `apps/waitlist`
 
 Every package has a short `eslint.config.js` importing the right shared config, and a `lint` script (`eslint .`). `apps/api`'s adds the dependency-rule lint guard: `no-restricted-imports` stops `src/domain/` and `src/application/` from importing Drizzle, Fastify, Better Auth, postgres, ioredis or `@resonory/db` (see [Clean Architecture](./clean-architecture.md#lint-guard)).
 

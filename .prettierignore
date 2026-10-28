@@ -3,3 +3,5 @@ dist/
 .next/
 .turbo/
 packages/db/migrations/
+supabase/.temp/
+supabase/.branches/
