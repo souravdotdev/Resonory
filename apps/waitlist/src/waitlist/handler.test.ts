@@ -208,8 +208,8 @@ describe("the welcome email", () => {
       to: "ada@example.com",
       subject: "You're on the Resonory waitlist",
     });
-    expect(sent[0]?.html).toContain("You&#39;re on the list.");
-    expect(sent[0]?.text).toContain("You're on the list.");
+    expect(sent[0]?.html).toContain("You&#39;re on the List!");
+    expect(sent[0]?.text).toContain("You're on the List!");
     expect(welcomeEmailed).toEqual(["ada@example.com"]);
   });
 

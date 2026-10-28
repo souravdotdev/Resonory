@@ -79,7 +79,7 @@ A new sending domain starts at 300 emails a day (see [AutoSend notes](#autosend-
 - **Send check (do this last, by hand, with your own address).** Needs steps 6 to 9 done and the domain verified. Join at `https://resonory.com` with an address you own and can read, then check:
   - the email arrives from `hello@resonory.com` with the subject "You're on the Resonory waitlist";
   - it lands in the inbox, not spam (check the spam folder if it isn't there);
-  - it reads as specified: "You're on the list." / "Thanks for joining Resonory. You'll be among the first to use it: we'll email you once more, when early access opens." / "Sourav Sanjay, Founder, Resonory", with no links or images;
+  - it reads as specified: "You're on the List!" / "Thanks for joining Resonory." then, on its own line, "You'll be among the first to use it: we'll email you once more, when early access opens." / "Sourav Sanjay, Founder, Resonory", in the page's dark look with the Resonory logo at the top and no links. The logo is served from `https://resonory.com/brand/email-logo.png`, so deploy the site before the first real send, or the logo shows as its alt text "Resonory";
   - the row's `welcome_emailed_at` in Supabase is set (it stays null if the send failed or no key is set; check the function logs for "Could not send the welcome email");
   - joining again with the same address sends nothing new.
 
