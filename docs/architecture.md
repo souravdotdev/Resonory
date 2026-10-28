@@ -21,7 +21,8 @@ apps/
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
   waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory,
-                                   the signup form and its email field id
+                                   EmailSender port with its AutoSend and logging adapters, the Welcome
+                                   email builder, the signup form and its email field id
               src/app/             the routes (page, privacy page, 404), OG/icon images,
                                    and the nav and footer of the privacy page and 404
               src/screen/          the one-screen waitlist page: its composition, nav button, search demo and the demo loop
