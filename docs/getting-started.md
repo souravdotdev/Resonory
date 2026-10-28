@@ -71,6 +71,36 @@ insert into storage.buckets (id, name, public) values ('thumbnails', 'thumbnails
 
 Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/{userId}/{itemId}.webp`.
 
+## Local Supabase (optional)
+
+Thumbnail storage normally uses your hosted dev project (above). You can run Supabase on your machine instead with the [Supabase CLI](https://supabase.com/docs/guides/local-development): its local stack includes Storage, and the worker and API only need a Supabase URL, a service role key and the private `thumbnails` bucket, so they don't care that the stack is local. Docker must be running. Nothing in the repo depends on this; it is a way to work on Thumbnails without touching a hosted project.
+
+1. **Ports.** Every local Supabase stack defaults to the same ports (`54321` API, `54322` database, `54323` Studio), so two stacks on one machine collide. This repo's `supabase/config.toml` therefore moves every port into the `553xx` range: `55321` API, `55322` database, `55323` Studio, `55324` Inbucket (test mail), `55327` analytics, `55320` shadow database and `55329` pooler, with `project_id = "Resonory"`. It can run beside a stack on the defaults. If something else already uses one of these, change it in the file.
+2. **Start it** from the repo root (`supabase/config.toml` already exists):
+
+   ```bash
+   supabase start    # starts the stack, including Storage
+   supabase stop     # stops it
+   ```
+
+3. **Create the `thumbnails` bucket, private.** The worker never creates it. In local Studio (`http://127.0.0.1:55323`) open **Storage → New bucket**, name it `thumbnails` and leave **Public bucket** off. Or run the same SQL as above in Studio's SQL editor. Recent CLI versions can also create it from `supabase/config.toml` (a `[storage.buckets.thumbnails]` table with `public = false`), which runs on `supabase start` and `supabase db reset`.
+4. **Point the apps at it.** Run `supabase status` for the API URL and the service role (secret) key, then set both in **`apps/worker/.env`** and **`apps/api/.env`**: the worker uploads Thumbnails and the API signs their links.
+
+   ```
+   SUPABASE_URL=http://127.0.0.1:55321
+   SUPABASE_SERVICE_ROLE_KEY=<the local service role key from supabase status>
+   ```
+
+   This is the local stack's own key, not your hosted project's. Never commit it.
+
+5. **Check an image loads.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), and the app shows it through a signed link to `http://127.0.0.1:55321`, which your browser reaches on the same machine.
+
+Good to know:
+
+- **Local Storage is separate from the hosted project.** It holds only what you upload locally; Thumbnails already in the hosted project don't appear, and local Items would need reprocessing to get them there.
+- **The database is a separate choice.** Storage doesn't need to share a database with Resonory. By default `DATABASE_URL` stays on the Docker Postgres (port `5433`) or your hosted dev project. To use the local Supabase database instead, set `DATABASE_URL` to its connection string (`supabase status` shows it, port `55322` with this config) in the three `.env` files and run `pnpm db:migrate` against it.
+- **Switching back.** Put the hosted project's `SUPABASE_URL` and service role key back in the two `.env` files. With either variable unset, Thumbnails are simply off.
+
 ## Running the apps
 
 ```bash
