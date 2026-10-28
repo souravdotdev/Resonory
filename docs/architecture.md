@@ -19,6 +19,16 @@ apps/
               src/interface/       itemsWorker.ts (BullMQ Worker + job switch), itemsJobFailed.ts (failed handler), processors/
               src/infrastructure/  adapters: the Drizzle database and Item repository
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
+  waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
+              src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory,
+                                   EmailSender port with its AutoSend and logging adapters, the Welcome
+                                   email builder, the signup form and its email field id
+              src/app/             the routes (page, privacy page, 404), OG/icon images,
+                                   and the nav and footer of the privacy page and 404
+              src/screen/          the one-screen waitlist page: its composition, nav button, search demo and the demo loop
+              src/screen/wall/     the card wall behind it: its demo Items, the pure layout, Item cards and the client wall
+              src/motion/          the reduced motion preference (reduced-motion.ts)
+              src/brand/           brand colors, the logo paths and SVG components, the font for generated images
 
 packages/
   shared/             zod request/response schemas for web <-> api; depends only on zod
@@ -31,13 +41,13 @@ packages/
   vitest-config/      Shared Vitest presets (node / react)
 ```
 
-`apps/*` are deployable units — each one runs as its own process. `packages/*` are internal, unpublished libraries consumed via pnpm's `workspace:*` protocol and scoped under `@resonory/*`. Apps stay unscoped (`web`, `api`, `worker`) since nothing else depends on them.
+`apps/*` are deployable units — each one runs as its own process. `packages/*` are internal, unpublished libraries consumed via pnpm's `workspace:*` protocol and scoped under `@resonory/*`. Apps stay unscoped (`web`, `api`, `worker`, `waitlist`) since nothing else depends on them.
 
 Internal packages use **Just-in-Time (JIT) compilation** — they export TypeScript source directly (see each package's `exports` field in `package.json`), never compiled to JS themselves. `apps/web` (Next.js's own bundler) and `apps/api`/`apps/worker` in dev (`tsx`, esbuild-based) transpile that source on the fly, so no build step is needed just to _consume_ `@resonory/db` from `apps/api`, for example.
 
 That's fine for anything bundler-based — but plain `node` cannot execute raw TypeScript at all (Node 20's native TS support doesn't exist; it landed in Node 22.6+/23.6+, and even then doesn't handle decorators). So `apps/api`'s and `apps/worker`'s **production** builds don't use plain `tsc` — they use [`tsup`](https://tsup.egoist.dev) (an esbuild-based bundler) via each app's `tsup.config.ts`, with `noExternal: [/^@resonory\//]` forcing the JIT workspace packages to be inlined into the output, while real npm dependencies (`fastify`, `drizzle-orm`, etc.) stay external via `skipNodeModulesBundle`. This mirrors exactly what `tsx` already does correctly in dev — same underlying esbuild resolution, just producing a deployable bundle instead of running a watcher. Two real, verified gotchas from building this: transitive npm packages used only _inside_ a bundled workspace package (`ioredis`, `postgres` and `zod` through `@resonory/db`) had to be explicitly added to the consuming app's own `dependencies` too, since pnpm's strict `node_modules` isolation means they're otherwise only resolvable from the original package's own scope, not the app's; and `apps/api` deliberately leaves `emitDecoratorMetadata` off (esbuild can't emit it), so every constructor parameter of an `@injectable()` class names its dependency with `@inject(TOKENS.X)`.
 
-`packages/*` themselves stay JIT — no `build` script, not independently cached by Turborepo the way `apps/api`'s/`apps/worker`'s own `build` task is. Only the three deployable apps have real `build` scripts (`tsup` for api/worker, `next build` for web).
+`packages/*` themselves stay JIT — no `build` script, not independently cached by Turborepo the way `apps/api`'s/`apps/worker`'s own `build` task is. Only the four deployable apps have real `build` scripts (`tsup` for api/worker, `next build` for web and waitlist).
 
 ## Why this split
 
