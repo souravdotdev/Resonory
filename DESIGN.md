@@ -175,8 +175,8 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 ### Hierarchy
 
-- **Display** (600, 36px on phones, clamp(36px, 8.4cqi, 54px) on desktop, line-height 1.04, -0.04em): the one headline. Filled with a Paper White to Ash gradient; the highlighted verbs are set in orange with the italic removed, so emphasis comes from colour, not slant.
-- **Body lead** (400, 15px on phones, 17px on desktop, line-height 1.5 to 1.55, Mute): the sub under the headline, capped at 30em and set with pretty wrapping.
+- **Display** (600, 36px on phones (scaled with the column under 375px), clamp(36px, 8.4cqi, 54px) from 640px, line-height 1.04, -0.04em): the one headline. Filled with a Paper White to Ash gradient; the highlighted verbs are set in orange with the italic removed, so emphasis comes from colour, not slant.
+- **Body lead** (400, 15px on phones, 17px from 640px, line-height 1.5 to 1.55, Mute): the sub under the headline, capped at 30em and set with pretty wrapping.
 - **Body** (400, 15 to 15.5px): the email input and general running text.
 - **Label** (500, 13.5 to 14.5px): button text and the confirmation heading.
 - **Card title** (400, 12 to 12.5px, line-height 1.36 to 1.38): titles on Item cards and the Cue; clamped to two or three whole lines, never cut mid-word.
@@ -193,9 +193,11 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 The waitlist is a single screen that fills one dynamic viewport (min-height 100dvh) and only grows, so the page scrolls, when the viewport is too short for the form. The card wall is absolutely positioned behind everything and is laid out to keep clear of the nav, the copy column, the demo and the footer.
 
-On desktop (1024px and up) the main area is a two-column grid: the copy column up to 640px and a fixed 488px demo column, vertically centred, an 8px gap, 88px top and bottom padding, 32px right padding and a left gutter of clamp(32px, 5.56vw, 80px). The copy column is a size container, so the headline scales with its width (8.4cqi). Below 1024px the layout stacks: 20px side gutters, 80px top padding to clear the nav, the copy capped at 560px, then the demo 24px below at up to 343px wide and reduced to just its search bar.
+On desktop (1024px and up) the main area is a two-column grid: the copy column up to 640px and a fixed 488px demo column, vertically centred, an 8px gap, 88px top and bottom padding, 32px right padding and a left gutter of clamp(32px, 5.56vw, 80px), growing past 1440px wide to half the extra width, so the pair stays where the 1440px frame puts it, centred on a wider screen. The copy column is a size container, so the headline scales with its width (8.4cqi). Below 1024px the layout stacks in one centred column, 520px at most: 20px side gutters, 80px top padding to clear the nav (72px on a screen under 600px tall), the copy, then the demo 24px below, as wide as the form and reduced to just its search bar. Room is kept under the demo for the cards it finds (264px on a phone, 220px from 640px) and given up first on a short screen; what's left is shared above the stack and below it (twice as much below from 640px).
 
-The nav pill floats at the top (12px inset on phones, 20px on desktop) centred at up to 720px; the footer pill floats 8 to 14px from the bottom, sized to its content. Base text size is 15px on phones and 16px on desktop.
+From 640px (tablets, landscape phones) the nav, footer, form, card and type sizes are the desktop ones, the headline at clamp(36px, 8.4cqi, 54px) on one line per sentence, and the wall is the desktop's column wall, its columns centred on the screen and the promised cards in a row under the demo. Below 640px the headline is 36px (scaled down with the column under 375px), and the wall is the design's four phone cards in two columns under the demo, as wide as it; on a screen too short for them, one row of two PDF cards.
+
+The nav pill floats at the top (12px inset on phones, 20px from 640px) centred at up to 720px; the footer pill floats 8 to 14px from the bottom, sized to its content. Base text size is 15px on phones and 16px on desktop.
 
 Spacing is tight and concentric: elements nested inside a rounded container sit 5px (phone) or 6px (desktop) from its edge, which is why the field and nav carry 5 to 6px padding on the button side and more on the text side. Floating palettes stack 8px apart.
 

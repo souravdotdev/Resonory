@@ -5,17 +5,17 @@ import { thumbnailArt } from "./thumbnail-art";
 
 /*
  * One Item's card on the wall, drawn the way the founder's design draws
- * each card style. The phone sizes come first; `lg:` carries the desktop ones,
- * which switch at the same width as the wall's desktop layout. Every title
+ * each card style. The phone sizes come first; `sm:` carries the desktop ones,
+ * which switch where the wall of columns starts (`COLUMNS_MIN_WIDTH`). Every title
  * fits its card whole: text is never cut off mid-word.
  */
 
-const META = "truncate font-mono text-[9.5px] text-faint lg:text-[10px]";
-const TITLE = "text-[12px] leading-[1.36] text-text lg:text-[12.5px] lg:leading-[1.38]";
+const META = "truncate font-mono text-[9.5px] text-faint sm:text-[10px]";
+const TITLE = "text-[12px] leading-[1.36] text-text sm:text-[12.5px] sm:leading-[1.38]";
 const SOURCE =
-  "flex min-w-0 items-center gap-1.5 font-mono text-[9.5px] whitespace-nowrap text-faint lg:text-[10px]";
+  "flex min-w-0 items-center gap-1.5 font-mono text-[9.5px] whitespace-nowrap text-faint sm:text-[10px]";
 const AVATAR =
-  "grid size-[18px] shrink-0 place-items-center rounded-full border border-line-strong bg-card-raised font-mono text-[7.5px] text-text lg:size-5 lg:text-[8px]";
+  "grid size-[18px] shrink-0 place-items-center rounded-full border border-line-strong bg-card-raised font-mono text-[7.5px] text-text sm:size-5 sm:text-[8px]";
 
 /** The stroked 16×16 icons the design draws for a post's counts. */
 const ENGAGEMENT_ICONS = [
@@ -26,7 +26,7 @@ const ENGAGEMENT_ICONS = [
 
 function Favicon({ letter }: { letter: string }) {
   return (
-    <span className="grid size-3.5 shrink-0 place-items-center rounded-[4px] border border-line-strong bg-card-raised text-[8px] text-text lg:size-[15px] lg:text-[8.5px]">
+    <span className="grid size-3.5 shrink-0 place-items-center rounded-[4px] border border-line-strong bg-card-raised text-[8px] text-text sm:size-[15px] sm:text-[8.5px]">
       {letter}
     </span>
   );
@@ -58,25 +58,25 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
       return (
         <>
           {/* When the name and the time don't both fit, the time wraps out of sight. */}
-          <span className="flex h-[18px] min-w-0 shrink-0 flex-wrap items-center gap-x-1.5 overflow-hidden lg:h-5 lg:gap-x-[7px]">
+          <span className="flex h-[18px] min-w-0 shrink-0 flex-wrap items-center gap-x-1.5 overflow-hidden sm:h-5 sm:gap-x-[7px]">
             <span className={AVATAR}>{item.initials}</span>
-            <span className="min-w-0 truncate text-[11px] leading-[18px] font-medium lg:text-[11.5px] lg:leading-5">
+            <span className="min-w-0 truncate text-[11px] leading-[18px] font-medium sm:text-[11.5px] sm:leading-5">
               {item.author}
             </span>
-            <span className="ml-auto font-mono text-[9px] leading-[18px] whitespace-nowrap text-faint lg:text-[9.5px] lg:leading-5">
+            <span className="ml-auto font-mono text-[9px] leading-[18px] whitespace-nowrap text-faint sm:text-[9.5px] sm:leading-5">
               {item.savedWhen}
             </span>
           </span>
-          <span className={`${TITLE} line-clamp-2 lg:line-clamp-3`}>{item.title}</span>
-          <span className="mt-auto flex items-center gap-[9px] font-mono text-[9px] text-faint lg:gap-2.5 lg:text-[9.5px]">
+          <span className={`${TITLE} line-clamp-2 sm:line-clamp-3`}>{item.title}</span>
+          <span className="mt-auto flex items-center gap-[9px] font-mono text-[9px] text-faint sm:gap-2.5 sm:text-[9.5px]">
             {[item.replies, item.reposts, item.likes].map((count, i) => (
               <span
                 key={ENGAGEMENT_ICONS[i]}
-                className="inline-flex items-center gap-[3px] lg:gap-1"
+                className="inline-flex items-center gap-[3px] sm:gap-1"
               >
                 <svg
                   viewBox="0 0 16 16"
-                  className="size-2.5 fill-none stroke-current stroke-[1.3] [stroke-linecap:round] [stroke-linejoin:round] lg:size-[11px]"
+                  className="size-2.5 fill-none stroke-current stroke-[1.3] [stroke-linecap:round] [stroke-linejoin:round] sm:size-[11px]"
                 >
                   <path d={ENGAGEMENT_ICONS[i]} />
                 </svg>
@@ -89,14 +89,14 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
     case "video":
       return (
         <>
-          <span className="relative grid h-10 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-card-raised text-text lg:h-16 lg:rounded-lg">
+          <span className="relative grid h-10 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-card-raised text-text sm:h-16 sm:rounded-lg">
             <Art seed={artSeed} height={56} />
-            <span className="relative grid size-[22px] place-items-center rounded-full bg-bg/60 lg:size-6">
-              <svg viewBox="0 0 16 16" className="size-2.5 fill-current lg:size-[11px]">
+            <span className="relative grid size-[22px] place-items-center rounded-full bg-bg/60 sm:size-6">
+              <svg viewBox="0 0 16 16" className="size-2.5 fill-current sm:size-[11px]">
                 <path d="M6 4.5v7l5.5-3.5z" />
               </svg>
             </span>
-            <span className="absolute right-[5px] bottom-1.5 rounded-[4px] bg-bg/72 px-1 py-px font-mono text-[8.5px] lg:right-1.5 lg:bottom-[7px] lg:text-[9px]">
+            <span className="absolute right-[5px] bottom-1.5 rounded-[4px] bg-bg/72 px-1 py-px font-mono text-[8.5px] sm:right-1.5 sm:bottom-[7px] sm:text-[9px]">
               {item.duration}
             </span>
             <span className="absolute inset-x-0 bottom-0 h-[3px] bg-bg/60">
@@ -115,19 +115,19 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
             {item.domain}
           </span>
           <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
-          <span className="mt-auto flex items-center gap-2 font-mono text-[9px] whitespace-nowrap text-faint lg:mt-0 lg:text-[9.5px]">
+          <span className="mt-auto flex items-center gap-2 font-mono text-[9px] whitespace-nowrap text-faint sm:mt-0 sm:text-[9.5px]">
             <span className="h-0.5 flex-1 overflow-hidden rounded-[2px] bg-card-raised">
               <ProgressFill percent={item.progress} />
             </span>
             {item.read}
           </span>
-          <span className={`hidden lg:block ${META}`}>{savedLabel(item)}</span>
+          <span className={`hidden sm:block ${META}`}>{savedLabel(item)}</span>
         </>
       );
     case "pdf":
       return (
-        <span className="@container flex h-full min-w-0 items-stretch gap-2 lg:gap-2.5">
-          <span className="flex h-9 w-[26px] shrink-0 flex-col gap-[3px] rounded-[3px] bg-text px-1 py-1.5 @max-[130px]:hidden lg:h-10 lg:w-[30px] lg:px-[5px]">
+        <span className="@container flex h-full min-w-0 items-stretch gap-2 sm:gap-2.5">
+          <span className="flex h-9 w-[26px] shrink-0 flex-col gap-[3px] rounded-[3px] bg-text px-1 py-1.5 @max-[130px]:hidden sm:h-10 sm:w-[30px] sm:px-[5px]">
             {[72, 100, 100, 100, 100, 50].map((width, i) => (
               <i
                 key={i}
@@ -136,7 +136,7 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
               />
             ))}
           </span>
-          <span className="flex min-w-0 flex-col gap-[3px] lg:gap-1">
+          <span className="flex min-w-0 flex-col gap-[3px] sm:gap-1">
             <span className={`${TITLE} line-clamp-2`}>{item.title}</span>
             <span className={`mt-auto ${META}`}>{item.meta ?? savedLabel(item)}</span>
           </span>
@@ -145,9 +145,9 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
     case "instagram":
       return (
         <>
-          <span className="relative grid min-h-0 flex-1 place-items-center overflow-hidden rounded-[7px] bg-card-raised lg:rounded-lg">
+          <span className="relative grid min-h-0 flex-1 place-items-center overflow-hidden rounded-[7px] bg-card-raised sm:rounded-lg">
             <Art seed={artSeed} height={100} />
-            <span className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 gap-[3px] lg:bottom-[7px]">
+            <span className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 gap-[3px] sm:bottom-[7px]">
               {[0, 1, 2, 3].map((dot) => (
                 <i
                   key={dot}
@@ -156,9 +156,9 @@ function Body({ item, artSeed }: { item: DemoItem; artSeed: number }): ReactNode
               ))}
             </span>
           </span>
-          <span className="flex min-w-0 shrink-0 items-center gap-1.5 lg:gap-[7px]">
+          <span className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-[7px]">
             <span className={AVATAR}>{item.initials}</span>
-            <span className="line-clamp-2 min-w-0 text-[11px] leading-[1.36] lg:text-[11.5px]">
+            <span className="line-clamp-2 min-w-0 text-[11px] leading-[1.36] sm:text-[11.5px]">
               {item.title}
             </span>
           </span>
@@ -190,7 +190,7 @@ const STACK_SHADOW =
 const SCAN_BRIGHTNESS = 2.2;
 
 function cardStateClasses(lit: boolean, scanning: boolean): string {
-  if (lit) return "z-3 -translate-y-1 scale-103 lg:-translate-y-1.5 lg:scale-[1.035]";
+  if (lit) return "z-3 -translate-y-1 scale-103 sm:-translate-y-1.5 sm:scale-[1.035]";
   if (scanning) return "-translate-y-0.5 [transition-duration:500ms,900ms]";
   return "";
 }
@@ -228,7 +228,7 @@ export function ItemCard({
       className={`absolute transition-[opacity,transform] duration-900 ease-spring ${cardStateClasses(lit, scanning)}`}
     >
       <div
-        className={`flex size-full flex-col gap-1.5 rounded-[11px] border border-line bg-card p-2.5 lg:gap-[7px] lg:rounded-xl lg:px-3 lg:py-[11px] ${
+        className={`flex size-full flex-col gap-1.5 rounded-[11px] border border-line bg-card p-2.5 sm:gap-[7px] sm:rounded-xl sm:px-3 sm:py-[11px] ${
           card.stacked ? STACK_SHADOW : "overflow-hidden"
         }`}
       >
@@ -236,13 +236,13 @@ export function ItemCard({
       </div>
       {/* The lit edge and glow, faded in over the card. */}
       <span
-        className={`pointer-events-none absolute inset-0 rounded-[11px] border border-accent shadow-[0_0_0_1px_var(--color-accent),0_0_22px_rgb(212_98_26/0.38)] transition-opacity duration-600 ease-spring lg:rounded-xl lg:shadow-[0_0_0_1px_var(--color-accent),0_0_28px_rgb(212_98_26/0.38)] ${
+        className={`pointer-events-none absolute inset-0 rounded-[11px] border border-accent shadow-[0_0_0_1px_var(--color-accent),0_0_22px_rgb(212_98_26/0.38)] transition-opacity duration-600 ease-spring sm:rounded-xl sm:shadow-[0_0_0_1px_var(--color-accent),0_0_28px_rgb(212_98_26/0.38)] ${
           lit ? "opacity-100" : "opacity-0"
         }`}
       />
       {showsUnopened && (
         <span
-          className={`absolute top-[7px] right-[7px] rounded-[5px] border border-line-strong bg-bg px-[5px] py-[3px] font-mono text-[8.5px] leading-none text-mute transition-opacity duration-400 ease-spring lg:top-2 lg:right-2 lg:text-[9px] ${
+          className={`absolute top-[7px] right-[7px] rounded-[5px] border border-line-strong bg-bg px-[5px] py-[3px] font-mono text-[8.5px] leading-none text-mute transition-opacity duration-400 ease-spring sm:top-2 sm:right-2 sm:text-[9px] ${
             lit ? "opacity-0" : ""
           }`}
         >
@@ -250,8 +250,8 @@ export function ItemCard({
         </span>
       )}
       <span
-        className={`absolute top-[9px] right-[9px] size-[7px] rounded-full bg-accent transition-[opacity,transform] duration-900 ease-spring lg:top-2.5 lg:right-2.5 lg:size-2 ${
-          lit ? "opacity-100 delay-150" : "translate-y-1 opacity-0 lg:translate-y-[5px]"
+        className={`absolute top-[9px] right-[9px] size-[7px] rounded-full bg-accent transition-[opacity,transform] duration-900 ease-spring sm:top-2.5 sm:right-2.5 sm:size-2 ${
+          lit ? "opacity-100 delay-150" : "translate-y-1 opacity-0 sm:translate-y-[5px]"
         }`}
       />
     </div>

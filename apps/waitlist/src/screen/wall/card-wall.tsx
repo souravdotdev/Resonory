@@ -60,13 +60,13 @@ function Thread({
   width,
   height,
   drawn,
-  desktop,
+  phone,
 }: {
   route: ThreadRoute;
   width: number;
   height: number;
   drawn: boolean;
-  desktop: boolean;
+  phone: boolean;
 }) {
   const line = `${THREAD_LINE} ${drawn ? "[stroke-dashoffset:0]" : "[stroke-dashoffset:1] opacity-0"}`;
   return (
@@ -81,22 +81,22 @@ function Thread({
       <path
         pathLength={1}
         d={route.path}
-        className={`${line} stroke-6 blur-[4px] lg:stroke-7 lg:blur-[5px] ${drawn ? "opacity-60" : ""}`}
+        className={`${line} stroke-6 blur-[4px] sm:stroke-7 sm:blur-[5px] ${drawn ? "opacity-60" : ""}`}
       />
       <path pathLength={1} d={route.path} className={`${line} stroke-[1.6]`} />
       {/* Held still, the spark would sit at the thread's start: reduced motion has none. */}
       <path
         pathLength={1}
         d={route.path}
-        className={`fill-none stroke-text stroke-2 drop-shadow-[0_0_3px_var(--color-accent)] transition-opacity duration-400 ease-spring [stroke-dasharray:0.1_0.9] [stroke-dashoffset:1] [stroke-linecap:round] motion-reduce:hidden lg:stroke-[2.2] lg:[stroke-dasharray:0.07_0.93] ${
-          drawn ? "animate-thread-spark opacity-95 lg:[animation-duration:1.5s]" : "opacity-0"
+        className={`fill-none stroke-text stroke-2 drop-shadow-[0_0_3px_var(--color-accent)] transition-opacity duration-400 ease-spring [stroke-dasharray:0.1_0.9] [stroke-dashoffset:1] [stroke-linecap:round] motion-reduce:hidden sm:stroke-[2.2] sm:[stroke-dasharray:0.07_0.93] ${
+          drawn ? "animate-thread-spark opacity-95 sm:[animation-duration:1.5s]" : "opacity-0"
         }`}
       />
       <circle
         cx={route.end.x}
         cy={route.end.y}
-        r={desktop ? 3.5 : 2.5}
-        className={`fill-accent drop-shadow-[0_0_4px_var(--color-accent)] transition-opacity duration-400 ease-spring lg:drop-shadow-[0_0_5px_var(--color-accent)] ${
+        r={phone ? 2.5 : 3.5}
+        className={`fill-accent drop-shadow-[0_0_4px_var(--color-accent)] transition-opacity duration-400 ease-spring sm:drop-shadow-[0_0_5px_var(--color-accent)] ${
           drawn ? "opacity-100 delay-700" : "opacity-0"
         }`}
       />
@@ -163,7 +163,7 @@ export function CardWall() {
     >
       {scene && layout && (
         <div className="absolute inset-0 animate-wall-in">
-          <div className="absolute inset-0 animate-wall-drift [--wall-drift-x:-5px] [--wall-drift-y:-4px] lg:[--wall-drift-x:-9px] lg:[--wall-drift-y:-6px]">
+          <div className="absolute inset-0 animate-wall-drift [--wall-drift-x:-5px] [--wall-drift-y:-4px] sm:[--wall-drift-x:-9px] sm:[--wall-drift-y:-6px]">
             {layout.cards.map((card) => (
               <ItemCard
                 key={card.id}
@@ -172,13 +172,13 @@ export function CardWall() {
                 scanning={card.id === view.scanningCardId}
               />
             ))}
-            {found && (
+            {found?.route && (
               <Thread
                 route={found.route}
                 width={scene.width}
                 height={scene.height}
                 drawn={view.matched}
-                desktop={layout.mode === "desktop"}
+                phone={layout.mode === "mobile"}
               />
             )}
           </div>
