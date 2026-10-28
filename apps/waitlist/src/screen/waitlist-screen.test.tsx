@@ -121,6 +121,17 @@ describe("waitlist screen", () => {
     ).toBeTruthy();
   });
 
+  it("opens with a line about the lost link, read before the headline", async () => {
+    await renderScreen();
+
+    const opening = screen.getByText("Remember that link you were sure you’d need?");
+    const headline = screen.getByRole("heading", { level: 1 });
+    expect(
+      opening.compareDocumentPosition(headline) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByRole("main").contains(opening)).toBe(true);
+  });
+
   it("offers the signup form inside the main content", async () => {
     await renderScreen();
 
