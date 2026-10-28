@@ -12,8 +12,8 @@ import { KEEP_CLEAR } from "./wall/markers";
 const HIGHLIGHT = "text-accent not-italic [-webkit-text-fill-color:var(--color-accent)]";
 
 /**
- * The waitlist home page, one screen: the pill nav, the headline and the
- * signup form with a search demo, and the footer pill, over a wall of Item
+ * The waitlist home page, one screen: the pill nav, an opening line, the
+ * headline and the signup form with a search demo, and the footer pill, over a wall of Item
  * cards. On desktop (from 1024px) the copy sits left of the demo, the pair
  * centred on a wide screen as the design's 1440px frame. Below that the copy,
  * form and demo stack in one column, centred and 520px at most from 640px,
@@ -53,7 +53,7 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
 
         <main
           id="main"
-          className="flex min-h-dvh flex-col items-center px-5 pt-20 pb-[52px] max-lg:short:pt-[72px] lg:grid lg:grid-cols-[minmax(0,640px)_488px] lg:items-center lg:gap-2 lg:py-[88px] lg:pr-8 lg:pl-[max(clamp(32px,5.56vw,80px),calc(50vw-640px))]"
+          className="flex min-h-dvh flex-col items-center px-5 pt-[72px] pb-[52px] sm:pt-20 max-lg:short:pt-16 max-lg:short:pb-9 lg:grid lg:grid-cols-[minmax(0,640px)_488px] lg:items-center lg:gap-2 lg:py-[88px] lg:pr-8 lg:pl-[max(clamp(32px,5.56vw,80px),calc(50vw-640px))]"
         >
           {/*
            * Below 1024px the stack sits in what's left of the screen: room is
@@ -62,7 +62,10 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
            */}
           <div className="grow lg:hidden" />
           <div {...KEEP_CLEAR} className="@container w-full max-w-[520px] lg:max-w-none">
-            <h1 className="animate-fade-up bg-linear-to-r from-text to-muted bg-clip-text leading-[1.04] font-semibold tracking-[-0.04em] text-transparent [animation-delay:100ms] max-sm:text-[min(36px,10.75cqi)] sm:text-[clamp(36px,8.4cqi,54px)]">
+            <p className="mb-2 max-w-[30em] animate-fade-up text-[15px] leading-normal max-lg:short:leading-snug text-pretty text-mute [animation-delay:60ms] sm:mb-4 sm:text-[17px] sm:leading-[1.55]">
+              Remember that link you were sure you&rsquo;d need?
+            </p>
+            <h1 className="animate-fade-up bg-linear-to-r from-text to-muted bg-clip-text leading-[1.04] font-semibold tracking-[-0.04em] text-transparent [animation-delay:160ms] max-sm:text-[min(36px,10.75cqi)] sm:text-[clamp(36px,8.4cqi,54px)]">
               <span className="block">
                 You <em className={HIGHLIGHT}>saved</em> it.
               </span>{" "}
@@ -71,16 +74,16 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
                 <br className="sm:hidden" /> it back.
               </span>
             </h1>
-            <p className="mt-3.5 max-w-[30em] animate-fade-up text-[15px] leading-normal text-pretty text-mute [animation-delay:180ms] sm:mt-5 sm:text-[17px] sm:leading-[1.55]">
+            <p className="mt-2.5 max-w-[30em] animate-fade-up text-[15px] leading-normal max-lg:short:leading-snug text-pretty text-mute [animation-delay:240ms] sm:mt-5 sm:text-[17px] sm:leading-[1.55]">
               You saved it because it mattered to you. Resonory makes sure you see it again, right
               when you&rsquo;re looking for it.
             </p>
-            <div className="mt-[22px] animate-fade-up [animation-delay:260ms] sm:mt-8">
+            <div className="mt-4 animate-fade-up max-lg:short:mt-3 [animation-delay:320ms] sm:mt-8">
               <WaitlistForm note={proofLine} />
             </div>
           </div>
 
-          <div className="mt-6 w-full max-w-[520px] lg:mt-0 lg:max-w-none">
+          <div className="mt-4 w-full max-w-[520px] max-lg:short:mt-3 sm:mt-6 lg:mt-0 lg:max-w-none">
             <SearchDemo />
           </div>
           {/* The room kept for the cards the demo finds, given up first on a short screen. */}

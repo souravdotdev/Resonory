@@ -162,7 +162,7 @@
       },
       "body-lead": {
         "displayName": "Body lead",
-        "purpose": "The sub under the headline, in Mute, max 30em. 15px on phones."
+        "purpose": "The opening sentence above the headline and the sub under it, in Mute, max 30em. 15px on phones."
       },
       "body": {
         "displayName": "Body",
@@ -393,7 +393,7 @@
       "**Don't** set human-facing sentences in mono (the proof line under the form is the one exception), or slant the headline's highlighted verbs.",
       "**Don't** add blurred white or coloured glows; the only light is the orange glow of a resurfaced card and its thread.",
       "**Don't** use photographs in Item cards; thumbnails are the seeded sun-over-ridge placeholder.",
-      "**Don't** place a small label or kicker above a headline; the headline stands alone."
+      "**Don't** place a small label or kicker above a headline (uppercase, tracked or boxed). The one line above it is a plain sentence in the body lead's voice, not a label."
     ]
   }
 }

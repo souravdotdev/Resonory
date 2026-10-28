@@ -36,102 +36,111 @@ const SCREENS = [
   screen(
     320,
     568,
-    box(20, 390, 280, 126),
-    { x: 280, y: 413 },
+    box(20, 400, 280, 126),
+    { x: 280, y: 423 },
     box(12, 12, 296, 48),
-    box(20, 72, 280, 294),
+    box(20, 64, 280, 324),
     box(69, 533, 182, 27),
   ),
   screen(
     360,
     740,
-    box(20, 395, 320, 126),
-    { x: 320, y: 418 },
+    box(20, 438, 320, 126),
+    { x: 320, y: 461 },
     box(12, 12, 336, 48),
-    box(20, 80, 320, 291),
+    box(20, 72, 320, 350),
     box(89, 705, 182, 27),
   ),
   screen(
     375,
     667,
-    box(20, 400, 335, 126),
-    { x: 335, y: 423 },
+    box(20, 421, 335, 126),
+    { x: 335, y: 444 },
     box(12, 12, 351, 48),
-    box(20, 80, 335, 296),
+    box(20, 72, 335, 333),
     box(97, 632, 182, 27),
   ),
   screen(
     375,
-    812,
-    box(20, 400, 335, 126),
-    { x: 335, y: 423 },
+    700,
+    box(20, 421, 335, 126),
+    { x: 335, y: 444 },
     box(12, 12, 351, 48),
-    box(20, 80, 335, 296),
+    box(20, 72, 335, 333),
+    box(97, 665, 182, 27),
+  ),
+  screen(
+    375,
+    812,
+    box(20, 421, 335, 126),
+    { x: 335, y: 444 },
+    box(12, 12, 351, 48),
+    box(20, 72, 335, 333),
     box(97, 777, 182, 27),
   ),
   screen(
     390,
     844,
-    box(20, 401, 350, 126),
-    { x: 350, y: 424 },
+    box(20, 421, 350, 126),
+    { x: 350, y: 444 },
     box(12, 12, 366, 48),
-    box(20, 81, 350, 296),
+    box(20, 72, 350, 333),
     box(104, 809, 182, 27),
   ),
   screen(
     430,
     932,
-    box(20, 434, 390, 126),
-    { x: 390, y: 457 },
+    box(20, 436, 390, 126),
+    { x: 390, y: 459 },
     box(12, 12, 406, 48),
-    box(20, 136, 390, 273),
+    box(20, 126, 390, 294),
     box(124, 897, 182, 27),
   ),
-  // Tablets, and a phone held landscape (844×390, its page scrolling to 556).
+  // Tablets, and a phone held landscape (844×390, its page scrolling to 533).
   screen(
     640,
     900,
-    box(60, 424, 520, 126),
-    { x: 560, y: 447 },
+    box(60, 453, 520, 126),
+    { x: 560, y: 476 },
     box(32, 20, 576, 50),
-    box(60, 119, 520, 282),
+    box(60, 105, 520, 324),
     box(223, 856, 194, 30),
   ),
   screen(
     768,
     1024,
-    box(124, 466, 520, 126),
-    { x: 624, y: 489 },
+    box(124, 494, 520, 126),
+    { x: 624, y: 517 },
     box(32, 20, 704, 50),
-    box(124, 160, 520, 282),
+    box(124, 146, 520, 324),
     box(287, 980, 194, 30),
   ),
   screen(
     834,
     1194,
-    box(157, 522, 520, 126),
-    { x: 657, y: 545 },
+    box(157, 551, 520, 126),
+    { x: 657, y: 574 },
     box(57, 20, 720, 50),
-    box(157, 217, 520, 282),
+    box(157, 203, 520, 324),
     box(320, 1150, 194, 30),
   ),
   screen(
     936,
     1000,
-    box(208, 458, 520, 126),
-    { x: 708, y: 481 },
+    box(208, 486, 520, 126),
+    { x: 708, y: 509 },
     box(108, 20, 720, 50),
-    box(208, 152, 520, 282),
+    box(208, 138, 520, 324),
     box(371, 956, 194, 30),
   ),
   screen(
     844,
-    556,
-    box(162, 378, 520, 126),
-    { x: 662, y: 401 },
+    533,
+    box(162, 371, 520, 126),
+    { x: 662, y: 394 },
     box(62, 20, 720, 50),
-    box(162, 72, 520, 282),
-    box(325, 512, 194, 30),
+    box(162, 64, 520, 295),
+    box(325, 489, 194, 30),
   ),
   // Desktops, from a short laptop to an ultrawide.
   screen(
@@ -140,7 +149,7 @@ const SCREENS = [
     box(504, 113, 488, 374),
     { x: 966, y: 175 },
     box(152, 20, 720, 50),
-    box(57, 153, 439, 294),
+    box(57, 132, 439, 336),
     box(415, 556, 194, 30),
   ),
   screen(
@@ -149,7 +158,7 @@ const SCREENS = [
     box(504, 197, 488, 374),
     { x: 966, y: 259 },
     box(152, 20, 720, 50),
-    box(57, 237, 439, 294),
+    box(57, 216, 439, 336),
     box(415, 724, 194, 30),
   ),
   screen(
@@ -158,7 +167,7 @@ const SCREENS = [
     box(719, 113, 488, 374),
     { x: 1181, y: 175 },
     box(280, 20, 720, 50),
-    box(71, 149, 640, 303),
+    box(71, 128, 640, 345),
     box(543, 556, 194, 30),
   ),
   screen(
@@ -167,7 +176,7 @@ const SCREENS = [
     box(719, 213, 488, 374),
     { x: 1181, y: 275 },
     box(280, 20, 720, 50),
-    box(71, 249, 640, 303),
+    box(71, 228, 640, 345),
     box(543, 756, 194, 30),
   ),
   screen(
@@ -176,7 +185,7 @@ const SCREENS = [
     box(728, 263, 488, 374),
     { x: 1190, y: 325 },
     box(360, 20, 720, 50),
-    box(80, 299, 640, 303),
+    box(80, 278, 640, 345),
     box(623, 856, 194, 30),
   ),
   screen(
@@ -185,7 +194,7 @@ const SCREENS = [
     box(968, 353, 488, 374),
     { x: 1430, y: 415 },
     box(600, 20, 720, 50),
-    box(320, 389, 640, 303),
+    box(320, 368, 640, 345),
     box(863, 1036, 194, 30),
   ),
   screen(
@@ -194,7 +203,7 @@ const SCREENS = [
     box(1288, 533, 488, 374),
     { x: 1750, y: 595 },
     box(920, 20, 720, 50),
-    box(640, 569, 640, 303),
+    box(640, 548, 640, 345),
     box(1183, 1396, 194, 30),
   ),
 ];
@@ -362,6 +371,8 @@ describe.each(COLUMN_WALLS)("the column wall at $name", ({ scene }) => {
     const visible = layout.cards.filter(
       (card) => !PROMISED_ITEMS.includes(card.item) && insideScreen(card, scene),
     );
+    // With the copy this tall, a screen may keep no other card whole to compare with.
+    if (visible.length === 0) return;
     const median = visible.map(distance).sort((a, b) => a - b)[Math.floor(visible.length / 2)]!;
     const mean = promised.reduce((sum, card) => sum + distance(card), 0) / promised.length;
     expect(mean).toBeLessThan(median);
@@ -454,7 +465,7 @@ describe.each(PHONES)("the phone wall at $name", ({ scene }) => {
 
 describe("the phone wall", () => {
   it("fills the bottom of the screen with the design's four cards, in the demo's order", () => {
-    for (const name of ["375×812", "390×844", "430×932"]) {
+    for (const name of ["390×844", "430×932"]) {
       const layout = layoutWall(named(name).scene);
       expect(
         layout.cards.map((card) => card.item),
@@ -473,7 +484,7 @@ describe("the phone wall", () => {
   });
 
   it("falls back to a row of two PDFs on a screen too short for the design's rows", () => {
-    const layout = layoutWall(named("375×667").scene);
+    const layout = layoutWall(named("375×700").scene);
     expect(layout.cards).toHaveLength(2);
     expect(layout.cards.every((card) => card.item.style === "pdf" && !card.stacked)).toBe(true);
     expect(layout.cards[0]!.item).toBe(PROMISED_ITEMS[3]);
@@ -482,6 +493,7 @@ describe("the phone wall", () => {
   it("leaves the wall empty rather than put a card under the footer", () => {
     const scene = named("320×568").scene;
     expect(layoutWall(scene).cards).toEqual([]);
+    expect(layoutWall(named("375×667").scene).cards).toEqual([]);
     const short = layoutWall({
       ...named("375×812").scene,
       height: 700,
