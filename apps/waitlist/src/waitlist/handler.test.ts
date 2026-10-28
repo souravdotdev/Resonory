@@ -256,7 +256,7 @@ describe("the welcome email", () => {
 
   it("still answers the same 200, logs the error and records nothing when sending throws", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const failure = new Error("AutoSend answered 503");
+    const failure = new Error("AutoSend answered 503 for ada@example.com");
     const emailSender: EmailSender = {
       send: async () => {
         throw failure;
@@ -270,7 +270,8 @@ describe("the welcome email", () => {
     expect(await response.json()).toEqual({ ok: true });
     expect(entries).toHaveLength(1);
     expect(welcomeEmailed).toEqual([]);
-    expect(logged).toHaveBeenCalledWith(expect.any(String), failure);
+    expect(logged).toHaveBeenCalledWith(expect.any(String), "Error");
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("ada@example.com");
     logged.mockRestore();
   });
 
