@@ -48,7 +48,9 @@ const LAYOUT_PROPERTIES = [
 /**
  * jsdom does no layout, so the card wall would never lay itself out. This
  * gives every element a box: the wall a 1440×900 screen, the parts it keeps
- * clear of small boxes in its top left corner.
+ * clear of small boxes in its top left corner, and the demo (with its
+ * extension icon) one 1000px to their right, so its threads can reach the wall
+ * without crossing them.
  */
 function layOutAsDesktop() {
   const saved = LAYOUT_PROPERTIES.map(
@@ -63,7 +65,12 @@ function layOutAsDesktop() {
         return this.parentElement;
       },
     },
-    offsetLeft: { configurable: true, get: () => 0 },
+    offsetLeft: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.hasAttribute("data-wall-demo") ? 1000 : 0;
+      },
+    },
     offsetTop: { configurable: true, get: () => 0 },
     offsetWidth: {
       configurable: true,

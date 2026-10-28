@@ -121,9 +121,9 @@ function SearchResults({ query }: { query: string }) {
  * The search demo: the visitor's own browser, searching, with Resonory's
  * Cue that they already saved something like this. On desktop it's
  * a browser window with its tab, toolbar and page (the start page while the
- * query types, results once it's complete); on a phone, just the search bar.
- * It follows the demo loop, so the Cue names the card lit on the
- * wall.
+ * query types, results once it's complete); below 1024px, just the search
+ * bar, as wide as the form. It follows the demo loop, so the Cue names the
+ * card lit on the wall.
  *
  * To assistive technology it's one image with a text description.
  */
@@ -135,7 +135,7 @@ export function SearchDemo() {
       {...WALL_DEMO}
       role="img"
       aria-label={DESCRIPTION}
-      className="relative w-full max-w-[343px] animate-fade-up [animation-delay:340ms] lg:w-[488px] lg:max-w-none"
+      className="relative w-full animate-fade-up [animation-delay:340ms] lg:w-[488px]"
     >
       <div className="overflow-hidden rounded-[13px] border border-line-strong bg-card shadow-[0_30px_60px_-30px_rgb(0_0_0/0.9)] lg:rounded-xl lg:shadow-[0_0_0_1px_rgb(0_0_0/0.45),0_30px_60px_-30px_rgb(0_0_0/0.9)]">
         <div className="hidden h-[38px] items-end gap-1.5 pr-2.5 pl-3.5 lg:flex">

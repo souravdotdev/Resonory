@@ -90,16 +90,16 @@ export function WaitlistForm({ note }: { note?: string }) {
     return (
       <div
         role="status"
-        className="flex w-full max-w-[520px] items-start gap-3 rounded-[13px] border border-line-strong bg-card px-3.5 py-[13px] lg:rounded-[14px] lg:px-4 lg:py-[15px]"
+        className="flex w-full max-w-[520px] items-start gap-3 rounded-[13px] border border-line-strong bg-card px-3.5 py-[13px] sm:rounded-[14px] sm:px-4 sm:py-[15px]"
       >
-        <span className="grid size-[22px] shrink-0 place-items-center rounded-[7px] bg-text text-bg lg:size-6">
+        <span className="grid size-[22px] shrink-0 place-items-center rounded-[7px] bg-text text-bg sm:size-6">
           <Check aria-hidden="true" size={16} />
         </span>
         <p>
-          <strong className="block text-[14.5px] font-medium lg:text-[15px]">
+          <strong className="block text-[14.5px] font-medium sm:text-[15px]">
             You&rsquo;re on the list.
           </strong>{" "}
-          <span className="block text-[13.5px] text-mute lg:text-sm">
+          <span className="block text-[13.5px] text-mute sm:text-sm">
             We&rsquo;ll email you when your spot opens.
           </span>
         </p>
@@ -115,12 +115,12 @@ export function WaitlistForm({ note }: { note?: string }) {
         Email
       </label>
       <div
-        className={`flex w-full max-w-[520px] items-center gap-2 rounded-[13px] border bg-card py-[5px] pr-[5px] pl-3.5 shadow-[inset_0_1px_0_rgb(250_250_247/0.04),0_24px_48px_-28px_rgb(0_0_0/0.8)] transition-[border-color,box-shadow] duration-500 ease-spring focus-within:shadow-[0_0_0_4px_rgb(250_250_247/0.07)] lg:gap-2.5 lg:rounded-[14px] lg:py-1.5 lg:pr-1.5 lg:pl-4 ${error ? "border-text/72" : "border-line-strong hover:border-text/26 focus-within:border-text/44"}`}
+        className={`flex w-full max-w-[520px] items-center gap-2 rounded-[13px] border bg-card py-[5px] pr-[5px] pl-3.5 shadow-[inset_0_1px_0_rgb(250_250_247/0.04),0_24px_48px_-28px_rgb(0_0_0/0.8)] transition-[border-color,box-shadow] duration-500 ease-spring focus-within:shadow-[0_0_0_4px_rgb(250_250_247/0.07)] sm:gap-2.5 sm:rounded-[14px] sm:py-1.5 sm:pr-1.5 sm:pl-4 ${error ? "border-text/72" : "border-line-strong hover:border-text/26 focus-within:border-text/44"}`}
       >
         <EnvelopeSimple
           aria-hidden="true"
           size={16}
-          className="hidden shrink-0 text-faint lg:block"
+          className="hidden shrink-0 text-faint sm:block"
         />
         <input
           id={EMAIL_FIELD_ID}
@@ -137,18 +137,19 @@ export function WaitlistForm({ note }: { note?: string }) {
           }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error || note ? messageId : undefined}
-          className="h-10 min-w-0 flex-1 bg-transparent text-[15px] text-text caret-text outline-none placeholder:text-faint lg:text-[15.5px]"
+          className="h-10 min-w-0 flex-1 bg-transparent text-[15px] text-text caret-text outline-none placeholder:text-faint sm:text-[15.5px]"
         />
         <button
           type="submit"
           disabled={joining}
-          className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-text pr-1.5 pl-3 text-sm font-medium whitespace-nowrap text-bg transition-[transform,opacity] duration-600 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:scale-97 disabled:cursor-default disabled:px-3.5 disabled:opacity-72 disabled:active:scale-100 lg:gap-2.5 lg:pr-2 lg:pl-4 lg:text-[14.5px] lg:disabled:px-4"
+          className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-text pr-1.5 pl-3 text-sm font-medium whitespace-nowrap text-bg transition-[transform,opacity] duration-600 ease-spring hover:opacity-88 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-text active:scale-97 disabled:cursor-default disabled:px-3.5 disabled:opacity-72 disabled:active:scale-100 sm:gap-2.5 sm:pr-2 sm:pl-4 sm:text-[14.5px] sm:disabled:px-4"
         >
           {joining ? "Joining…" : "Join the waitlist"}
+          {/* Under 360px wide the keycap gives its room to the address. */}
           {!joining && (
             <kbd
               aria-hidden="true"
-              className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-bg/18 bg-bg/7 px-[5px] font-mono text-[11px] leading-none text-bg lg:h-[22px] lg:min-w-[22px] lg:px-1.5 lg:text-[11.5px]"
+              className="inline-flex h-5 min-w-5 items-center max-[359px]:hidden justify-center rounded-md border border-bg/18 bg-bg/7 px-[5px] font-mono text-[11px] leading-none text-bg sm:h-[22px] sm:min-w-[22px] sm:px-1.5 sm:text-[11.5px]"
             >
               ↵
             </kbd>
@@ -173,7 +174,7 @@ export function WaitlistForm({ note }: { note?: string }) {
         <p
           id={messageId}
           role="alert"
-          className="mt-2.5 flex min-h-[18px] items-center gap-2 text-[13px] text-text lg:mt-3 lg:min-h-5 lg:text-[13.5px]"
+          className="mt-2.5 flex min-h-[18px] items-center gap-2 text-[13px] text-text sm:mt-3 sm:min-h-5 sm:text-[13.5px]"
         >
           <WarningCircle aria-hidden="true" size={16} className="shrink-0" />
           {error}
@@ -182,7 +183,7 @@ export function WaitlistForm({ note }: { note?: string }) {
         note && (
           <p
             id={messageId}
-            className="mt-2.5 flex min-h-[18px] items-center font-mono text-[11.5px] text-mute tabular-nums lg:mt-3 lg:min-h-5 lg:text-[12.5px]"
+            className="mt-2.5 flex min-h-[18px] items-center font-mono text-[11.5px] text-mute tabular-nums sm:mt-3 sm:min-h-5 sm:text-[12.5px]"
           >
             {note}
           </p>

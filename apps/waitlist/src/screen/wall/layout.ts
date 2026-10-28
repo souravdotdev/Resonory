@@ -29,22 +29,30 @@ export type WallCard = {
   opacity: number;
   /** Picks the card's thumbnail art. */
   artSeed: number;
-  route: ThreadRoute;
+  /** Null for a card no thread can reach without crossing the copy: the demo never finds it. */
+  route: ThreadRoute | null;
 };
 
 export type WallLayout = {
-  mode: "desktop" | "mobile";
+  mode: "desktop" | "tablet" | "mobile";
   cards: WallCard[];
   /**
-   * The cards the demo finds, in order, by id: every fully visible card, once
-   * per title. On desktop the four promised Items are spread through it,
-   * starting with the first.
+   * The cards the demo finds, in order, by id: every fully visible card with
+   * a route, once per title. On desktop and tablet the four promised Items are
+   * spread through it, starting with the first.
    */
   sequence: string[];
 };
 
 /** The desktop composition starts here, as the screen's `lg` breakpoint does. */
 export const DESKTOP_MIN_WIDTH = 1024;
+
+/**
+ * The wall of columns starts here, as the screen's `sm` breakpoint does: from
+ * 640px the stacked column (copy, form, demo) has a wall all round it. Below,
+ * a phone shows the design's four cards under the demo.
+ */
+export const COLUMNS_MIN_WIDTH = 640;
 
 /** How far a stacked card's pile hangs below it. */
 export const STACK_DEPTH = 10;
@@ -86,6 +94,20 @@ const DESKTOP = {
   ],
 } as const;
 
+/**
+ * Where the tablet wants the promised Items: in a row under the demo, by
+ * column (0 is the column in the middle of the screen) and offset from the
+ * demo's bottom, the tokens PDF a row lower.
+ */
+const TABLET_PROMISED_SLOTS = [
+  { column: 0, from: "bottom", offset: 44 },
+  { column: 1, from: "bottom", offset: 60 },
+  { column: -1, from: "bottom", offset: 52 },
+  { column: 1, from: "bottom", offset: 200 },
+] as const;
+
+type PromisedSlot = { column: number; from: "top" | "bottom"; offset: number };
+
 const MOBILE = {
   /** Between the two columns of cards under the demo. */
   gutter: 17,
@@ -103,7 +125,32 @@ const MOBILE = {
     { item: PROMISED_ITEMS[2], column: 1, row: 0, height: 120, top: 32, stacked: false },
     { item: PROMISED_ITEMS[3], column: 0, row: 1, height: 66, top: 156, stacked: true },
   ],
+  /**
+   * For a screen too short for two of those: one row of the design's
+   * shortest cards, the tokens PDF and another PDF, side by side.
+   */
+  shortSlots: [
+    { item: PROMISED_ITEMS[3], column: 0, row: 0, height: 66, top: 28, stacked: false },
+    {
+      item: WALL_ITEMS.find((item) => item.style === "pdf")!,
+      column: 1,
+      row: 0,
+      height: 66,
+      top: 28,
+      stacked: false,
+    },
+  ],
 } as const;
+
+type MobileSlot = {
+  item: DemoItem;
+  column: 0 | 1;
+  row: 0 | 1;
+  height: number;
+  /** How far below the demo the card's top sits. */
+  top: number;
+  stacked: boolean;
+};
 
 /** How many Items past the next one the wall looks through to fill a gap. */
 const GAP_FILLERS = 5;
@@ -209,19 +256,14 @@ function routeThrough(points: Point[]): ThreadRoute {
  * the demo's top or bottom (or, for a card left of it, its left side) and
  * runs along a row just off the card's edge.
  */
-function desktopRoute(box: Box, demo: Box, anchor: Point): ThreadRoute {
+function desktopRoute(box: Box, demo: Box, anchor: Point): Point[] {
   const start = { x: anchor.x, y: anchor.y };
   const cx = Math.round(box.x + box.width / 2);
   const cy = Math.round(box.y + box.height / 2);
 
   if (box.x >= right(demo)) {
     const channel = box.x - GAP;
-    return routeThrough([
-      start,
-      { x: channel, y: anchor.y },
-      { x: channel, y: cy },
-      { x: box.x, y: cy },
-    ]);
+    return [start, { x: channel, y: anchor.y }, { x: channel, y: cy }, { x: box.x, y: cy }];
   }
   const above = bottom(box) <= demo.y || (box.y < bottom(demo) && cy < anchor.y);
   const edge = above ? bottom(box) : box.y;
@@ -230,35 +272,106 @@ function desktopRoute(box: Box, demo: Box, anchor: Point): ThreadRoute {
   const high = Math.min(right(box), right(demo)) - GAP;
   if (low <= high) {
     const x = Math.min(Math.max(cx, low), high);
-    return routeThrough([start, { x, y: anchor.y }, { x, y: edge }]);
+    return [start, { x, y: anchor.y }, { x, y: edge }];
   }
   const row = above ? edge + ROW_OFFSET : edge - ROW_OFFSET;
   const exitX = Math.min(Math.max(cx, demo.x + GAP), right(demo) - GAP);
-  return routeThrough([
+  return [
     start,
     { x: exitX, y: anchor.y },
     { x: exitX, y: row },
     { x: cx, y: row },
     { x: cx, y: edge },
-  ]);
+  ];
 }
 
 /**
- * The design's desktop wall, generalised: columns of cards lined up on the
- * demo's right edge, the four promised Items in reserved slots as near the
- * design's places beside and below the demo as the screen allows, and the
- * rest of the wall filled from a repeating pool around them.
+ * The tablet thread: it comes out from under the demo's edge facing the card,
+ * so it never crosses the copy above. To a card beside the demo it runs
+ * straight out of that side; to a card below, straight down where the two
+ * line up, or else down to a row just above the card and along it. A card
+ * above the demo, over the copy, gets none.
  */
-function layoutDesktop(scene: WallScene): WallLayout {
-  const { width, height, demo, anchor } = scene;
+function tabletRoute(box: Box, demo: Box): Point[] | null {
+  const cx = Math.round(box.x + box.width / 2);
+  const cy = Math.round(box.y + box.height / 2);
+  const top = Math.max(box.y, demo.y) + ROW_OFFSET;
+  const low = Math.min(bottom(box), bottom(demo)) - ROW_OFFSET;
+  const beside = right(box) <= demo.x || box.x >= right(demo);
+  if (beside && top <= low) {
+    const y = Math.min(Math.max(cy, top), low);
+    const onLeft = right(box) <= demo.x;
+    return [
+      { x: onLeft ? demo.x : right(demo), y },
+      { x: onLeft ? right(box) : box.x, y },
+    ];
+  }
+  if (box.y < bottom(demo)) return null;
+  const start = bottom(demo);
+  const from = Math.max(box.x, demo.x) + GAP;
+  const to = Math.min(right(box), right(demo)) - GAP;
+  if (from <= to) {
+    const x = Math.min(Math.max(cx, from), to);
+    return [
+      { x, y: start },
+      { x, y: box.y },
+    ];
+  }
+  const exitX = Math.min(Math.max(cx, demo.x + GAP), right(demo) - GAP);
+  const row = box.y - ROW_OFFSET;
+  return [
+    { x: exitX, y: start },
+    { x: exitX, y: row },
+    { x: cx, y: row },
+    { x: cx, y: box.y },
+  ];
+}
+
+/** How a column wall is set out: where its columns line up, its promised slots and its threads. */
+type ColumnPlan = {
+  mode: "desktop" | "tablet";
+  /** The x of column 0; the others are every pitch from it. */
+  firstColumn: number;
+  promisedSlots: readonly PromisedSlot[];
+  /** The corners of the thread to a card at `box`, or null where none can reach it. */
+  route: (box: Box) => Point[] | null;
+};
+
+/** Whether the straight run from `a` to `b` passes behind `box`. */
+function crosses(a: Point, b: Point, box: Box): boolean {
+  return (
+    Math.min(a.x, b.x) < right(box) &&
+    Math.max(a.x, b.x) > box.x &&
+    Math.min(a.y, b.y) < bottom(box) &&
+    Math.max(a.y, b.y) > box.y
+  );
+}
+
+/**
+ * The design's desktop wall, generalised: columns of cards across the whole
+ * screen, the four promised Items in reserved slots as near the plan's places
+ * by the demo as the screen allows, and the rest of the wall filled from a
+ * repeating pool around them.
+ */
+function layoutColumns(scene: WallScene, plan: ColumnPlan): WallLayout {
+  const { width, height, demo } = scene;
   const w = DESKTOP.cardWidth;
   const zones = [
     grow(demo, DESKTOP.clearance, DESKTOP.demoShadow),
     ...scene.keepClear.map((box) => grow(box, DESKTOP.clearance)),
   ];
 
-  // Columns: number 0 starts just right of the demo, the others every pitch from it.
-  const firstColumn = right(demo) + 2 * GAP;
+  // A thread never runs behind the copy, nav or footer: a card it can't reach that way isn't found.
+  const threadTo = (box: Box): ThreadRoute | null => {
+    const points = plan.route(box);
+    if (!points) return null;
+    const blocked = points.some(
+      (pt, i) => i > 0 && scene.keepClear.some((kept) => crosses(points[i - 1]!, pt, kept)),
+    );
+    return blocked ? null : routeThrough(points);
+  };
+
+  const { firstColumn } = plan;
   const columns: { x: number; index: number }[] = [];
   const lowest = Math.ceil((-w - firstColumn) / DESKTOP.pitch);
   for (let index = lowest; firstColumn + index * DESKTOP.pitch < width; index++) {
@@ -267,10 +380,10 @@ function layoutDesktop(scene: WallScene): WallLayout {
 
   const placed: { box: Box; stacked: boolean; item: DemoItem; artSeed: number }[] = [];
 
-  // The promised Items: each in the free, fully visible spot nearest its design slot.
+  // The promised Items: each in the free, fully visible spot nearest its slot.
   const promised: typeof placed = [];
   PROMISED_ITEMS.forEach((item, n) => {
-    const slot = DESKTOP.promisedSlots[n]!;
+    const slot = plan.promisedSlots[n]!;
     const want = {
       x: firstColumn + slot.column * DESKTOP.pitch,
       y: slot.from === "top" ? demo.y + slot.offset : bottom(demo) + slot.offset,
@@ -285,6 +398,7 @@ function layoutDesktop(scene: WallScene): WallLayout {
         if (!isFullyVisible(space, width, height)) continue;
         if (zones.some((zone) => overlaps(space, zone, GAP / 2))) continue;
         if (promised.some((other) => overlaps(space, footprint(other), GAP))) continue;
+        if (threadTo(box) === null) continue;
         const score = (box.x - want.x) ** 2 + (box.y - want.y) ** 2;
         if (!best || score < best.score) best = { box, score };
       }
@@ -345,15 +459,16 @@ function layoutDesktop(scene: WallScene): WallLayout {
     ...card,
     id: `card-${i}`,
     opacity: edgeOpacity(card.box, width, height, DESKTOP.fade),
-    route: desktopRoute(card.box, demo, anchor),
+    route: threadTo(card.box),
   }));
 
-  // Every fully visible card, once per title, with the promised ones spread through.
+  // Every fully visible card with a thread, once per title, with the promised ones spread through.
   const seen = new Set<string>();
   const promisedIds: string[] = [];
   const rest: WallCard[] = [];
   for (const card of cards) {
-    if (!isFullyVisible(footprint(card), width, height) || seen.has(card.item.title)) continue;
+    if (!card.route || !isFullyVisible(footprint(card), width, height)) continue;
+    if (seen.has(card.item.title)) continue;
     seen.add(card.item.title);
     if (PROMISED_ITEMS.includes(card.item)) promisedIds.push(card.id);
     else rest.push(card);
@@ -370,13 +485,14 @@ function layoutDesktop(scene: WallScene): WallLayout {
   });
   sequence.push(...promisedIds.slice(p));
 
-  return { mode: "desktop", cards, sequence };
+  return { mode: plan.mode, cards, sequence };
 }
 
 /**
  * The design's phone wall: its four cards in two columns under the demo,
  * risen toward the demo on a short screen and left out where even that
- * doesn't clear the footer. Threads come out from under the Cue.
+ * doesn't clear the footer. Where fewer than two of them fit, one row of
+ * the shortest cards takes their place. Threads come out from under the Cue.
  */
 function layoutMobile(scene: WallScene): WallLayout {
   const { width, height, demo } = scene;
@@ -384,58 +500,66 @@ function layoutMobile(scene: WallScene): WallLayout {
   const w = Math.floor((demo.width - MOBILE.gutter) / 2);
   const gutterX = Math.round(demo.x + demo.width / 2);
 
-  const boxesAt = (lift: number): Box[] =>
-    MOBILE.slots.map((slot) => ({
-      x: slot.column === 0 ? demo.x : right(demo) - w,
-      y: bottom(demo) + slot.top - lift,
-      width: w,
-      height: slot.height,
-    }));
   const isClear = (box: Box, stacked: boolean) => {
     const space = footprint({ box, stacked });
     return (
       isFullyVisible(space, width, height) && !zones.some((zone) => overlaps(space, zone, GAP / 2))
     );
   };
-  const clearCount = (boxes: Box[]) =>
-    boxes.filter((box, i) => isClear(box, MOBILE.slots[i]!.stacked)).length;
 
-  // Rise as little as possible; if nothing clears every card, keep the most.
-  const maxLift = Math.min(...MOBILE.slots.map((slot) => slot.top)) - MOBILE.minTop;
-  let lift = 0;
-  for (let l = 0; l <= maxLift; l++) {
-    if (clearCount(boxesAt(l)) > clearCount(boxesAt(lift))) lift = l;
-    if (clearCount(boxesAt(l)) === MOBILE.slots.length) break;
-  }
+  /** The slots' cards, risen as little as possible; if nothing clears every card, keeping the most. */
+  const place = (slots: readonly MobileSlot[]): WallCard[] => {
+    const boxesAt = (lift: number): Box[] =>
+      slots.map((slot) => ({
+        x: slot.column === 0 ? demo.x : right(demo) - w,
+        y: bottom(demo) + slot.top - lift,
+        width: w,
+        height: slot.height,
+      }));
+    const clearCount = (boxes: Box[]) =>
+      boxes.filter((box, i) => isClear(box, slots[i]!.stacked)).length;
+    const maxLift = Math.min(...slots.map((slot) => slot.top)) - MOBILE.minTop;
+    let lift = 0;
+    for (let l = 0; l <= maxLift; l++) {
+      if (clearCount(boxesAt(l)) > clearCount(boxesAt(lift))) lift = l;
+      if (clearCount(boxesAt(l)) === slots.length) break;
+    }
 
-  const cards: WallCard[] = [];
-  boxesAt(lift).forEach((box, i) => {
-    const slot = MOBILE.slots[i]!;
-    if (!isClear(box, slot.stacked)) return;
-    const cx = Math.round(box.x + box.width / 2);
-    const cy = Math.round(box.y + box.height / 2);
-    const route =
-      slot.row === 0
-        ? routeThrough([
-            { x: cx, y: bottom(demo) },
-            { x: cx, y: box.y },
-          ])
-        : routeThrough([
-            { x: gutterX, y: bottom(demo) },
-            { x: gutterX, y: cy },
-            { x: slot.column === 0 ? right(box) : box.x, y: cy },
-          ]);
-    cards.push({
-      id: `card-${i}`,
-      item: slot.item,
-      box,
-      stacked: slot.stacked,
-      opacity: edgeOpacity(box, width, height, MOBILE.fade),
-      artSeed: i + 3,
-      route,
+    const cards: WallCard[] = [];
+    boxesAt(lift).forEach((box, i) => {
+      const slot = slots[i]!;
+      if (!isClear(box, slot.stacked)) return;
+      const cx = Math.round(box.x + box.width / 2);
+      const cy = Math.round(box.y + box.height / 2);
+      const route =
+        slot.row === 0
+          ? routeThrough([
+              { x: cx, y: bottom(demo) },
+              { x: cx, y: box.y },
+            ])
+          : routeThrough([
+              { x: gutterX, y: bottom(demo) },
+              { x: gutterX, y: cy },
+              { x: slot.column === 0 ? right(box) : box.x, y: cy },
+            ]);
+      cards.push({
+        id: `card-${i}`,
+        item: slot.item,
+        box,
+        stacked: slot.stacked,
+        opacity: edgeOpacity(box, width, height, MOBILE.fade),
+        artSeed: i + 3,
+        route,
+      });
     });
-  });
+    return cards;
+  };
 
+  let cards = place(MOBILE.slots);
+  if (cards.length < 2) {
+    const short = place(MOBILE.shortSlots);
+    if (short.length > cards.length) cards = short;
+  }
   return { mode: "mobile", cards, sequence: cards.map((card) => card.id) };
 }
 
@@ -445,5 +569,24 @@ function layoutMobile(scene: WallScene): WallLayout {
  * and with its thread route, and the order the demo finds them in.
  */
 export function layoutWall(scene: WallScene): WallLayout {
-  return scene.width >= DESKTOP_MIN_WIDTH ? layoutDesktop(scene) : layoutMobile(scene);
+  const { width, demo, anchor } = scene;
+  if (width >= DESKTOP_MIN_WIDTH) {
+    // Columns line up on the demo's right edge, as in the design.
+    return layoutColumns(scene, {
+      mode: "desktop",
+      firstColumn: right(demo) + 2 * GAP,
+      promisedSlots: DESKTOP.promisedSlots,
+      route: (box) => desktopRoute(box, demo, anchor),
+    });
+  }
+  if (width >= COLUMNS_MIN_WIDTH) {
+    // Columns centred on the screen, as the stacked column is, so the two sides match.
+    return layoutColumns(scene, {
+      mode: "tablet",
+      firstColumn: Math.round(width / 2 - DESKTOP.cardWidth / 2),
+      promisedSlots: TABLET_PROMISED_SLOTS,
+      route: (box) => tabletRoute(box, demo),
+    });
+  }
+  return layoutMobile(scene);
 }
