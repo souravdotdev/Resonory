@@ -7,10 +7,17 @@ export interface NewWaitlistEntry {
 
 export interface WaitlistStore {
   /**
-   * Adds a Waitlist Entry, doing nothing if the email is already on the list.
-   * Never reports which happened, so the list can't be probed.
+   * Adds a Waitlist Entry, doing nothing if the email is already on the list,
+   * and says which happened. For the server only: it decides who gets the
+   * Welcome email. It must never reach the HTTP response, so the list can't be
+   * probed.
    */
-  join(entry: NewWaitlistEntry): Promise<void>;
+  join(entry: NewWaitlistEntry): Promise<{ created: boolean }>;
+  /**
+   * Records that the provider accepted the Welcome email for this address.
+   * Keeps the first time if one is already recorded.
+   */
+  markWelcomeEmailed(email: string): Promise<void>;
   /** The number of Waitlist Entries. */
   count(): Promise<number>;
 }

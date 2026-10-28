@@ -3,7 +3,7 @@ import { readProofLine } from "./proof-line";
 import type { WaitlistStore } from "./store";
 
 function storeWithCount(count: () => Promise<number>): WaitlistStore {
-  return { join: async () => {}, count };
+  return { join: async () => ({ created: true }), markWelcomeEmailed: async () => {}, count };
 }
 
 describe("readProofLine", () => {

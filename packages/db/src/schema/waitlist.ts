@@ -12,4 +12,7 @@ export const waitlistEntries = pgTable("waitlist_entries", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // Reserved for a later double opt-in; unused for now.
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  // When the email provider accepted the Welcome email; null until then, so
+  // an entry that never got one can be found and re-sent later.
+  welcomeEmailedAt: timestamp("welcome_emailed_at", { withTimezone: true }),
 });
