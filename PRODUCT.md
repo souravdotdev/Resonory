@@ -36,7 +36,7 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
 - **V1 capture:** paste any link in the web app. Async processing detects the type, gets the title, description and thumbnail, and extracts the text. Items also get AI tags, which the User can add to or remove, plus manual tags, semantic search, and a grid library filtered by tag.
 - **No folders, ever.** Organisation is tags only.
 - **Not in V1:** the browser extension and Cues, Reminders, uploads, and mobile apps.
-- **Waitlist:** email only. No confirmation email yet. A Waitlist Entry stores the email, its source and the signup time.
+- **Waitlist:** email only. The promise is two emails, nothing else: a welcome email when you join and one when early access opens. A Waitlist Entry stores the email, its source and the signup time.
 - **Undecided:** pricing amounts, the launch date, and the free tier's limits.
 
 ## Brand Commitments

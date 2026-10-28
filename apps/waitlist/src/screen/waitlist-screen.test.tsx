@@ -144,6 +144,19 @@ describe("waitlist screen", () => {
     expect(within(main).getByRole("button", { name: "Join the waitlist" })).toBeTruthy();
   });
 
+  it("confirms a signup with the two-email promise", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ok: true })));
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: "Join the waitlist" }));
+
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "You’re on the list. Check your inbox for a confirmation. We’ll email you again when early access opens.",
+    );
+  });
+
   it("promises early access under the form while fewer than 100 are waiting", async () => {
     await renderScreen(fakeStore(99));
 

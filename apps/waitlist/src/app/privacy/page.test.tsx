@@ -20,12 +20,17 @@ describe("privacy page", () => {
     expect(screen.getByRole("main").id).toBe("main");
   });
 
-  it("promises one email when early access opens, and that joining is free", () => {
+  it("promises two emails, names AutoSend, and says joining is free", () => {
     render(<PrivacyPage />);
 
     expect(
       screen.getByText(
-        "We email you once, when early access opens, and nothing else. Joining the waitlist is free.",
+        "We email you twice, and nothing else: a confirmation when you join, and one when early access opens. Joining the waitlist is free.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "AutoSend, our email provider, sends both emails, so it handles your address to deliver them.",
       ),
     ).toBeTruthy();
     expect(screen.getByText(/so we can tell you when early access opens/)).toBeTruthy();

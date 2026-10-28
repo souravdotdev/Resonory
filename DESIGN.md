@@ -152,7 +152,7 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 - **Border Grey** (border): an opaque edge, used for the scrollbar thumb and the secondary pages' outline button and link underlines.
 - **Paper White** (text): all primary text and the logo's bars, fixed by PRODUCT.md. As a fill it is the primary button. The headline runs a left-to-right gradient from Paper White to Ash.
 - **Ash** (muted): the end of the headline gradient, and body text on the secondary (privacy, 404) pages.
-- **Mute** (mute, Paper White at 66%): the lead paragraph, the proof line under the field, the "We'll email you" confirmation line, the "unopened" badge.
+- **Mute** (mute, Paper White at 66%): the lead paragraph, the proof line under the field, the "Check your inbox" confirmation line, the "unopened" badge.
 - **Faint** (faint, Paper White at 56%): meta in mono (sites, dates, counts), placeholders, idle icons, the footer's copyright.
 - **Line** (line, Paper White at 9%): the default hairline on cards, the nav and footer pills, tiles and dividers.
 - **Line Strong** (line-strong, Paper White at 16%): the edge of anything the visitor acts on or should read first: the email field, the browser window, the Cue, avatar and favicon rings. The field brightens its edge on hover (26%) and focus (44%), and turns to 72% on error.
