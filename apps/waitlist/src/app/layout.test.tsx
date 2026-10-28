@@ -9,14 +9,14 @@ vi.mock("geist/font/mono", () => ({ GeistMono: { variable: "font-geist-mono" } }
 
 describe("site metadata", () => {
   it("titles the page with the headline and makes it indexable", () => {
-    expect(metadata.title).toBe("Resonory · You saved it. Resonory brings it back.");
+    expect(metadata.title).toBe("Resonory - You saved it. Resonory brings it back.");
     expect(String(metadata.metadataBase)).toBe("https://resonory.com/");
     expect(metadata.robots).toEqual({ index: true, follow: true });
   });
 
   it("gives social previews the same title and description", () => {
     expect(metadata.openGraph).toMatchObject({
-      title: "Resonory · You saved it. Resonory brings it back.",
+      title: "Resonory - You saved it. Resonory brings it back.",
       description: metadata.description,
       url: "/",
       siteName: "Resonory",
@@ -24,7 +24,7 @@ describe("site metadata", () => {
     });
     expect(metadata.twitter).toMatchObject({
       card: "summary_large_image",
-      title: "Resonory · You saved it. Resonory brings it back.",
+      title: "Resonory - You saved it. Resonory brings it back.",
       description: metadata.description,
     });
   });

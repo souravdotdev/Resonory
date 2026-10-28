@@ -5,7 +5,7 @@ import { GeistSans } from "geist/font/sans";
 import "@fontsource/caveat/latin-500.css";
 import "./globals.css";
 
-const title = "Resonory · You saved it. Resonory brings it back.";
+const title = "Resonory - You saved it. Resonory brings it back.";
 const description =
   "Save any link in one paste. When you search or work on that topic again, Resonory shows you what you already saved. Join the waitlist for early access.";
 
