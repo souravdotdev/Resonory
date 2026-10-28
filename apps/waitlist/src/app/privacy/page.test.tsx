@@ -19,4 +19,15 @@ describe("privacy page", () => {
     );
     expect(screen.getByRole("main").id).toBe("main");
   });
+
+  it("promises one email when early access opens, and that joining is free", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByText(
+        "We email you once, when early access opens, and nothing else. Joining the waitlist is free.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/so we can tell you when early access opens/)).toBeTruthy();
+  });
 });

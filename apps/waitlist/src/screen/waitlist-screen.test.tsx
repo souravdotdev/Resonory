@@ -133,13 +133,19 @@ describe("waitlist screen", () => {
   it("promises early access under the form while fewer than 100 are waiting", async () => {
     await renderScreen(fakeStore(99));
 
-    expect(screen.getByText("Early access and a founding member price.")).toBeTruthy();
+    expect(screen.getByText("Join the waitlist. Be among the first to use Resonory.")).toBeTruthy();
+  });
+
+  it("promises no founding member price anywhere on the screen", async () => {
+    await renderScreen(fakeStore(100));
+
+    expect(document.body.textContent).not.toMatch(/founding member price/i);
   });
 
   it("shows how many people are waiting from 100 up", async () => {
     await renderScreen(fakeStore(100));
 
-    expect(screen.getByText("100 people are waiting · founding member price")).toBeTruthy();
+    expect(screen.getByText("100 people are waiting · be among the first")).toBeTruthy();
   });
 
   it("moves focus to the email field from the nav's join button", async () => {

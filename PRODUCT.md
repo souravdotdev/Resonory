@@ -62,7 +62,7 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
 - **Allowed claims:**
   - **Privacy promise**, exactly: "Your library is private to you. We never sell your saves or show them to anyone."
   - **Founder note**, signed "Sourav Sanjay, Founder", with no photo.
-  - **Offer:** early access plus a founding member price, with no number.
+  - **Offer:** early access only. Pricing is still undecided, and the site states none.
 - **Banned claims:** naming competitors, launch dates, prices, user counts, AI-training or data-export promises.
 - **Illustrative numbers** (e.g. "you saved 1,000 things, you reopened 12") must read as a familiar feeling, never as a statistic.
 

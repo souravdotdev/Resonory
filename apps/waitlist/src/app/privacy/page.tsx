@@ -38,8 +38,8 @@ export default function PrivacyPage() {
             </p>
             <ul className="flex list-disc flex-col gap-2 pl-6 text-base text-pretty text-muted">
               <li>
-                <span className="text-text">Your email address</span>, so we can tell you when your
-                spot opens.
+                <span className="text-text">Your email address</span>, so we can tell you when early
+                access opens.
               </li>
               <li>
                 <span className="text-text">Where you came from</span>, such as the site that linked
@@ -61,7 +61,8 @@ export default function PrivacyPage() {
               When we email you
             </h2>
             <p className="text-base text-pretty text-muted">
-              We email you when your spot opens, and nothing else.
+              We email you once, when early access opens, and nothing else. Joining the waitlist is
+              free.
             </p>
           </section>
 

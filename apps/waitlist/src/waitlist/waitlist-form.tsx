@@ -100,7 +100,7 @@ export function WaitlistForm({ note }: { note?: string }) {
             You&rsquo;re on the list.
           </strong>{" "}
           <span className="block text-[13.5px] text-mute sm:text-sm">
-            We&rsquo;ll email you when your spot opens.
+            We&rsquo;ll email you once, when early access opens.
           </span>
         </p>
       </div>
