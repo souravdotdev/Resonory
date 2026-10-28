@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import "@fontsource/caveat/latin-500.css";
 import "./globals.css";
 
 const title = "Resonory · You saved it. Resonory brings it back.";

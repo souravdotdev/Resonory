@@ -14,4 +14,5 @@ export const brandColors = {
   muted: "#9B9B9B",
   accent: "#D4621A",
   accentHover: "#E0712B",
+  success: "#3FB26B",
 } as const;
