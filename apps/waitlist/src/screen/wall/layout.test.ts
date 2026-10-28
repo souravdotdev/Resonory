@@ -332,8 +332,8 @@ describe.each(COLUMN_WALLS)("the column wall at $name", ({ scene }) => {
   // A short screen (a landscape phone, a 600px laptop) is mostly copy and demo: no room for all four.
   const roomy = scene.height >= 700;
 
-  it("is filled: no 200px square of the screen is empty of cards and kept-clear boxes", () => {
-    const SIDE = 200;
+  it("breathes without voids: no 360px square of the screen is empty of cards and kept-clear boxes", () => {
+    const SIDE = 360;
     const taken = [
       ...layout.cards.map(footprint),
       ...[scene.demo, ...scene.keepClear].map((b) => grown(b, 24)),
@@ -358,24 +358,34 @@ describe.each(COLUMN_WALLS)("the column wall at $name", ({ scene }) => {
   });
 
   it.runIf(roomy)("keeps the promised Items near the demo", () => {
-    const demoCentre = {
-      x: scene.demo.x + scene.demo.width / 2,
-      y: scene.demo.y + scene.demo.height / 2,
-    };
-    const distance = (card: WallCard) =>
-      Math.hypot(
-        card.box.x + card.box.width / 2 - demoCentre.x,
-        card.box.y + card.box.height / 2 - demoCentre.y,
+    // How far a card's edge is from the demo's edge, 0 where they touch.
+    const gapToDemo = (card: WallCard) => {
+      const dx = Math.max(
+        scene.demo.x - (card.box.x + card.box.width),
+        card.box.x - (scene.demo.x + scene.demo.width),
+        0,
       );
-    const promised = layout.cards.filter((card) => PROMISED_ITEMS.includes(card.item));
-    const visible = layout.cards.filter(
-      (card) => !PROMISED_ITEMS.includes(card.item) && insideScreen(card, scene),
+      const dy = Math.max(
+        scene.demo.y - (card.box.y + card.box.height),
+        card.box.y - (scene.demo.y + scene.demo.height),
+        0,
+      );
+      return Math.hypot(dx, dy);
+    };
+    for (const card of layout.cards.filter((c) => PROMISED_ITEMS.includes(c.item))) {
+      expect(gapToDemo(card), card.item.title).toBeLessThan(320);
+    }
+  });
+
+  it("leaves air round the copy and the demo: no other card within 40px of them", () => {
+    const copy = scene.keepClear.reduce((a, b) =>
+      b.width * b.height > a.width * a.height ? b : a,
     );
-    // With the copy this tall, a screen may keep no other card whole to compare with.
-    if (visible.length === 0) return;
-    const median = visible.map(distance).sort((a, b) => a - b)[Math.floor(visible.length / 2)]!;
-    const mean = promised.reduce((sum, card) => sum + distance(card), 0) / promised.length;
-    expect(mean).toBeLessThan(median);
+    const near = layout.cards
+      .filter((card) => !PROMISED_ITEMS.includes(card.item))
+      .filter((card) => [scene.demo, copy].some((b) => intersects(footprint(card), grown(b, 40))))
+      .map((card) => card.item.title);
+    expect(near).toEqual([]);
   });
 });
 

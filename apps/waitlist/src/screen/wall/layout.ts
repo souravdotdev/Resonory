@@ -77,8 +77,21 @@ const DESKTOP = {
   } satisfies Record<CardStyle, number>,
   /** Where each column's first card starts, so the rows never line up. */
   columnStarts: [-70, -20, -110, -40, -90, -10, -60, -30],
-  /** Kept-clear boxes grow by this much before cards are placed around them. */
+  /** Kept-clear boxes grow by this much before the promised Items are placed around them. */
   clearance: 8,
+  /**
+   * The rest of the wall keeps further off: this much air round the copy and
+   * the demo, and `chromeBreathing` round the nav and footer, so the content
+   * never sits in a crowd.
+   */
+  breathing: 48,
+  chromeBreathing: 20,
+  /** Between one wall card and the next down a column. */
+  rowGap: 36,
+  /** Every this many cards down a column, one card's turn is left empty. */
+  restEvery: 3,
+  /** How tall that empty turn is. */
+  restHeight: 120,
   /** The demo's drop shadow, kept clear below it as well. */
   demoShadow: 24,
   fade: { distance: 240, min: 0.16, range: 0.26 },
@@ -409,7 +422,19 @@ function layoutColumns(scene: WallScene, plan: ColumnPlan): WallLayout {
   // The rest of the wall: down each column, from a repeating pool of Items.
   // Where the next Item won't fit before something kept clear, one of the
   // few after it may fill the gap; failing that the column steps past.
-  const obstacles = [...zones, ...promised.map(footprint)];
+  // The copy is the biggest kept-clear box; the nav and footer are slim strips.
+  const area = (box: Box) => box.width * box.height;
+  const copy = scene.keepClear.reduce<Box | null>(
+    (biggest, box) => (!biggest || area(box) > area(biggest) ? box : biggest),
+    null,
+  );
+  const obstacles = [
+    grow(demo, DESKTOP.breathing, DESKTOP.demoShadow),
+    ...scene.keepClear.map((box) =>
+      grow(box, box === copy ? DESKTOP.breathing : DESKTOP.chromeBreathing),
+    ),
+    ...promised.map(footprint),
+  ];
   const upcoming: DemoItem[] = [];
   let fed = 0;
   const peek = (k: number) => {
@@ -419,7 +444,13 @@ function layoutColumns(scene: WallScene, plan: ColumnPlan): WallLayout {
   let drawn = 0;
   for (const column of columns) {
     let y = DESKTOP.columnStarts[mod(column.index - 1, DESKTOP.columnStarts.length)]!;
+    // Staggered by column, so the empty turns never line up into a row.
+    let turn = mod(column.index, DESKTOP.restEvery);
     for (let guard = 0; y < height && guard < 80; guard++) {
+      if (++turn % DESKTOP.restEvery === 0) {
+        y += DESKTOP.restHeight;
+        continue;
+      }
       const fitting = (k: number) => {
         const item = peek(k);
         const stacked = item.stacked ?? false;
@@ -439,7 +470,7 @@ function layoutColumns(scene: WallScene, plan: ColumnPlan): WallLayout {
           (option) => !option.hit,
         );
         if (!filler) {
-          y = bottom(card.hit) + GAP;
+          y = bottom(card.hit) + DESKTOP.rowGap;
           continue;
         }
         card = filler;
@@ -450,7 +481,7 @@ function layoutColumns(scene: WallScene, plan: ColumnPlan): WallLayout {
       if (bottom(card.space) > 0) {
         placed.push({ box: card.box, stacked: card.stacked, item: card.item, artSeed: drawn });
       }
-      y = bottom(card.space) + GAP;
+      y = bottom(card.space) + DESKTOP.rowGap;
     }
   }
   placed.push(...promised);
