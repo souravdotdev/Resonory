@@ -185,7 +185,7 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 ### Named Rules
 
-**The Machine Speaks Mono Rule.** Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the offer, "Early access and a founding member price.", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.
+**The Machine Speaks Mono Rule.** Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the invitation, "Join the waitlist. Be among the first to use Resonory.", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.
 
 **The Colour, Not Slant Rule.** Emphasis inside the headline is an `em` coloured orange with the italic removed. Use it only for the verbs of saving and bringing back.
 

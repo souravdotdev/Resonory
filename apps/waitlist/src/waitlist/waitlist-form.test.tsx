@@ -28,7 +28,7 @@ describe("WaitlistForm", () => {
 
   it("clears the inline error once the visitor types again, bringing back the note", async () => {
     const user = userEvent.setup();
-    render(<WaitlistForm note="Early access and a founding member price." />);
+    render(<WaitlistForm note="Join the waitlist. Be among the first to use Resonory." />);
     const field = screen.getByLabelText("Email");
 
     await user.type(field, "ada@");
@@ -40,7 +40,7 @@ describe("WaitlistForm", () => {
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(field.getAttribute("aria-invalid")).toBeNull();
-    expect(screen.getByText("Early access and a founding member price.")).toBeTruthy();
+    expect(screen.getByText("Join the waitlist. Be among the first to use Resonory.")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,7 @@ describe("WaitlistForm", () => {
     answer(Response.json({ ok: true }));
 
     expect((await screen.findByRole("status")).textContent).toBe(
-      "You’re on the list. We’ll email you when your spot opens.",
+      "You’re on the list. We’ll email you once, when early access opens.",
     );
     expect(screen.queryByLabelText("Email")).toBeNull();
     window.history.replaceState(null, "", "/");
@@ -104,7 +104,7 @@ describe("WaitlistForm", () => {
     await user.click(button);
 
     expect((await screen.findByRole("status")).textContent).toBe(
-      "You’re on the list. We’ll email you when your spot opens.",
+      "You’re on the list. We’ll email you once, when early access opens.",
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

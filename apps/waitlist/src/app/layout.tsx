@@ -6,7 +6,7 @@ import "./globals.css";
 
 const title = "Resonory · You saved it. Resonory brings it back.";
 const description =
-  "Save any link in one paste. When you search or work on that topic again, Resonory shows you what you already saved. Join the waitlist for early access and a founding member price.";
+  "Save any link in one paste. When you search or work on that topic again, Resonory shows you what you already saved. Join the waitlist for early access.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://resonory.com"),
