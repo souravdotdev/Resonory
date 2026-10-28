@@ -132,7 +132,7 @@ Density is calm, with air. The screen is a single viewport, the wall supplies te
 - One accent, orange, reserved for resurfacing: the logo dot, the two verbs of the headline, the lit card, its thread and its rising dot.
 - Primary actions are off-white fills with dark text; orange never fills a button.
 - Floating palettes: pill nav, search-style field, browser window, Cue, all on tonal surfaces with hairline edges and soft drops.
-- Geist for language, Geist Mono for metadata and keycaps.
+- Geist for language, Geist Mono for metadata and keycaps, and one handwritten line: Caveat, used only for the opening sentence above the headline.
 - One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change; every animation has a still state under reduced motion.
 
 ## Colors
@@ -159,7 +159,7 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 ### Named Rules
 
-**The One Signal Rule.** Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.
+**The One Signal Rule.** Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead. The one exception to the page's colours is the success green (`#3FB26B`), used only for the check on the signup's success card, so the confirmation reads as success. The welcome email is the one other place orange is used on purpose: its heading and the founder's name are set in the brand orange, at the founder's request, so the email reads as Resonory's even where the page's dark look can't be shown.
 
 **The One White Rule.** Secondary text and edges are the same off-white at fixed strengths (66, 56, 16, 9 percent), not new greys. A new tier of emphasis takes a new opacity of Paper White, not a new hex.
 
@@ -176,7 +176,8 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 ### Hierarchy
 
 - **Display** (600, 36px on phones (scaled with the column under 375px), clamp(36px, 8.4cqi, 54px) from 640px, line-height 1.04, -0.04em): the one headline. Filled with a Paper White to Ash gradient; the highlighted verbs are set in orange with the italic removed, so emphasis comes from colour, not slant.
-- **Body lead** (400, 15px on phones, 17px from 640px, line-height 1.5 to 1.55, Mute): two lines of plain prose: the opening sentence above the headline ("Remember that link you were sure you'd need?", in sentence case with no tracking, a sentence and not a label) and the sub under it, each capped at 30em and set with pretty wrapping.
+- **Body lead** (400, 15px on phones, 17px from 640px, line-height 1.5 to 1.55, Mute): the subheadline under the headline, capped at 30em and set with pretty wrapping.
+- **Hand line** (Caveat 500, 22px on phones, 20px on short phones, 28px from 640px, line-height 1.15, Mute): the one handwritten sentence above the headline, "Remember that link you were sure you'd need?". It is the only text set in Caveat; the founder asked for handwriting there, so it is the one exception to Geist-only. It is upright, never italic.
 - **Body** (400, 15 to 15.5px): the email input and general running text.
 - **Label** (500, 13.5 to 14.5px): button text and the confirmation heading.
 - **Card title** (400, 12 to 12.5px, line-height 1.36 to 1.38): titles on Item cards and the Cue; clamped to two or three whole lines, never cut mid-word.

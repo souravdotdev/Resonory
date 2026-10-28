@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/caveat": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@resonory/db": "workspace:*",
     "@resonory/shared": "workspace:*",

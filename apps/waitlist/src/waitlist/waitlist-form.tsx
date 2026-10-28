@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Check, EnvelopeSimple, WarningCircle } from "@phosphor-icons/react/dist/ssr";
+import { EnvelopeSimple, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
+import { JoinedCard } from "./joined-card";
 import {
   HONEYPOT_FIELD,
   INVALID_EMAIL_MESSAGE,
@@ -86,27 +87,7 @@ export function WaitlistForm({ note }: { note?: string }) {
     setStatus("joined");
   }
 
-  if (status === "joined") {
-    return (
-      <div
-        role="status"
-        className="flex w-full max-w-[520px] items-start gap-3 rounded-[13px] border border-line-strong bg-card px-3.5 py-[13px] sm:rounded-[14px] sm:px-4 sm:py-[15px]"
-      >
-        <span className="grid size-[22px] shrink-0 place-items-center rounded-[7px] bg-text text-bg sm:size-6">
-          <Check aria-hidden="true" size={16} />
-        </span>
-        <p>
-          <strong className="block text-[14.5px] font-medium sm:text-[15px]">
-            You&rsquo;re on the list.
-          </strong>{" "}
-          <span className="block text-[13.5px] text-mute sm:text-sm">
-            Check your inbox for a confirmation. We&rsquo;ll email you again when early access
-            opens.
-          </span>
-        </p>
-      </div>
-    );
-  }
+  if (status === "joined") return <JoinedCard />;
 
   const joining = status === "joining";
 
@@ -184,7 +165,7 @@ export function WaitlistForm({ note }: { note?: string }) {
         note && (
           <p
             id={messageId}
-            className="mt-2.5 flex min-h-[18px] items-center font-mono text-[11.5px] text-mute tabular-nums sm:mt-3 sm:min-h-5 sm:text-[12.5px]"
+            className="mt-2.5 flex min-h-[18px] items-center font-mono text-[11.5px] text-pretty text-mute tabular-nums sm:mt-3 sm:min-h-5 sm:text-[12.5px]"
           >
             {note}
           </p>

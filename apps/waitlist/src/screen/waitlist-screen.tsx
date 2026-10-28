@@ -62,7 +62,7 @@ export async function WaitlistScreen({ store }: { store: WaitlistStore }) {
            */}
           <div className="grow lg:hidden" />
           <div {...KEEP_CLEAR} className="@container w-full max-w-[520px] lg:max-w-none">
-            <p className="mb-2 max-w-[30em] animate-fade-up text-[15px] leading-normal max-lg:short:leading-snug text-pretty text-mute [animation-delay:60ms] sm:mb-4 sm:text-[17px] sm:leading-[1.55]">
+            <p className="mb-1.5 max-w-[30em] animate-fade-up font-hand text-[22px] max-lg:short:text-[20px] leading-[1.15] font-medium text-pretty text-mute [animation-delay:60ms] sm:mb-3 sm:text-[28px]">
               Remember that link you were sure you&rsquo;d need?
             </p>
             <h1 className="animate-fade-up bg-linear-to-r from-text to-muted bg-clip-text leading-[1.04] font-semibold tracking-[-0.04em] text-transparent [animation-delay:160ms] max-sm:text-[min(36px,10.75cqi)] sm:text-[clamp(36px,8.4cqi,54px)]">
