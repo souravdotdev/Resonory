@@ -124,7 +124,7 @@ Resonory is drawn as a dark, quiet archive: a wall of the visitor's own saved ca
 
 The system is monochrome by construction. Off-white (#FAFAF7) is the only bright neutral and is set at fixed strengths (66%, 56%, 16%, 9%) for secondary text, meta and edges, rather than introducing more greys. Surfaces separate by small tonal steps (ground, card, card-raised) and hairline borders, and depth comes from long, soft, dark drops under the floating palettes. Type is Geist throughout, with Geist Mono for everything the product "knows" about an Item: when, where from, how much was read, the keycap.
 
-Density is high but calm. The screen is a single viewport, the wall supplies texture and proof at once, and motion is slow and springy: parts rise in on load, the wall drifts a few pixels over 44 seconds, and the only fast thing is the spark that runs along the orange thread.
+Density is calm, with air. The screen is a single viewport, the wall supplies texture and proof at once but leaves a clear ring around the copy and the demo (48px on the sides that face the wall, with a card's turn left empty now and then down each column), and motion is slow and springy: parts rise in on load, the wall drifts a few pixels over 44 seconds, and the only fast thing is the spark that runs along the orange thread.
 
 **Key Characteristics:**
 
@@ -191,7 +191,7 @@ A strict monochrome of near-black tonal surfaces and one off-white at set streng
 
 ## Layout
 
-The waitlist is a single screen that fills one dynamic viewport (min-height 100dvh) and only grows, so the page scrolls, when the viewport is too short for the form. The card wall is absolutely positioned behind everything and is laid out to keep clear of the nav, the copy column, the demo and the footer.
+The waitlist is a single screen that fills one dynamic viewport (min-height 100dvh) and only grows, so the page scrolls, when the viewport is too short for the form. The card wall is absolutely positioned behind everything and is laid out to keep clear of the nav, the copy column, the demo and the footer, with 48px of air round the copy and the demo, 20px round the nav and footer, and about a third of the cards left out so the content never sits in a crowd.
 
 On desktop (1024px and up) the main area is a two-column grid: the copy column up to 640px and a fixed 488px demo column, vertically centred, an 8px gap, 88px top and bottom padding, 32px right padding and a left gutter of clamp(32px, 5.56vw, 80px), growing past 1440px wide to half the extra width, so the pair stays where the 1440px frame puts it, centred on a wider screen. The copy column is a size container, so the headline scales with its width (8.4cqi). Below 1024px the layout stacks in one centred column, 520px at most: 20px side gutters, 80px top padding to clear the nav (64px on a screen under 600px tall), the copy, then the demo 24px below (12px on a screen under 600px tall, where the gaps in the copy tighten too), as wide as the form and reduced to just its search bar. Room is kept under the demo for the cards it finds (264px on a phone, 220px from 640px) and given up first on a short screen; what's left is shared above the stack and below it (twice as much below from 640px).
 
