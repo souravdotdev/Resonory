@@ -70,7 +70,7 @@ describe("WaitlistForm", () => {
     answer(Response.json({ ok: true }));
 
     expect((await screen.findByRole("status")).textContent).toBe(
-      "You’re on the list. We’ll email you once, when early access opens.",
+      "You’re on the list. Check your inbox for a confirmation. We’ll email you again when early access opens.",
     );
     expect(screen.queryByLabelText("Email")).toBeNull();
     window.history.replaceState(null, "", "/");
@@ -104,7 +104,7 @@ describe("WaitlistForm", () => {
     await user.click(button);
 
     expect((await screen.findByRole("status")).textContent).toBe(
-      "You’re on the list. We’ll email you once, when early access opens.",
+      "You’re on the list. Check your inbox for a confirmation. We’ll email you again when early access opens.",
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

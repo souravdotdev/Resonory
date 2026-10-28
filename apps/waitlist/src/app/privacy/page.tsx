@@ -26,7 +26,7 @@ export default function PrivacyPage() {
             <h1 className="bg-linear-to-r from-text to-muted bg-clip-text pb-1 text-4xl font-semibold tracking-tight text-balance text-transparent">
               Privacy
             </h1>
-            <p className="text-sm text-muted">Last updated October 25, 2026</p>
+            <p className="text-sm text-muted">Last updated October 28, 2026</p>
           </header>
 
           <section aria-labelledby="stored" className="flex flex-col gap-3">
@@ -61,8 +61,12 @@ export default function PrivacyPage() {
               When we email you
             </h2>
             <p className="text-base text-pretty text-muted">
-              We email you once, when early access opens, and nothing else. Joining the waitlist is
-              free.
+              We email you twice, and nothing else: a confirmation when you join, and one when early
+              access opens. Joining the waitlist is free.
+            </p>
+            <p className="text-base text-pretty text-muted">
+              AutoSend, our email provider, sends both emails, so it handles your address to deliver
+              them.
             </p>
           </section>
 
