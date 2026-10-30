@@ -274,6 +274,12 @@ describe("ProcessItemUseCase, Item type", () => {
       "code",
     ],
     [
+      "a rule on the final URL over a rule on the pasted URL",
+      "https://github.com/vercel/next.js",
+      { ...htmlPage(), finalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+      "video",
+    ],
+    [
       "a rule on the final URL over the page's JSON-LD",
       "https://lnkd.in/eXyZ",
       {
