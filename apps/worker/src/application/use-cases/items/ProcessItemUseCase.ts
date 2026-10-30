@@ -13,8 +13,10 @@ import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IOEmbedProvider, OEmbed } from "@/domain/providers/IOEmbedProvider";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
+import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
+import { canonicalUrl } from "@/domain/rules/canonicalUrl";
 import { itemTypeFromJsonLd } from "@/domain/rules/itemTypeFromJsonLd";
 import { itemTypeFromOpenGraph } from "@/domain/rules/itemTypeFromOpenGraph";
 import { itemTypeFromResponse } from "@/domain/rules/itemTypeFromResponse";
@@ -43,22 +45,31 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * and description, and the Thumbnail key, each decided by the precedence
  * below, all in one update.
  *
- * Every Item is fetched, even one a URL rule already types, for its title.
+ * Every Item is fetched, even one a URL rule already types, for its title —
+ * its final URL is what the URL preview cache is keyed on, so a cache hit
+ * still needs this fetch to learn it. When the final URL's canonical form
+ * already has a cached result, that's used as-is and nothing else below runs
+ * (no oEmbed call, no Thumbnail download/resize/upload); a cache miss, or a
+ * cache that can't be reached, is treated exactly like processing a URL for
+ * the first time, and its result is cached afterward for next time.
+ *
  * When the fetch fails or is refused, an Item a rule typed still becomes
  * Ready, titled by its known oEmbed provider if it has one (X, YouTube …),
  * and keeps that provider's thumbnail as its Thumbnail when it offers one;
  * an untyped one's error propagates, so the job is retried and, out of
- * attempts, the Item ends Failed as a Link. An oEmbed call that fails or is
- * refused never fails Processing: the page's other signals decide. Nor does
- * a Thumbnail: a download that is refused or fails, an image that can't be
- * resized, or an upload that fails moves on to the next candidate image, and
- * with none left the Item is Ready without one.
+ * attempts, the Item ends Failed as a Link. This path has no final URL, so
+ * it never touches the cache. An oEmbed call that fails or is refused never
+ * fails Processing: the page's other signals decide. Nor does a Thumbnail: a
+ * download that is refused or fails, an image that can't be resized, or an
+ * upload that fails moves on to the next candidate image, and with none left
+ * the Item is Ready without one.
  */
 @injectable()
 export class ProcessItemUseCase {
   constructor(
     @inject(WORKER_TOKENS.ItemRepository) private readonly items: IItemRepository,
     @inject(WORKER_TOKENS.UrlFetcher) private readonly fetcher: IUrlFetcher,
+    @inject(WORKER_TOKENS.UrlPreviewCache) private readonly cache: IUrlPreviewCache,
     @inject(WORKER_TOKENS.OEmbedProvider) private readonly oEmbeds: IOEmbedProvider,
     @inject(WORKER_TOKENS.ImageFetcher) private readonly images: IImageFetcher,
     @inject(WORKER_TOKENS.ThumbnailResizer) private readonly resizer: IThumbnailResizer,
@@ -79,13 +90,18 @@ export class ProcessItemUseCase {
     } catch (error) {
       if (typeFromSourceUrl === null) throw error;
       // A known provider still describes a post its site wouldn't serve.
+      // There's no final URL here, so this path never touches the cache.
       const answer = await this.ask(knownOEmbedRequestFor(item.sourceUrl));
       return this.ready(ref, {
         type: typeFromSourceUrl,
         metadata: metadataOf(null, answer),
-        thumbnailKey: await this.keepThumbnail(ref, item.sourceUrl, false, null, answer),
+        thumbnailKey: await this.keepThumbnail(item.sourceUrl, false, null, answer),
       });
     }
+
+    const canonical = canonicalUrl(page.finalUrl);
+    const cached = canonical && (await this.cached(canonical));
+    if (cached) return this.ready(ref, cached);
 
     const head = page.kind === "html" ? page.head : null;
     // A file says nothing oEmbed could add; an unsuccessful answer may still be a known provider's.
@@ -93,30 +109,33 @@ export class ProcessItemUseCase {
     const answer = await this.ask(request);
     const type = itemTypeOf(typeFromSourceUrl, page, answer);
     const isImage = type === "image" && page.kind === "file";
-    return this.ready(ref, {
+    const result: CachedPreview = {
       type,
       metadata: metadataOf(head, answer),
-      thumbnailKey: await this.keepThumbnail(ref, page.finalUrl, isImage, head, answer),
-    });
+      thumbnailKey: await this.keepThumbnail(page.finalUrl, isImage, head, answer),
+    };
+    if (canonical) await this.remember(canonical, result);
+    return this.ready(ref, result);
   }
 
   /**
    * Keeps the first candidate image (thumbnailCandidates) that downloads,
-   * resizes and uploads as the Item's card Thumbnail, at its fixed key, and
-   * returns that key. Any failure moves on to the next candidate; null when
-   * none is kept, or when there is no Thumbnail store (then nothing is
-   * downloaded at all).
+   * resizes and uploads as the URL's card Thumbnail, at its fixed key
+   * (shared by every Item that saves this URL), and returns that key. Any
+   * failure moves on to the next candidate; null when none is kept, or when
+   * there is no Thumbnail store (then nothing is downloaded at all).
    */
   private async keepThumbnail(
-    ref: ItemRef,
     finalUrl: string,
     isImage: boolean,
     head: PageHead | null,
     answer: OEmbedAnswer | null,
   ): Promise<string | null> {
     if (!this.thumbnails) return null;
+    const canonical = canonicalUrl(finalUrl);
+    if (!canonical) return null;
     const oEmbedThumbnailUrl = answer?.oEmbed.thumbnailUrl ?? null;
-    const key = thumbnailKeyOf(ref);
+    const key = thumbnailKeyOf(canonical);
     for (const url of thumbnailCandidates({ finalUrl, isImage, head, oEmbedThumbnailUrl })) {
       try {
         const image = await this.images.fetchImage(url);
@@ -139,6 +158,24 @@ export class ProcessItemUseCase {
       };
     } catch {
       return null;
+    }
+  }
+
+  /** The cached preview for a canonical URL, or null on a miss or an unreachable cache. */
+  private async cached(canonical: string): Promise<CachedPreview | null> {
+    try {
+      return await this.cache.get(canonical);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Caches a freshly computed preview; a failed write is never fatal to Processing. */
+  private async remember(canonical: string, preview: CachedPreview): Promise<void> {
+    try {
+      await this.cache.set(canonical, preview);
+    } catch {
+      // Unreachable or erroring: next save just processes this URL fresh again.
     }
   }
 
