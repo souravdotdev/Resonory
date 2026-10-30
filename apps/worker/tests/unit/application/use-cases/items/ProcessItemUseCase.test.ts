@@ -15,7 +15,17 @@ import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
+import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
+import { canonicalUrl } from "@/domain/rules/canonicalUrl";
+import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
+
+// A Thumbnail key for a URL, the way Processing itself derives one.
+const keyFor = (url: string): string => {
+  const canonical = canonicalUrl(url);
+  if (!canonical) throw new Error(`not a URL: ${url}`);
+  return thumbnailKeyOf(canonical);
+};
 
 const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 const OTHER_USER_ID = "0b6a1f7e-2c3d-4e5f-8a9b-1c2d3e4f5a6b";
@@ -192,23 +202,54 @@ interface ThumbnailPorts {
   store?: IThumbnailStore | null;
 }
 
-// By default without a Thumbnail store, as the worker runs without Supabase Storage.
+// A URL preview cache that never has anything cached yet.
+function cacheMissing() {
+  return {
+    get: vi.fn(async (_url: string) => null),
+    set: vi.fn(async (_url: string, _preview: CachedPreview) => {}),
+  } satisfies IUrlPreviewCache;
+}
+
+// A URL preview cache answering every get with this cached preview.
+function cacheAnswering(preview: CachedPreview) {
+  return {
+    get: vi.fn(async (_url: string) => preview),
+    set: vi.fn(async (_url: string, _preview: CachedPreview) => {}),
+  } satisfies IUrlPreviewCache;
+}
+
+// A URL preview cache whose every read and write fails (Redis unreachable …).
+function cacheFailing() {
+  return {
+    get: vi.fn(async (_url: string): Promise<CachedPreview | null> => {
+      throw new Error("Redis answered ECONNREFUSED");
+    }),
+    set: vi.fn(async (_url: string, _preview: CachedPreview): Promise<void> => {
+      throw new Error("Redis answered ECONNREFUSED");
+    }),
+  } satisfies IUrlPreviewCache;
+}
+
+// By default without a Thumbnail store, as the worker runs without Supabase Storage,
+// and without anything already cached.
 const useCaseFor = (
   repository: IItemRepository,
   fetcher: IUrlFetcher,
   oEmbeds: IOEmbedProvider = oEmbedsFailing(),
   { images = imagesFailing(), resizer = resizerFailing(), store = null }: ThumbnailPorts = {},
-) => new ProcessItemUseCase(repository, fetcher, oEmbeds, images, resizer, store);
+  cache: IUrlPreviewCache = cacheMissing(),
+) => new ProcessItemUseCase(repository, fetcher, cache, oEmbeds, images, resizer, store);
 
 const run = (
   sourceUrl: string,
   fetcher: IUrlFetcher,
   oEmbeds: IOEmbedProvider = oEmbedsFailing(),
   thumbnails: ThumbnailPorts = {},
+  cache: IUrlPreviewCache = cacheMissing(),
 ) => {
   const { repository, item } = itemsInMemory(sourceUrl);
-  const useCase = useCaseFor(repository, fetcher, oEmbeds, thumbnails);
-  return { item, repository, result: useCase.execute(REF) };
+  const useCase = useCaseFor(repository, fetcher, oEmbeds, thumbnails, cache);
+  return { item, repository, result: useCase.execute(REF), cache };
 };
 
 describe("ProcessItemUseCase, Item type", () => {
@@ -671,12 +712,12 @@ describe("ProcessItemUseCase, missing Items", () => {
 });
 
 describe("ProcessItemUseCase, Thumbnail", () => {
-  const KEY = `${USER_ID}/${ITEM_ID}.webp`;
   const PHOTO_URL = "https://cdn.example.com/photos/sunset.png";
+  const KEY = keyFor(PHOTO_URL);
   const photo = () =>
     fetcherAnswering(file("image/png", new Uint8Array([0x89, 0x50, 0x4e, 0x47]), PHOTO_URL));
 
-  it("keeps an Image Item's image, resized, as its Thumbnail at {userId}/{itemId}.webp", async () => {
+  it("keeps an Image Item's image, resized, as its Thumbnail, shared by URL", async () => {
     const images = imagesAnswering();
     const resizer = resizerAnswering();
     const { store, objects } = thumbnailsInMemory();
@@ -801,7 +842,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
 });
 
 describe("ProcessItemUseCase, a page's Thumbnail", () => {
-  const KEY = `${USER_ID}/${ITEM_ID}.webp`;
+  const KEY = keyFor(PAGE_URL);
   const OG_IMAGE = "https://cdn.example.com/cover.jpg";
   const TWITTER_IMAGE = "https://cdn.example.com/card.png";
   const thumbnails = (images: IImageFetcher) => ({
@@ -911,7 +952,9 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
       thumbnails(images),
     );
 
-    await expect(result).resolves.toMatchObject({ thumbnailKey: KEY });
+    await expect(result).resolves.toMatchObject({
+      thumbnailKey: keyFor("https://www.example.org/news/story"),
+    });
     expect(images.fetchImage).toHaveBeenCalledWith("https://www.example.org/cover.jpg");
   });
 
@@ -952,7 +995,6 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
 });
 
 describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
-  const KEY = `${USER_ID}/${ITEM_ID}.webp`;
   const OEMBED_IMAGE = "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg";
   const OG_IMAGE = "https://cdn.example.com/cover.jpg";
   const thumbnails = (images: IImageFetcher) => ({
@@ -973,10 +1015,10 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
     await expect(result).resolves.toMatchObject({
       outcome: "ready",
       type: "video",
-      thumbnailKey: KEY,
+      thumbnailKey: keyFor(video),
     });
     expect(images.fetchImage).toHaveBeenCalledWith(OEMBED_IMAGE);
-    expect(item).toMatchObject({ status: "ready", thumbnailKey: KEY });
+    expect(item).toMatchObject({ status: "ready", thumbnailKey: keyFor(video) });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
   });
 
@@ -991,7 +1033,7 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
       thumbnails(images),
     );
 
-    await expect(result).resolves.toMatchObject({ thumbnailKey: KEY });
+    await expect(result).resolves.toMatchObject({ thumbnailKey: keyFor(PAGE_URL) });
     expect(images.fetchImage.mock.calls).toEqual([[OEMBED_IMAGE]]);
   });
 
@@ -1006,7 +1048,10 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
       thumbnails(images),
     );
 
-    await expect(result).resolves.toMatchObject({ outcome: "ready", thumbnailKey: KEY });
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      thumbnailKey: keyFor(PAGE_URL),
+    });
     expect(images.fetchImage.mock.calls).toEqual([[OEMBED_IMAGE], [OG_IMAGE]]);
   });
 
@@ -1014,9 +1059,10 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
     const cover = "https://i.scdn.co/image/ab67616d00001e02";
     const images = imagesAt(cover);
     const oEmbeds = oEmbedsAnswering({ type: "rich", title: "A track", thumbnailUrl: cover });
+    const sourceUrl = "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC";
 
     const { item, result } = run(
-      "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
+      sourceUrl,
       fetcherFailing(new Error("offline")),
       oEmbeds,
       thumbnails(images),
@@ -1026,10 +1072,129 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
       outcome: "ready",
       type: "audio",
       metadata: { title: "A track", description: null },
-      thumbnailKey: KEY,
+      thumbnailKey: keyFor(sourceUrl),
     });
     expect(images.fetchImage).toHaveBeenCalledWith(cover);
-    expect(item).toMatchObject({ status: "ready", thumbnailKey: KEY });
+    expect(item).toMatchObject({ status: "ready", thumbnailKey: keyFor(sourceUrl) });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ProcessItemUseCase, the URL preview cache", () => {
+  it("reuses a cached preview instead of reprocessing, skipping oEmbed and the Thumbnail pipeline", async () => {
+    const preview: CachedPreview = {
+      type: "video",
+      metadata: { title: "Rick Astley - Never Gonna Give You Up", description: null },
+      thumbnailKey: "shared/abc123.webp",
+    };
+    const cache = cacheAnswering(preview);
+    const oEmbeds = oEmbedsFailing();
+    const { store } = thumbnailsInMemory();
+
+    const { item, result } = run(
+      "https://youtu.be/dQw4w9WgXcQ",
+      fetcherAnswering(htmlPage()),
+      oEmbeds,
+      { images: imagesAnswering(), resizer: resizerAnswering(), store },
+      cache,
+    );
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+    expect(item).toMatchObject({ status: "ready", type: preview.type, ...preview.metadata });
+    expect(oEmbeds.fetchOEmbed).not.toHaveBeenCalled();
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it("looks the cache up by the final, canonical URL, not the pasted one", async () => {
+    const preview: CachedPreview = { type: "article", metadata: NO_METADATA, thumbnailKey: null };
+    const cache = cacheAnswering(preview);
+    const page = { ...htmlPage(), finalUrl: "https://example.com/page?utm_source=newsletter" };
+
+    const { result } = run("https://bit.ly/3xYz", fetcherAnswering(page), undefined, {}, cache);
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+    expect(cache.get).toHaveBeenCalledWith("https://example.com/page");
+  });
+
+  it("caches a freshly processed result by its final, canonical URL", async () => {
+    const page = {
+      ...htmlPage({ "og:type": "article" }, { title: "A title" }),
+      finalUrl: "https://example.com/page?utm_source=newsletter",
+    };
+    const { store } = thumbnailsInMemory();
+
+    const { result, cache } = run(
+      "https://example.com/page?utm_source=newsletter",
+      fetcherAnswering(page),
+      undefined,
+      { images: imagesFailing(), resizer: resizerFailing(), store },
+    );
+
+    await result;
+
+    expect(cache.set).toHaveBeenCalledWith("https://example.com/page", {
+      type: "article",
+      metadata: { title: "A title", description: null },
+      thumbnailKey: null,
+    });
+  });
+
+  it("caches a 'no Thumbnail' result too, so a page confirmed to offer nothing isn't retried", async () => {
+    const page = htmlPage({ "og:type": "article" });
+
+    const { result, cache } = run("https://example.com/page", fetcherAnswering(page));
+
+    await result;
+
+    expect(cache.set).toHaveBeenCalledWith(
+      "https://example.com/page",
+      expect.objectContaining({ thumbnailKey: null }),
+    );
+  });
+
+  it("never touches the cache when the fetch itself fails", async () => {
+    const { result, cache } = run(
+      "https://youtu.be/dQw4w9WgXcQ",
+      fetcherFailing(new Error("ETIMEDOUT")),
+    );
+
+    await result;
+
+    expect(cache.get).not.toHaveBeenCalled();
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  it("treats a cache read or write failure as a miss and still completes Processing", async () => {
+    const page = htmlPage({ "og:type": "article" });
+
+    const { result, item } = run(
+      "https://example.com/page",
+      fetcherAnswering(page),
+      undefined,
+      {},
+      cacheFailing(),
+    );
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
+    expect(item).toMatchObject({ status: "ready", type: "article" });
+  });
+
+  it("behaves exactly as without caching for a URL never seen before", async () => {
+    const images = imagesAnswering();
+    const resizer = resizerAnswering();
+    const { store, objects } = thumbnailsInMemory();
+    const page = htmlPage({ "og:type": "article", "og:image": "https://cdn.example.com/a.jpg" });
+
+    const { result } = run(
+      "https://example.com/page",
+      fetcherAnswering(page),
+      undefined,
+      { images, resizer, store },
+      cacheMissing(),
+    );
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
+    expect(images.fetchImage).toHaveBeenCalledWith("https://cdn.example.com/a.jpg");
+    expect(objects.size).toBe(1);
   });
 });
