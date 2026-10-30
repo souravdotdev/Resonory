@@ -150,7 +150,10 @@ export class ProcessItemUseCase {
 
 /**
  * The Item type precedence, the first signal that answers wins:
- * 1. the URL rules on the Source URL as pasted, then on the final URL;
+ * 1. the URL rules on the final URL (after any redirect), then on the
+ *    Source URL as pasted — where a link actually leads outranks the
+ *    address that was pasted, so a shortened link is never typed by its
+ *    shortening service's own domain;
  * 2. a file's Content-Type, then its magic bytes;
  * 3. the page's declarations: oEmbed, then JSON-LD, then Open Graph, then
  *    Twitter Card (an unsuccessful answer has only oEmbed);
@@ -162,7 +165,7 @@ function itemTypeOf(
   page: FetchedPage,
   answer: OEmbedAnswer | null,
 ): ItemType {
-  const fromUrl = typeFromSourceUrl ?? itemTypeFromUrl(page.finalUrl);
+  const fromUrl = itemTypeFromUrl(page.finalUrl) ?? typeFromSourceUrl;
   if (fromUrl) return fromUrl;
   const fromOEmbed = answer && itemTypeFromOEmbed(answer.oEmbed, answer.provider);
   switch (page.kind) {
