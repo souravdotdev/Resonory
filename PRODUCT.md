@@ -46,9 +46,9 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
   - `#141414`: the ground.
   - `#D4621A`: the accent.
   - `#FAFAF7`: text and the mark.
-- **Logo:** an orange dot rising above stacked off-white bars, i.e. a saved thing resurfacing from the pile. Vector sources are in `assets/logo/`:
-  - `resonory-horizontal_full-colour-on-dark.svg`
-  - `resonory-symbol_full-colour-on-dark.svg`
+- **Logo:** an orange dot rising above stacked off-white bars, i.e. a saved thing resurfacing from the pile. Vector sources are in `assets/Resonory-Logo/`:
+  - `02-Horizontal-Lockup/Transparent/resonory-horizontal_full-colour-on-dark_transparent.svg`
+  - `01-Symbol/Transparent/resonory-symbol_full-colour-on-dark_transparent.svg`
 
   Both carry a `#141414` background rect, which is stripped for use on a page.
 

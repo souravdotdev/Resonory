@@ -89,7 +89,7 @@ A new sending domain starts at 300 emails a day (see [AutoSend notes](#autosend-
 
 - **Security headers**, set in `apps/waitlist/next.config.ts` and matching `apps/web`'s: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` denying camera, microphone and geolocation, and HSTS (see [Security](./security.md#appsweb-response-headers)).
 - **Metadata**: title, description, Open Graph and Twitter tags, `robots.txt` and `sitemap.xml`; the page is indexable.
-- **Generated images**: the Open Graph image (`src/app/opengraph-image.tsx`) and the favicon and home screen icon (`src/app/icon.tsx`, `src/app/apple-icon.tsx`), drawn from the logo paths in `src/brand/logo.ts` (copied from `assets/logo/` without their background). The nav and footer draw the same paths through `src/brand/logo-svg.tsx`.
+- **Generated images**: the Open Graph image (`src/app/opengraph-image.tsx`) and the favicon and home screen icon (`src/app/icon.tsx`, `src/app/apple-icon.tsx`), drawn from the logo paths in `src/brand/logo.ts` (copied from `assets/Resonory-Logo/` without their background). The nav and footer draw the same paths through `src/brand/logo-svg.tsx`.
 
 ## AutoSend notes
 
