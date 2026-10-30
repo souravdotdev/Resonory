@@ -1,5 +1,5 @@
 /**
- * The Resonory logo, from the founder's vector files in `assets/logo/`, with
+ * The Resonory logo, from the founder's vector files in `assets/Resonory-Logo/`, with
  * their baked in #141414 background removed so the mark sits on any ground.
  * The page (`logo-svg.tsx`) and the generated images (icons, OG image) both draw
  * from these paths, so the mark is the same everywhere.
