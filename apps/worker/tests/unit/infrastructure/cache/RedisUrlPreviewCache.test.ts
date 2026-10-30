@@ -3,8 +3,11 @@ import type { CachedPreview } from "@/domain/providers/IUrlPreviewCache";
 import { RedisUrlPreviewCache } from "@/infrastructure/cache/RedisUrlPreviewCache";
 
 // A fake of just the two ioredis commands this adapter calls, backed by an
-// in-memory map: a real connection would need a live Redis server, which
-// neither this repo's other infrastructure tests nor its CI provide.
+// in-memory map. `docker-compose.yml` does provision a local Redis for
+// manual testing, but CI runs on a bare runner with no Redis service, so a
+// unit test here can't depend on one being reachable — matching how every
+// other infrastructure test in this repo (SharpThumbnailResizer, …) avoids
+// needing an already-running external dependency.
 function fakeRedis() {
   const store = new Map<string, string>();
   return {

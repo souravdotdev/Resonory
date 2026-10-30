@@ -45,7 +45,8 @@ export function createContainer(): Container {
   // Redis is already required for BullMQ, so this has no "unset" case.
   container
     .bind<IUrlPreviewCache>(WORKER_TOKENS.UrlPreviewCache)
-    .toConstantValue(new RedisUrlPreviewCache(redisConnection));
+    .to(RedisUrlPreviewCache)
+    .inSingletonScope();
   container
     .bind<IOEmbedProvider>(WORKER_TOKENS.OEmbedProvider)
     .to(GuardedOEmbedProvider)

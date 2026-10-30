@@ -95,7 +95,13 @@ export class ProcessItemUseCase {
       return this.ready(ref, {
         type: typeFromSourceUrl,
         metadata: metadataOf(null, answer),
-        thumbnailKey: await this.keepThumbnail(item.sourceUrl, false, null, answer),
+        thumbnailKey: await this.keepThumbnail(
+          item.sourceUrl,
+          canonicalUrl(item.sourceUrl),
+          false,
+          null,
+          answer,
+        ),
       });
     }
 
@@ -112,7 +118,7 @@ export class ProcessItemUseCase {
     const result: CachedPreview = {
       type,
       metadata: metadataOf(head, answer),
-      thumbnailKey: await this.keepThumbnail(page.finalUrl, isImage, head, answer),
+      thumbnailKey: await this.keepThumbnail(page.finalUrl, canonical, isImage, head, answer),
     };
     if (canonical) await this.remember(canonical, result);
     return this.ready(ref, result);
@@ -127,13 +133,12 @@ export class ProcessItemUseCase {
    */
   private async keepThumbnail(
     finalUrl: string,
+    canonical: string | null,
     isImage: boolean,
     head: PageHead | null,
     answer: OEmbedAnswer | null,
   ): Promise<string | null> {
-    if (!this.thumbnails) return null;
-    const canonical = canonicalUrl(finalUrl);
-    if (!canonical) return null;
+    if (!this.thumbnails || !canonical) return null;
     const oEmbedThumbnailUrl = answer?.oEmbed.thumbnailUrl ?? null;
     const key = thumbnailKeyOf(canonical);
     for (const url of thumbnailCandidates({ finalUrl, isImage, head, oEmbedThumbnailUrl })) {
