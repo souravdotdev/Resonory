@@ -199,6 +199,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@resonory/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@resonory/shared':
         specifier: workspace:*
         version: link:../../packages/shared
