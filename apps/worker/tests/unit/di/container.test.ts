@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WORKER_TOKENS } from "@/di/tokens";
+import { createRecordingLogger } from "../testLogger";
 
 // ioredis connects as soon as it's constructed, so the shared Redis connection
 // is a stand-in. The Postgres client connects lazily, on its first query, which
@@ -55,7 +56,6 @@ describe("the worker's production container", () => {
   ])("starts without Thumbnails when %s is missing", async (missing, set) => {
     vi.stubEnv(missing, "");
     vi.stubEnv(set, set === "SUPABASE_URL" ? "https://project.supabase.co" : "service-role-key");
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const { container, tokens } = await productionContainer();
 
     // ProcessItemUseCase then gets no store, and downloads no image.
@@ -74,4 +74,33 @@ describe("the worker's production container", () => {
 
     await expect(productionContainer()).rejects.toThrow("SUPABASE_URL");
   });
+});
+
+describe("thumbnailStore", () => {
+  it.each([
+    ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+    ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"],
+  ])(
+    "warns, with no Item id bound, that Thumbnails are off when %s is missing",
+    async (missing, set) => {
+      vi.stubEnv(missing, "");
+      vi.stubEnv(set, set === "SUPABASE_URL" ? "https://project.supabase.co" : "service-role-key");
+      vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
+      vi.resetModules();
+      const { thumbnailStore } = await import("@/di/container");
+      const logger = createRecordingLogger();
+
+      const store = thumbnailStore(logger);
+
+      expect(store).toBeNull();
+      expect(logger.logs).toEqual([
+        {
+          level: "warn",
+          bindings: {},
+          fields: {},
+          msg: "Supabase Storage isn't configured; Items get no Thumbnails",
+        },
+      ]);
+    },
+  );
 });
