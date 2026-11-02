@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { StorageClient } from "@supabase/storage-js";
 import { Container } from "inversify";
+import { createLogger, type Logger } from "@resonory/logger";
 import { AdmitSignInUseCase } from "@/application/use-cases/auth/AdmitSignInUseCase";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
@@ -42,6 +43,7 @@ export function createContainer(): Container {
 
   container.bind<Env>(TOKENS.Env).toConstantValue(env);
   container.bind<Database>(TOKENS.Database).toConstantValue(db);
+  container.bind<Logger>(TOKENS.Logger).toConstantValue(createLogger({ name: "api" }));
   container.bind<RateLimitRedis>(TOKENS.RateLimitRedis).toConstantValue(rateLimitRedis);
   container.bind<ItemsQueue>(TOKENS.ItemsQueue).toConstantValue(itemsQueue);
 
