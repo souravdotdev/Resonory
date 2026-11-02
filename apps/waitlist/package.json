@@ -15,6 +15,7 @@
     "@fontsource/caveat": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@resonory/db": "workspace:*",
+    "@resonory/logger": "workspace:*",
     "@resonory/shared": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@vercel/analytics": "^2.0.1",

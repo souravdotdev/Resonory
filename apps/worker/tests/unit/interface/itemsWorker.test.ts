@@ -1,13 +1,14 @@
 import "reflect-metadata";
 import { UnrecoverableError } from "bullmq";
 import { Container } from "inversify";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { NO_METADATA } from "@/domain/entities/Item";
 import { runItemsJob } from "@/interface/itemsWorker";
+import { createRecordingLogger } from "../testLogger";
 
 const ITEM_ID = "00000000-0000-4000-8000-000000000001";
 const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
@@ -26,12 +27,9 @@ function testContainer(
   container
     .bind<Pick<ProcessItemUseCase, "execute">>(WORKER_TOKENS.ProcessItemUseCase)
     .toConstantValue(useCase);
+  container.bind(WORKER_TOKENS.Logger).toConstantValue(createRecordingLogger());
   return { container, useCase };
 }
-
-beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
-});
 
 afterEach(() => {
   vi.restoreAllMocks();

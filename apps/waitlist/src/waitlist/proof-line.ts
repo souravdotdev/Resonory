@@ -1,3 +1,4 @@
+import { logger, logSafeError } from "@/logger";
 import type { WaitlistStore } from "./store";
 
 /** Below this many Waitlist Entries the count is hidden, so a tiny number never puts people off. */
@@ -18,7 +19,7 @@ export async function readProofLine(store: WaitlistStore): Promise<string> {
   try {
     count = await store.count();
   } catch (error) {
-    console.error("Could not read the Waitlist Entry count", error);
+    logSafeError(logger, error, "Could not read the Waitlist Entry count");
     return OFFER_LINE;
   }
   if (count < PROOF_COUNT_THRESHOLD) return OFFER_LINE;

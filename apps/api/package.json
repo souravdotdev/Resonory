@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@resonory/db": "workspace:*",
+    "@resonory/logger": "workspace:*",
     "@resonory/shared": "workspace:*",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
