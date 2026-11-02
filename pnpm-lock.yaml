@@ -123,6 +123,9 @@ importers:
       '@resonory/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@resonory/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@resonory/shared':
         specifier: workspace:*
         version: link:../../packages/shared
