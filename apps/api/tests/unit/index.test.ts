@@ -44,5 +44,9 @@ describe("the API entrypoint", () => {
     const [, options] = buildApp.mock.calls[0]!;
     expect(options).toHaveProperty("loggerInstance");
     expect(options).not.toHaveProperty("logger");
-  });
+  }, // Imports the real @/index, which builds the full production container
+  // (real ioredis/Postgres client construction against unreachable
+  // services) — slow and variable enough on CI's runner to occasionally
+  // miss the default 5s timeout; see di/container.test.ts for the same.
+  15000);
 });
