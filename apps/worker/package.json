@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@resonory/db": "workspace:*",
+    "@resonory/logger": "workspace:*",
     "@resonory/shared": "workspace:*",
     "@supabase/storage-js": "^2.118.0",
     "bullmq": "^6.3.15",

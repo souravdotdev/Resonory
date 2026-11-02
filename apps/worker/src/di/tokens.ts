@@ -4,6 +4,8 @@
  * unique Symbol; `di/container.ts` binds them.
  */
 export const WORKER_TOKENS = {
+  /** The shared Pino logger (`@resonory/logger`), named `"worker"`. */
+  Logger: Symbol("Logger"),
   /** The Drizzle database over the shared Postgres client. */
   Database: Symbol("Database"),
   /** The shared Redis connection (`maxRetriesPerRequest: null`, as BullMQ needs) jobs arrive on. */
