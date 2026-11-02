@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@resonory/logger": "workspace:*",
     "@resonory/shared": "workspace:*",
     "@resonory/ui": "workspace:*",
     "next": "^16.3.5",

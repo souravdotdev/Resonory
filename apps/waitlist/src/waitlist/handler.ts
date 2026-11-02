@@ -1,7 +1,8 @@
+import { describeError } from "@resonory/logger";
 import type { ErrorCode, ErrorResponse } from "@resonory/shared/schemas/common";
+import { logger } from "@/logger";
 import { HONEYPOT_FIELD, JoinWaitlistRequestSchema, SERVER_ERROR_MESSAGE } from "./request";
 import type { EmailSender } from "./email-sender";
-import { describeError } from "./log-error";
 import type { WaitlistStore } from "./store";
 import { buildWelcomeEmail } from "./welcome-email";
 
@@ -50,14 +51,19 @@ async function sendWelcomeEmail(
     // A skipped send (no provider configured) is not recorded as sent.
     if ((await emailSender.send(buildWelcomeEmail(email))) === "skipped") return;
   } catch (error) {
-    console.error("Could not send the welcome email:", describeError(error));
+    // `err` holds `describeError`'s safe string, never the raw Error: Pino's
+    // own `err` serializer calls `.message`/`.stack`, which is exactly the
+    // leak `describeError` exists to prevent. Do not "simplify" this to
+    // `err: error`.
+    logger.error({ err: describeError(error) }, "Could not send the welcome email");
     return;
   }
 
   try {
     await store.markWelcomeEmailed(email);
   } catch (error) {
-    console.error("Could not record the welcome email as sent:", describeError(error));
+    // Same reasoning as above: `err` is the safe string, not the Error.
+    logger.error({ err: describeError(error) }, "Could not record the welcome email as sent");
   }
 }
 
@@ -96,7 +102,11 @@ export function createJoinWaitlistHandler(dependencies: JoinWaitlistDependencies
         source: parsed.data.source ?? null,
       }));
     } catch (error) {
-      console.error("Could not add a Waitlist Entry:", describeError(error));
+      // `err` holds `describeError`'s safe string, never the raw Error: Pino's
+      // own `err` serializer calls `.message`/`.stack`, which is exactly the
+      // leak `describeError` exists to prevent. Do not "simplify" this to
+      // `err: error`.
+      logger.error({ err: describeError(error) }, "Could not add a Waitlist Entry");
       return errorResponse(500, "internal", SERVER_ERROR_MESSAGE);
     }
 

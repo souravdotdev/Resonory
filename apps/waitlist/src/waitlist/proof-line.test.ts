@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { logger } from "@/logger";
 import { readProofLine } from "./proof-line";
 import type { WaitlistStore } from "./store";
 
@@ -27,6 +28,22 @@ describe("readProofLine", () => {
     expect(await readProofLine(unreachable)).toBe(
       "Join the waitlist. Be among the first to use Resonory.",
     );
+  });
+
+  it("logs describeError's safe description, never the raw error, when the count can't be read", async () => {
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
+    const unreachable = storeWithCount(async () => {
+      throw new Error("connect ECONNREFUSED for ada@example.com");
+    });
+
+    await readProofLine(unreachable);
+
+    expect(logged).toHaveBeenCalledWith(
+      { err: "Error" },
+      "Could not read the Waitlist Entry count",
+    );
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("ada@example.com");
+    logged.mockRestore();
   });
 
   it("groups the digits of large counts", async () => {
