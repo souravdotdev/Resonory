@@ -1,5 +1,6 @@
 import type { Container } from "inversify";
 import { ProcessItemJobSchema } from "@resonory/shared/schemas/queue";
+import type { Logger } from "@resonory/logger";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 
@@ -11,12 +12,14 @@ export async function processItemFailed(container: Container, data: unknown): Pr
   const payload = ProcessItemJobSchema.safeParse(data);
   if (!payload.success) return;
 
+  const logger = container.get<Logger>(WORKER_TOKENS.Logger).child({ itemId: payload.data.itemId });
+
   const useCase = container.get<FailItemUseCase>(WORKER_TOKENS.FailItemUseCase);
   const result = await useCase.execute(payload.data);
 
   if (result.outcome === "failed") {
-    console.log(`[worker] Item ${payload.data.itemId} is Failed as ${result.type}`);
+    logger.info({ type: result.type }, "Item is Failed");
   } else {
-    console.log(`[worker] Item ${payload.data.itemId} no longer exists; nothing to mark Failed`);
+    logger.info({}, "Item no longer exists; nothing to mark Failed");
   }
 }

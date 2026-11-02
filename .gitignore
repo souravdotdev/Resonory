@@ -40,3 +40,6 @@ apps/*/CLAUDE.md
 .impeccable/build/
 .impeccable/questions/
 .impeccable/config.local.json
+
+## Agent worktrees (each a full checkout on its own branch)
+.claude/worktrees/

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeError } from "./log-error";
+import { describeError } from "./describe-error";
 
 describe("describeError", () => {
   it("names the error and never its message", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { logger } from "@/logger";
 import type { EmailMessage, EmailSender } from "./email-sender";
 import { createJoinWaitlistHandler } from "./handler";
 import type { NewWaitlistEntry, WaitlistStore } from "./store";
@@ -162,7 +163,7 @@ describe("POST /api/waitlist", () => {
   });
 
   it("answers a generic 500 that leaks nothing, and sends nothing, when the store fails", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
     const store: WaitlistStore = {
       join: async () => {
         throw new Error('connect ECONNREFUSED 10.0.0.1:6543 relation "waitlist_entries"');
@@ -255,7 +256,7 @@ describe("the welcome email", () => {
   });
 
   it("still answers the same 200, logs the error and records nothing when sending throws", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
     const failure = new Error("AutoSend answered 503 for ada@example.com");
     const emailSender: EmailSender = {
       send: async () => {
@@ -270,7 +271,7 @@ describe("the welcome email", () => {
     expect(await response.json()).toEqual({ ok: true });
     expect(entries).toHaveLength(1);
     expect(welcomeEmailed).toEqual([]);
-    expect(logged).toHaveBeenCalledWith(expect.any(String), "Error");
+    expect(logged).toHaveBeenCalledWith({ err: "Error" }, "Could not send the welcome email");
     expect(JSON.stringify(logged.mock.calls)).not.toContain("ada@example.com");
     logged.mockRestore();
   });
@@ -285,7 +286,7 @@ describe("the welcome email", () => {
   });
 
   it("logs and carries on when recording the send fails", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
     const memory = inMemoryStore();
     const store: WaitlistStore = {
       ...memory.store,

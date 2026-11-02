@@ -1,3 +1,4 @@
+import { logger } from "@/logger";
 import type { EmailSender } from "./email-sender";
 
 /**
@@ -8,7 +9,7 @@ import type { EmailSender } from "./email-sender";
 export function createLoggingEmailSender(): EmailSender {
   return {
     async send() {
-      console.info("Skipped sending the welcome email: AUTOSEND_API_KEY is not set");
+      logger.info("Skipped sending the welcome email: AUTOSEND_API_KEY is not set");
       return "skipped";
     },
   };

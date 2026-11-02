@@ -2,6 +2,7 @@ import { UnrecoverableError } from "bullmq";
 import type { Container } from "inversify";
 import { z } from "zod";
 import { ProcessItemJobSchema } from "@resonory/shared/schemas/queue";
+import type { Logger } from "@resonory/logger";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 
@@ -18,16 +19,24 @@ export async function processItem(container: Container, data: unknown): Promise<
     );
   }
 
+  const logger = container.get<Logger>(WORKER_TOKENS.Logger).child({ itemId: payload.data.itemId });
+
+  // See the comment where WORKER_TOKENS.ProcessItemUseCase is bound in
+  // `di/container.ts` for how a future logging ProcessItemUseCase would
+  // receive this job-scoped `logger`.
   const useCase = container.get<ProcessItemUseCase>(WORKER_TOKENS.ProcessItemUseCase);
   const result = await useCase.execute(payload.data);
 
   if (result.outcome === "ready") {
-    const titled = result.metadata.title === null ? "without a title" : "with a title";
-    const pictured = result.thumbnailKey === null ? "no Thumbnail" : "a Thumbnail";
-    console.log(
-      `[worker] Item ${payload.data.itemId} is Ready as ${result.type}, ${titled}, with ${pictured}`,
+    logger.info(
+      {
+        type: result.type,
+        titled: result.metadata.title !== null,
+        pictured: result.thumbnailKey !== null,
+      },
+      "Item is Ready",
     );
   } else {
-    console.log(`[worker] Item ${payload.data.itemId} no longer exists; nothing to process`);
+    logger.info({}, "Item no longer exists; nothing to process");
   }
 }
