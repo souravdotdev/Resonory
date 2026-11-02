@@ -1,7 +1,7 @@
 import pino, { type DestinationStream, type Logger } from "pino";
 import pretty from "pino-pretty";
 import { loggerEnv } from "./env";
-import { redactPaths, redactSensitiveFields } from "./redact";
+import { redactSensitiveFields } from "./redact";
 
 export interface CreateLoggerOptions {
   /** Which app produced the log line; tagged onto every line as `app`. */
@@ -27,7 +27,6 @@ export function createLogger(
 ): Logger {
   const options: pino.LoggerOptions = {
     level: resolveLevel(),
-    redact: { paths: redactPaths, censor: "[Redacted]" },
     base: { app: name, ...bindings },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
