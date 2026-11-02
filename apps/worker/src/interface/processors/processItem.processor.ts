@@ -21,11 +21,9 @@ export async function processItem(container: Container, data: unknown): Promise<
 
   const logger = container.get<Logger>(WORKER_TOKENS.Logger).child({ itemId: payload.data.itemId });
 
-  // A future ProcessItemUseCase that logs internally would receive this same
-  // job-scoped `logger`, not via a constructor-injected WORKER_TOKENS.Logger,
-  // but through a short-lived Inversify child container built per job —
-  // see the comment where WORKER_TOKENS.ProcessItemUseCase is bound in
-  // `di/container.ts` for the mechanism.
+  // See the comment where WORKER_TOKENS.ProcessItemUseCase is bound in
+  // `di/container.ts` for how a future logging ProcessItemUseCase would
+  // receive this job-scoped `logger`.
   const useCase = container.get<ProcessItemUseCase>(WORKER_TOKENS.ProcessItemUseCase);
   const result = await useCase.execute(payload.data);
 
