@@ -3,6 +3,7 @@ import { StorageClient } from "@supabase/storage-js";
 import type { Redis } from "ioredis";
 import { Container } from "inversify";
 import { redisConnection } from "@resonory/db/redis";
+import { createLogger, type Logger } from "@resonory/logger";
 import { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -32,6 +33,10 @@ import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbna
 export function createContainer(): Container {
   const container = new Container({ defaultScope: "Singleton" });
 
+  // Built first, so it can be passed into thumbnailStore() below.
+  const logger = createLogger({ name: "worker" });
+  container.bind<Logger>(WORKER_TOKENS.Logger).toConstantValue(logger);
+
   container.bind<Database>(WORKER_TOKENS.Database).toConstantValue(db);
   container.bind<Redis>(WORKER_TOKENS.RedisConnection).toConstantValue(redisConnection);
   container
@@ -57,7 +62,7 @@ export function createContainer(): Container {
     .to(SharpThumbnailResizer)
     .inSingletonScope();
   // Without Supabase Storage there's no Thumbnail store, and Processing fetches no image.
-  const store = thumbnailStore();
+  const store = thumbnailStore(logger);
   if (store) container.bind<IThumbnailStore>(WORKER_TOKENS.ThumbnailStore).toConstantValue(store);
 
   container
@@ -69,6 +74,20 @@ export function createContainer(): Container {
     .to(FailItemUseCase)
     .inTransientScope();
 
+  // A future piece of job-processing business logic (e.g. a logging
+  // ProcessItemUseCase) would receive a job-scoped logger via a short-lived
+  // Inversify child container built per job, not a constructor-injected
+  // WORKER_TOKENS.Logger:
+  //
+  //   const jobLogger = container.get<Logger>(WORKER_TOKENS.Logger).child({ itemId });
+  //   const jobContainer = container.createChild();
+  //   jobContainer.bind<Logger>(WORKER_TOKENS.Logger).toConstantValue(jobLogger);
+  //   const useCase = jobContainer.get<ProcessItemUseCase>(WORKER_TOKENS.ProcessItemUseCase);
+  //
+  // createChild() only overrides the rebound token; every other binding
+  // falls through unchanged. Not wired up here: nothing in ProcessItemUseCase
+  // logs internally yet.
+
   return container;
 }
 
@@ -79,10 +98,10 @@ export function createContainer(): Container {
  * also starts Realtime, which needs a native WebSocket); it sends the service
  * role key the way supabase-js does.
  */
-function thumbnailStore(): IThumbnailStore | null {
+export function thumbnailStore(logger: Pick<Logger, "warn">): IThumbnailStore | null {
   const env = supabaseStorageEnv(process.env);
   if (!env) {
-    console.warn("[worker] Supabase Storage isn't configured; Items get no Thumbnails");
+    logger.warn("Supabase Storage isn't configured; Items get no Thumbnails");
     return null;
   }
   const storage = new StorageClient(new URL("storage/v1", env.url).href, {

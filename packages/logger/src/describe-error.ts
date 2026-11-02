@@ -1,7 +1,7 @@
 /**
- * What the waitlist logs about an error: its name and, when it has one, its
+ * What the project logs about an error: its name and, when it has one, its
  * code, never its message. A database driver's message can carry the SQL and
- * its parameters (the visitor's address), so the logs name no one.
+ * its parameters (e.g. a visitor's email address), so the logs name no one.
  */
 export function describeError(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown error";

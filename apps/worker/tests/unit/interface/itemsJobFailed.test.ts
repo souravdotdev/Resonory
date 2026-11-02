@@ -1,11 +1,12 @@
 import "reflect-metadata";
 import { UnrecoverableError } from "bullmq";
 import { Container } from "inversify";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { type FailedItemsJob, onItemsJobFailed } from "@/interface/itemsJobFailed";
+import { createRecordingLogger } from "../testLogger";
 
 const ITEM_ID = "00000000-0000-4000-8000-000000000001";
 const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
@@ -15,11 +16,13 @@ function testContainer() {
   const useCase = {
     execute: vi.fn(async () => ({ outcome: "failed" as const, type: "link" as const })),
   };
+  const logger = createRecordingLogger();
   const container = new Container();
   container
     .bind<Pick<FailItemUseCase, "execute">>(WORKER_TOKENS.FailItemUseCase)
     .toConstantValue(useCase);
-  return { container, useCase };
+  container.bind(WORKER_TOKENS.Logger).toConstantValue(logger);
+  return { container, useCase, logger };
 }
 
 // When BullMQ moved a job to the failed set: it sets this only once no attempt is left.
@@ -44,13 +47,6 @@ function processItemJob(
   } satisfies FailedItemsJob;
 }
 
-let errorLog: ReturnType<typeof vi.spyOn>;
-
-beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
-  errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
-});
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -72,14 +68,30 @@ describe("a failed job on the Items queue", () => {
     expect(useCase.execute).not.toHaveBeenCalled();
   });
 
-  it("logs why the job failed, on every attempt", async () => {
-    const { container } = testContainer();
+  it("logs why the job failed, on every attempt, bound to that job's id and name", async () => {
+    const { container, logger } = testContainer();
 
     await onItemsJobFailed(container, processItemJob(1), new Error("Postgres is down"));
-    await onItemsJobFailed(container, processItemJob(3), new Error("fetch timed out"));
+    await onItemsJobFailed(container, processItemJob(3), new UnrecoverableError("fetch timed out"));
 
-    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("Postgres is down"));
-    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("fetch timed out"));
+    // The second call also runs the job's final-failure step (the Fail Item
+    // use case stand-in reports "failed"), which logs its own "Item is
+    // Failed" line through the shared logger; only the job-failure lines
+    // themselves are under test here.
+    expect(logger.logs.filter((log) => log.level === "error")).toEqual([
+      {
+        level: "error",
+        bindings: { jobId: "42", jobName: PROCESS_ITEM_JOB },
+        fields: { attemptsMade: 1, attempts: 3, err: "Error", willRetry: true },
+        msg: "job failed",
+      },
+      {
+        level: "error",
+        bindings: { jobId: "42", jobName: PROCESS_ITEM_JOB },
+        fields: { attemptsMade: 3, attempts: 3, err: "UnrecoverableError", willRetry: false },
+        msg: "job failed",
+      },
+    ]);
   });
 
   it("marks the Item Failed when BullMQ fails a job that stalled too often", async () => {
@@ -120,7 +132,7 @@ describe("a failed job on the Items queue", () => {
   });
 
   it("changes no Item when the job could never succeed (invalid payload)", async () => {
-    const { container, useCase } = testContainer();
+    const { container, useCase, logger } = testContainer();
 
     await onItemsJobFailed(
       container,
@@ -129,7 +141,14 @@ describe("a failed job on the Items queue", () => {
     );
 
     expect(useCase.execute).not.toHaveBeenCalled();
-    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("Invalid Process Item payload"));
+    expect(logger.logs).toEqual([
+      {
+        level: "error",
+        bindings: { jobId: "42", jobName: PROCESS_ITEM_JOB },
+        fields: { attemptsMade: 1, attempts: 3, err: "UnrecoverableError", willRetry: false },
+        msg: "job failed",
+      },
+    ]);
   });
 
   it("changes no Item for a job with an unknown name", async () => {
@@ -144,18 +163,25 @@ describe("a failed job on the Items queue", () => {
     expect(useCase.execute).not.toHaveBeenCalled();
   });
 
-  it("logs, rather than throws, when the Item can't be marked Failed", async () => {
-    const { container, useCase } = testContainer();
+  it("logs, rather than throws, when the Item can't be marked Failed, with no raw error message", async () => {
+    const { container, useCase, logger } = testContainer();
     useCase.execute.mockRejectedValueOnce(new Error("Postgres is still down"));
 
     await expect(
       onItemsJobFailed(container, processItemJob(3), new Error("Postgres is down")),
     ).resolves.toBeUndefined();
-    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("Postgres is still down"));
+
+    expect(logger.logs).toContainEqual({
+      level: "error",
+      bindings: { jobId: "42", jobName: PROCESS_ITEM_JOB },
+      fields: { err: "Error" },
+      msg: "couldn't mark the Item Failed",
+    });
+    expect(JSON.stringify(logger.logs)).not.toContain("Postgres is still down");
   });
 
-  it("logs a failure BullMQ reports without its job", async () => {
-    const { container, useCase } = testContainer();
+  it("logs a failure BullMQ reports without its job, with no raw error message", async () => {
+    const { container, useCase, logger } = testContainer();
 
     await onItemsJobFailed(
       container,
@@ -164,6 +190,13 @@ describe("a failed job on the Items queue", () => {
     );
 
     expect(useCase.execute).not.toHaveBeenCalled();
-    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("job stalled"));
+    expect(logger.logs).toEqual([
+      {
+        level: "error",
+        bindings: {},
+        fields: { queue: "items", err: "Error" },
+        msg: "a job on the queue failed, with no job",
+      },
+    ]);
   });
 });

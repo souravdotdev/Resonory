@@ -35,6 +35,7 @@ packages/
                       (subpaths ./schemas/common, ./schemas/auth, ./schemas/items)
   db/                 Drizzle schema for every table (./schema), the Postgres client (./client),
                       the Redis connection (./redis) and the drizzle-kit migrations
+  logger/             Pino logger factory, env resolution, and redaction, shared by every app
   ui/                 Shared React components
   eslint-config/      Shared flat ESLint configs
   typescript-config/  Shared tsconfig bases
@@ -54,6 +55,7 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 - **`apps/api`** holds all of the API's code, organised by layer rather than by feature ([ADR 0004](./adr/0004-layer-first-apps-with-use-case-classes-and-a-di-container.md)): `domain/` for the Auth and Items entities, ports, errors and rules; `application/` for the use cases (`AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`) and their output DTOs (`MeOutput`, `ItemCardOutput`); `interface/` for the routes, controllers and middleware; `infrastructure/` for Better Auth (`createAuth`, `BetterAuthSessionProvider`), the Drizzle repositories and the row mappers; and `di/` for the container that wires them. Google sign-in through [Better Auth](https://better-auth.com) runs here ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). See [Clean Architecture](./clean-architecture.md) for each layer and the dependency rule.
 - **`packages/shared`** defines every request and response between `apps/web` and `apps/api` once, as zod schemas, so the two can't drift apart (see [ADR 0001](./adr/0001-shared-zod-contracts-package.md)). Its only dependency is `zod`, and it never imports domain, persistence or framework code, so the web app never pulls in server packages. It has one entry point per context: `@resonory/shared/schemas/common` (the error response and the `paginated(schema)` helper), `@resonory/shared/schemas/auth` (the signed-in User returned by `GET /me`), and `@resonory/shared/schemas/items` (the Item card with its Tags and who applied each, the list query and paginated list response, and the create-Item input and response). Schemas end in `Schema` and their inferred types drop the suffix (`ItemCardSchema` / `ItemCard`); a plain `Item` is always the domain entity. The API validates what it receives and filters what it sends through these schemas, and the web app's API helpers (`apps/web/src/lib/api.ts`) parse every response with them and throw on a mismatch. The API's application layer owns the explicit mapping from its entities to these shapes (for Items, `toItemCardOutput` in `apps/api/src/application/dto/items/ItemCardOutput.ts`).
 - **`packages/db`** is shared infrastructure, not a feature. It declares the Drizzle schema for every table (`@resonory/db/schema`), builds the raw Postgres client (`@resonory/db/client`) and Redis connection (`@resonory/db/redis`) once rather than letting each caller open its own pool, and is the single drizzle-kit migration runner, since one Postgres database has one migration history spanning every context's tables. It knows nothing about the domain: the API's adapters import its tables and map rows to entities.
+- **`packages/logger`** is the same kind of shared infrastructure, for logging: one `createLogger({ name })` factory every app's composition root calls once, owning the log format, the default verbosity per environment, and a redaction safety net, so none of that drifts between apps (see [ADR 0006](./adr/0006-a-shared-logger-package-with-correlation-by-argument.md) and [Logging](./logging.md)).
 
 ## Tech stack
 
@@ -72,6 +74,8 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 **Database** (schema and migrations in `packages/db`, queries in `apps/api`'s infrastructure layer): Drizzle ORM, drizzle-kit (migrations/studio CLI), `postgres` (postgres.js driver), PostgreSQL 16 (Docker)
 
 **Redis** (connection in `packages/db`): ioredis, Redis 7 (Docker); today it backs the API's rate-limit store
+
+**Logging** (`packages/logger`): Pino, `pino-pretty` (dev only) — see [Logging](./logging.md)
 
 **Linting**: ESLint 9 (flat config), `typescript-eslint`, `eslint-config-next`, `eslint-config-prettier`
 
