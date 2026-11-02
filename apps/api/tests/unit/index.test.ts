@@ -27,26 +27,32 @@ afterEach(() => {
 });
 
 describe("the API entrypoint", () => {
-  it("hands Fastify a pre-built logger instance, not its own default", async () => {
-    for (const [name, value] of Object.entries(validEnv)) {
-      vi.stubEnv(name, value);
-    }
-
-    const buildApp = vi.fn(async (_container: unknown, _options?: Record<string, unknown>) => ({
-      listen: vi.fn(async () => {}),
-      log: { error: vi.fn() },
-    }));
-    vi.doMock("@/app", () => ({ buildApp }));
-
-    await import("@/index");
-
-    expect(buildApp).toHaveBeenCalledTimes(1);
-    const [, options] = buildApp.mock.calls[0]!;
-    expect(options).toHaveProperty("loggerInstance");
-    expect(options).not.toHaveProperty("logger");
-  }, // Imports the real @/index, which builds the full production container
+  // Imports the real @/index, which builds the full production container
   // (real ioredis/Postgres client construction against unreachable
   // services) — slow and variable enough on CI's runner to occasionally
   // miss the default 5s timeout; see di/container.test.ts for the same.
-  15000);
+  const SLOW_ENTRYPOINT_TEST_TIMEOUT = 15000;
+
+  it(
+    "hands Fastify a pre-built logger instance, not its own default",
+    async () => {
+      for (const [name, value] of Object.entries(validEnv)) {
+        vi.stubEnv(name, value);
+      }
+
+      const buildApp = vi.fn(async (_container: unknown, _options?: Record<string, unknown>) => ({
+        listen: vi.fn(async () => {}),
+        log: { error: vi.fn() },
+      }));
+      vi.doMock("@/app", () => ({ buildApp }));
+
+      await import("@/index");
+
+      expect(buildApp).toHaveBeenCalledTimes(1);
+      const [, options] = buildApp.mock.calls[0]!;
+      expect(options).toHaveProperty("loggerInstance");
+      expect(options).not.toHaveProperty("logger");
+    },
+    SLOW_ENTRYPOINT_TEST_TIMEOUT,
+  );
 });
