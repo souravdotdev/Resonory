@@ -9,6 +9,7 @@ Reference docs for the `resonory` monorepo, covering what's been set up and why.
 - [Database](./database.md) — schema, data model, and the Drizzle migration workflow
 - [API](./api.md) — HTTP endpoint reference for `apps/api`
 - [Queue & Background Jobs](./queue.md) — the planned Item-processing queue (not built yet)
+- [Logging](./logging.md) — the shared Pino logger, its redaction and verbosity rules, and each app's correlation convention
 - [Code Quality](./code-quality.md) — linting, formatting, and type-checking conventions
 - [Security](./security.md) — CORS, helmet, rate limiting, `apps/web`'s response headers, and Dependabot
 - [Deploying the waitlist page](./deploy-waitlist.md) — the Vercel checklist for `apps/waitlist`: root directory, `DATABASE_URL`, the migration, domains and analytics
