@@ -10,6 +10,13 @@ export const CreateItemSchema = z.object({
     .trim()
     .max(MAX_URL_LENGTH, `Links can be at most ${MAX_URL_LENGTH} characters`)
     .pipe(z.url({ protocol: /^https?$/, error: "Enter a valid http(s) link" })),
+  /**
+   * The page's already-rendered HTML, captured by the browser extension
+   * (issue #143) so the worker can skip its own fetch. Additive and
+   * optional: a caller sending only `url`, as every caller does today,
+   * behaves exactly as before.
+   */
+  html: z.string().optional(),
 });
 
 export type CreateItemInput = z.infer<typeof CreateItemSchema>;
