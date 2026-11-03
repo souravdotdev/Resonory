@@ -16,6 +16,7 @@ const env: Env = {
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
   WEB_ORIGIN: "https://allowed.example.com",
+  EXTENSION_ORIGIN: "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
 };
 
 // A minimal container: just what buildApp needs to come up (no auth/items
