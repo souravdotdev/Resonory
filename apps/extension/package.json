@@ -11,6 +11,9 @@
     "test": "vitest run",
     "postinstall": "wxt prepare"
   },
+  "dependencies": {
+    "@resonory/shared": "workspace:*"
+  },
   "devDependencies": {
     "@resonory/eslint-config": "workspace:*",
     "@resonory/typescript-config": "workspace:*",
