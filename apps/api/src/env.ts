@@ -9,6 +9,19 @@ const origin = httpUrl.refine((value) => URL.canParse(value) && new URL(value).o
   message: "Must be a bare origin, such as https://app.example.com (no path or trailing slash)",
 });
 
+// The extension's origin: `chrome-extension://<extension-id>`, a scheme `z.url()`'s
+// http(s)-only protocol check (used for `origin` above) would reject outright. Node's
+// URL parser also doesn't know `chrome-extension:` is a "special" scheme the way a
+// browser does, so it can't compute a `.origin` to compare against (unlike `origin`
+// above) — this is a plain shape check instead: the scheme, then a non-empty id,
+// with no path, query, fragment, or trailing slash.
+const extensionOrigin = z
+  .string()
+  .regex(
+    /^chrome-extension:\/\/[^/?#]+$/,
+    "Must be a bare chrome-extension:// origin, such as chrome-extension://<extension-id> (no path or trailing slash)",
+  );
+
 // An optional setting whose empty value (`SUPABASE_URL=` in a .env file) counts as unset.
 const unsetWhenEmpty = <T extends z.ZodType>(value: T) =>
   z.preprocess((raw) => (raw === "" ? undefined : raw), value.optional());
@@ -26,6 +39,12 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   // The web app's origin: the only one CORS and Better Auth trust.
   WEB_ORIGIN: origin,
+  // The extension's origin, the other one CORS trusts (alongside WEB_ORIGIN,
+  // never instead of it). Required like WEB_ORIGIN, with no default: the
+  // extension's id isn't knowable ahead of time (random per unpacked dev
+  // install, fixed once published or given a declared manifest `key`), so
+  // every deploy — local dev included — configures its own.
+  EXTENSION_ORIGIN: extensionOrigin,
   // The parent domain web and API share in production (e.g. `resonory.com`); unset locally.
   AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
   // Supabase Storage, where the worker keeps Thumbnails. Optional, as in the worker: with
