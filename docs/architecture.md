@@ -20,8 +20,9 @@ apps/
               src/infrastructure/  adapters: the Drizzle database and Item repository
               src/di/              tokens.ts (WORKER_TOKENS) and container.ts
   extension/ WXT-based Chrome MV3 browser extension skeleton:
-              entrypoints/      WXT's file-based entrypoints; only background.ts exists so far
-                                (a no-op stub) — the content script and popup land in a later ticket
+              entrypoints/      WXT's file-based entrypoints; background.ts, content.ts and
+                                popup/ each exist as minimal stubs (log on load / placeholder
+                                markup) — real capture, API calls and token handling land later
   waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory,
                                    EmailSender port with its AutoSend and logging adapters, the Welcome
