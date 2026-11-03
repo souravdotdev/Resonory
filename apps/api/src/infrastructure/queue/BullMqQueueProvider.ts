@@ -36,6 +36,7 @@ export class BullMqQueueProvider implements IQueueProvider {
     const payload: ProcessItemJob = ProcessItemJobSchema.parse({
       itemId: request.itemId,
       userId: request.userId,
+      html: request.html,
     });
     await this.queue.add(PROCESS_ITEM_JOB, payload, PROCESS_ITEM_OPTIONS);
   }
