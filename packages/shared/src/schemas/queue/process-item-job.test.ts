@@ -31,4 +31,15 @@ describe("ProcessItemJobSchema", () => {
   it("drops fields the payload doesn't declare", () => {
     expect(ProcessItemJobSchema.parse({ ...job, sourceUrl: "https://example.com" })).toEqual(job);
   });
+
+  it("carries captured page content alongside the ids when given", () => {
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    expect(ProcessItemJobSchema.parse({ ...job, html })).toEqual({ ...job, html });
+  });
+
+  it("leaves html undefined when the job carries none, same as today", () => {
+    expect(ProcessItemJobSchema.parse(job)).toEqual(job);
+    expect(ProcessItemJobSchema.parse(job).html).toBeUndefined();
+  });
 });

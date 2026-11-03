@@ -30,4 +30,20 @@ describe("CreateItemSchema", () => {
     expect(CreateItemSchema.safeParse({ url: atLimit }).success).toBe(true);
     expect(CreateItemSchema.safeParse({ url: atLimit + "a" }).success).toBe(false);
   });
+
+  it("accepts a URL with captured page content alongside it", () => {
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    expect(CreateItemSchema.parse({ url: "https://example.com/a", html })).toEqual({
+      url: "https://example.com/a",
+      html,
+    });
+  });
+
+  it("leaves html undefined when the caller sends only a URL, same as today", () => {
+    const parsed = CreateItemSchema.parse({ url: "https://example.com/a" });
+
+    expect(parsed).toEqual({ url: "https://example.com/a" });
+    expect(parsed.html).toBeUndefined();
+  });
 });
