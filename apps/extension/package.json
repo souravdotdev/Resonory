@@ -1,0 +1,24 @@
+{
+  "name": "extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@resonory/eslint-config": "workspace:*",
+    "@resonory/typescript-config": "workspace:*",
+    "@resonory/vitest-config": "workspace:*",
+    "eslint": "^9.39.5",
+    "globals": "^14.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.1",
+    "wxt": "0.21.5"
+  }
+}
