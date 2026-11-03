@@ -337,6 +337,30 @@ describe("POST /items", () => {
     });
   });
 
+  it("enqueues the job with the request's captured page content, unchanged", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    const res = await save(app, { url: "https://example.com/post", html });
+
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith({
+      itemId: res.json().id,
+      userId: USER_ID,
+      html,
+    });
+  });
+
+  it("enqueues a URL-only request without captured content, same as today", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+
+    await save(app, { url: "https://example.com/post" });
+
+    const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(call.html).toBeUndefined();
+  });
+
   it("saves the same URL twice as two Items", async () => {
     const { repository, saved } = itemsInMemory();
     const app = await buildApp(testContainer(signedIn(), { items: repository }));

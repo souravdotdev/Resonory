@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePageHead } from "@/infrastructure/http/parsePageHead";
+import { htmlHeadOf, parsePageHead } from "@/infrastructure/http/parsePageHead";
 
 const PAGE_URL = "https://example.com/posts/hello";
 const parse = (head: string) =>
@@ -83,5 +83,25 @@ describe("parsePageHead", () => {
       { url: "https://example.com/oembed?url=x&format=json", format: "json" },
       { url: "https://example.com/oembed.xml", format: "xml" },
     ]);
+  });
+});
+
+describe("htmlHeadOf", () => {
+  it("slices a document up to and including </head>", () => {
+    const html = "<!doctype html><html><head><title>A</title></head><body>B</body></html>";
+
+    expect(htmlHeadOf(html)).toBe("<!doctype html><html><head><title>A</title></head>");
+  });
+
+  it("matches </head> case-insensitively and with inner whitespace", () => {
+    const html = "<html><head><title>A</title></HEAD ><body>B</body></html>";
+
+    expect(htmlHeadOf(html)).toBe("<html><head><title>A</title></HEAD >");
+  });
+
+  it("returns the whole string when there's no </head>", () => {
+    const html = "<html><head><title>A</title>";
+
+    expect(htmlHeadOf(html)).toBe(html);
   });
 });

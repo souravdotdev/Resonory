@@ -9,6 +9,22 @@ const OEMBED_FORMATS = new Map<string, OEmbedLink["format"]>([
   ["application/xml+oembed", "xml"],
 ]);
 
+/** Matches a document's closing `</head>` tag, case-insensitively. */
+export const HEAD_END = /<\/head\s*>/i;
+
+/**
+ * An HTML document's text up to and including its first `</head>` (all of
+ * it, when there's none). The one place "what counts as the head" is
+ * decided, shared by a live fetch's capped body read (`SafeUrlFetcher`) and
+ * an already-captured page's full HTML (`HtmlPageParser`, for the
+ * supplied-content path), so both feed `parsePageHead` the same shape of
+ * input.
+ */
+export function htmlHeadOf(html: string): string {
+  const end = HEAD_END.exec(html);
+  return end ? html.slice(0, end.index + end[0].length) : html;
+}
+
 /**
  * Parses an HTML page's head once into the tags the rules read: meta tags,
  * the title, JSON-LD blocks and oEmbed discovery links. Entities in

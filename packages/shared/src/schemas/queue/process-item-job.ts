@@ -13,6 +13,8 @@ export const PROCESS_ITEM_JOB = "process-item";
 export const ProcessItemJobSchema = z.object({
   itemId: z.uuid(),
   userId: z.uuid(),
+  /** Captured page content (issue #143/#145), carried unchanged from the create-Item request. */
+  html: z.string().optional(),
 });
 
 export type ProcessItemJob = z.infer<typeof ProcessItemJobSchema>;

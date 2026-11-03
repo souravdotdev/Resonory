@@ -8,6 +8,8 @@ export interface SaveItemInput {
   userId: string;
   /** The Source URL, already trimmed and checked to be http(s). */
   sourceUrl: string;
+  /** Captured page content (issue #143/#145), threaded unchanged into the enqueued job. */
+  html?: string;
 }
 
 /**
@@ -25,7 +27,11 @@ export class SaveItemUseCase {
 
   async execute(input: SaveItemInput): Promise<ItemCardOutput> {
     const item = await this.items.create({ userId: input.userId, sourceUrl: input.sourceUrl });
-    await this.queue.enqueueProcessItem({ itemId: item.id, userId: item.userId });
+    await this.queue.enqueueProcessItem({
+      itemId: item.id,
+      userId: item.userId,
+      html: input.html,
+    });
     // A just-saved Item has no Thumbnail key, so its card needs no Thumbnail provider.
     return toItemCardOutput(item, []);
   }
