@@ -41,4 +41,21 @@ describe("BullMqQueueProvider", () => {
     ).rejects.toThrow();
     expect(queue.add).not.toHaveBeenCalled();
   });
+
+  it("threads captured page content into the job payload when given", async () => {
+    const queue = queueRecording();
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    await new BullMqQueueProvider(queue).enqueueProcessItem({ ...job, html });
+
+    expect(queue.add).toHaveBeenCalledWith(PROCESS_ITEM_JOB, { ...job, html }, expect.anything());
+  });
+
+  it("adds no html to the job when none is given, same as today", async () => {
+    const queue = queueRecording();
+
+    await new BullMqQueueProvider(queue).enqueueProcessItem(job);
+
+    expect(queue.add).toHaveBeenCalledWith(PROCESS_ITEM_JOB, job, expect.anything());
+  });
 });

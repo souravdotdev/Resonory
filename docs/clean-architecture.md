@@ -152,7 +152,9 @@ apps/worker/src/
     providers/          IUrlFetcher.ts (fetchPage → FetchedPage: html | file | unsuccessful),
                         IJsonFetcher.ts (fetchJson), IOEmbedProvider.ts (fetchOEmbed),
                         IImageFetcher.ts (fetchImage), IThumbnailResizer.ts (toCardThumbnail),
-                        IThumbnailStore.ts (put)
+                        IThumbnailStore.ts (put), IPageHeadParser.ts (parseHead: an already-captured
+                        page's HTML → PageHead, the same shape IUrlFetcher's HtmlPage carries, so
+                        already-rendered content (issue #143/#145) skips the fetch but not this step)
     rules/              thumbnailCandidates.ts (which images, in which order), thumbnailImage.ts
                         (the one list of accepted image formats), magicBytes.ts (file signatures, shared
                         with itemTypeFromMagicBytes.ts), thumbnailKey.ts,
@@ -169,7 +171,9 @@ apps/worker/src/
     database/           Database.ts, db.ts
     http/               SafeUrlFetcher.ts, publicAddress.ts (the guarded fetch), readBody.ts (bounded body
                         reads), looksLikeHtml.ts (sniffs a body without a Content-Type),
-                        parsePageHead.ts (htmlparser2), GuardedOEmbedProvider.ts (oEmbed over IJsonFetcher)
+                        parsePageHead.ts (htmlparser2), HtmlPageParser.ts (`IPageHeadParser` over
+                        parsePageHead, for already-captured content), GuardedOEmbedProvider.ts
+                        (oEmbed over IJsonFetcher)
     images/             SharpThumbnailResizer.ts (the card Thumbnail, with sharp)
     storage/            SupabaseThumbnailStore.ts, supabaseEnv.ts (the optional SUPABASE_URL /
                         SUPABASE_SERVICE_ROLE_KEY; unset, no store is bound)
