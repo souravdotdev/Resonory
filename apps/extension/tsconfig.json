@@ -1,5 +1,11 @@
 {
   "extends": "@resonory/typescript-config/base.json",
+  "compilerOptions": {
+    // Content scripts and the popup run in a browser/DOM context (only the
+    // background service worker doesn't), so the shared base config's
+    // Node-oriented `lib` needs DOM added.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
   "include": ["entrypoints", "wxt.config.ts", ".wxt/wxt.d.ts"],
   "exclude": ["node_modules", ".output"]
 }
