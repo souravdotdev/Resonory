@@ -16,9 +16,11 @@ import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
+import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
 
 // A Thumbnail key for a URL, the way Processing itself derives one.
 const keyFor = (url: string): string => {
@@ -238,7 +240,11 @@ const useCaseFor = (
   oEmbeds: IOEmbedProvider = oEmbedsFailing(),
   { images = imagesFailing(), resizer = resizerFailing(), store = null }: ThumbnailPorts = {},
   cache: IUrlPreviewCache = cacheMissing(),
-) => new ProcessItemUseCase(repository, fetcher, cache, oEmbeds, images, resizer, store);
+  // The real adapter: deterministic and side-effect free, so tests use it as-is
+  // rather than faking it, just like a pure domain rule.
+  pageParser: IPageHeadParser = new HtmlPageParser(),
+) =>
+  new ProcessItemUseCase(repository, fetcher, cache, oEmbeds, images, resizer, pageParser, store);
 
 const run = (
   sourceUrl: string,
@@ -1196,5 +1202,112 @@ describe("ProcessItemUseCase, the URL preview cache", () => {
     await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
     expect(images.fetchImage).toHaveBeenCalledWith("https://cdn.example.com/a.jpg");
     expect(objects.size).toBe(1);
+  });
+});
+
+describe("ProcessItemUseCase, supplied content", () => {
+  const OG_IMAGE = "https://cdn.example.com/cover.jpg";
+  const htmlContent = (
+    {
+      title = "Page title",
+      ogTitle,
+      ogDescription,
+      ogImage,
+    }: Record<string, string | undefined> = {
+      ogTitle: "The real title",
+      ogDescription: "What it's about",
+      ogImage: OG_IMAGE,
+    },
+  ) => `
+    <!doctype html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <meta property="og:type" content="article">
+        ${ogTitle ? `<meta property="og:title" content="${ogTitle}">` : ""}
+        ${ogDescription ? `<meta property="og:description" content="${ogDescription}">` : ""}
+        ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ""}
+      </head>
+      <body>Ignored.</body>
+    </html>
+  `;
+
+  it("resolves title, description and thumbnail from supplied HTML, never touching the network fetcher", async () => {
+    const fetcher = fetcherAnswering(htmlPage());
+    const images = imagesAt(OG_IMAGE);
+    const resizer = resizerAnswering();
+    const { store, objects } = thumbnailsInMemory();
+    const { repository, item } = itemsInMemory("https://example.com/page");
+    const useCase = useCaseFor(repository, fetcher, undefined, { images, resizer, store });
+
+    const result = useCase.execute({ ...REF, html: htmlContent() });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "The real title", description: "What it's about" },
+      thumbnailKey: keyFor("https://example.com/page"),
+    });
+    expect(fetcher.fetchPage).not.toHaveBeenCalled();
+    expect(images.fetchImage).toHaveBeenCalledWith(OG_IMAGE);
+    expect(objects.size).toBe(1);
+    expect(item).toMatchObject({
+      status: "ready",
+      title: "The real title",
+      description: "What it's about",
+    });
+  });
+
+  it("never calls the network fetcher at all when content is supplied", async () => {
+    const fetcher = fetcherAnswering(htmlPage());
+    const { repository } = itemsInMemory("https://example.com/page");
+    const useCase = useCaseFor(repository, fetcher);
+
+    await useCase.execute({ ...REF, html: htmlContent() });
+
+    expect(fetcher.fetchPage).not.toHaveBeenCalled();
+  });
+
+  it("resolves full metadata from supplied HTML even for a URL a real fetch would 403 (issue #137)", async () => {
+    const fetcher = fetcherFailing(new Error("Fetching https://medium.com/… answered 403"));
+    const { repository, item } = itemsInMemory("https://medium.com/@someone/a-post");
+    const useCase = useCaseFor(repository, fetcher);
+
+    const result = useCase.execute({
+      itemId: ITEM_ID,
+      userId: USER_ID,
+      html: htmlContent({ ogTitle: "A Medium post", ogDescription: "Behind Cloudflare" }),
+    });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      metadata: { title: "A Medium post", description: "Behind Cloudflare" },
+    });
+    expect(fetcher.fetchPage).not.toHaveBeenCalled();
+    expect(item).toMatchObject({ status: "ready", title: "A Medium post" });
+  });
+
+  it("still types supplied content by JSON-LD, like a fetched page", async () => {
+    const { repository } = itemsInMemory("https://example.com/page");
+    const useCase = useCaseFor(repository, fetcherFailing(new Error("must not be called")));
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <script type="application/ld+json">{"@type": "PodcastEpisode"}</script>
+        </head>
+      </html>
+    `;
+
+    const result = useCase.execute({ ...REF, html });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "audio" });
+  });
+
+  it("behaves exactly as today when no content is supplied (no regression)", async () => {
+    const { item, result } = run("https://youtu.be/dQw4w9WgXcQ", fetcherAnswering(htmlPage()));
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video" });
+    expect(item).toMatchObject({ status: "ready", type: "video" });
   });
 });

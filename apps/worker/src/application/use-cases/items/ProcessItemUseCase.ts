@@ -11,6 +11,7 @@ import {
 import type { PageHead } from "@/domain/entities/PageHead";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IOEmbedProvider, OEmbed } from "@/domain/providers/IOEmbedProvider";
+import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
@@ -73,6 +74,7 @@ export class ProcessItemUseCase {
     @inject(WORKER_TOKENS.OEmbedProvider) private readonly oEmbeds: IOEmbedProvider,
     @inject(WORKER_TOKENS.ImageFetcher) private readonly images: IImageFetcher,
     @inject(WORKER_TOKENS.ThumbnailResizer) private readonly resizer: IThumbnailResizer,
+    @inject(WORKER_TOKENS.PageHeadParser) private readonly pageParser: IPageHeadParser,
     // Unbound without Supabase Storage configured: then no image is fetched.
     @inject(WORKER_TOKENS.ThumbnailStore)
     @optional()
@@ -85,24 +87,31 @@ export class ProcessItemUseCase {
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
     let page: FetchedPage;
-    try {
-      page = await this.fetcher.fetchPage(item.sourceUrl);
-    } catch (error) {
-      if (typeFromSourceUrl === null) throw error;
-      // A known provider still describes a post its site wouldn't serve.
-      // There's no final URL here, so this path never touches the cache.
-      const answer = await this.ask(knownOEmbedRequestFor(item.sourceUrl));
-      return this.ready(ref, {
-        type: typeFromSourceUrl,
-        metadata: metadataOf(null, answer),
-        thumbnailKey: await this.keepThumbnail(
-          item.sourceUrl,
-          canonicalUrl(item.sourceUrl),
-          false,
-          null,
-          answer,
-        ),
-      });
+    if (ref.html !== undefined) {
+      // Already-rendered content (issue #143/#145): build the page
+      // representation directly from it, the same shape a successful fetch
+      // would have produced, and never call the network fetcher for this job.
+      page = this.pageFromContent(item.sourceUrl, ref.html);
+    } else {
+      try {
+        page = await this.fetcher.fetchPage(item.sourceUrl);
+      } catch (error) {
+        if (typeFromSourceUrl === null) throw error;
+        // A known provider still describes a post its site wouldn't serve.
+        // There's no final URL here, so this path never touches the cache.
+        const answer = await this.ask(knownOEmbedRequestFor(item.sourceUrl));
+        return this.ready(ref, {
+          type: typeFromSourceUrl,
+          metadata: metadataOf(null, answer),
+          thumbnailKey: await this.keepThumbnail(
+            item.sourceUrl,
+            canonicalUrl(item.sourceUrl),
+            false,
+            null,
+            answer,
+          ),
+        });
+      }
     }
 
     const canonical = canonicalUrl(page.finalUrl);
@@ -122,6 +131,22 @@ export class ProcessItemUseCase {
     };
     if (canonical) await this.remember(canonical, result);
     return this.ready(ref, result);
+  }
+
+  /**
+   * The page representation for already-rendered content supplied on the
+   * job (issue #143/#145), equivalent in shape to a successful fetch's
+   * `HtmlPage`: the Source URL as its final URL (there was no fetch, so no
+   * redirect to follow), a declared `text/html` Content-Type, and a head
+   * parsed from the supplied HTML the same way a fetched page's is.
+   */
+  private pageFromContent(sourceUrl: string, html: string): FetchedPage {
+    return {
+      kind: "html",
+      finalUrl: sourceUrl,
+      contentType: "text/html",
+      head: this.pageParser.parseHead(html, sourceUrl),
+    };
   }
 
   /**
