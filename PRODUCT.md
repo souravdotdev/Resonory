@@ -33,9 +33,9 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
   - **Rediscover digest** (V1): a weekly email of a few forgotten Items.
   - **Reminder** (V1.x, shown as "Next"): an Item comes back at a moment the User chose.
   - **Cue** (V1.x, shown as "Next"): while the User searches or browses, a small card says they already saved things on this topic.
-- **V1 capture:** paste any link in the web app. Async processing detects the type, gets the title, description and thumbnail, and extracts the text. Items also get AI tags, which the User can add to or remove, plus manual tags, semantic search, and a grid library filtered by tag.
+- **V1 capture:** a Chrome/Chromium browser extension, one click on the current tab — the only way to save. The extension sends the already-rendered page along with its address, so capture works even on pages that block a server-side fetch (bot-walled or login-gated sites). Async processing detects the type, gets the title, description and thumbnail, and extracts the text. Items also get AI tags, which the User can add to or remove, plus manual tags, semantic search, and a grid library filtered by tag. Covers five Item types: Article, Post, Link, Video and Audio.
 - **No folders, ever.** Organisation is tags only.
-- **Not in V1:** the browser extension and Cues, Reminders, uploads, and mobile apps.
+- **Not in V1:** Firefox/Safari extensions, saving a link without opening it, Cues, Reminders, uploads, and mobile apps (no extension exists on mobile, so there's no V1 capture path there).
 - **Waitlist:** email only. The promise is two emails, nothing else: a welcome email when you join and one when early access opens. A Waitlist Entry stores the email, its source and the signup time.
 - **Undecided:** pricing amounts, the launch date, and the free tier's limits.
 
@@ -72,7 +72,7 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
 2. **Understand by meaning.** Relevance comes from what a save is about, not from keywords or folders.
 3. **Never nag.** Resurfacing is rare, relevant and dismissible.
 4. **Earn trust.** Libraries are private, data is minimal, and every claim is true.
-5. **Effortless capture.** Saving takes one paste, and organising takes nothing.
+5. **Effortless capture.** Saving takes one click, and organising takes nothing.
 
 ## Accessibility & Inclusion
 

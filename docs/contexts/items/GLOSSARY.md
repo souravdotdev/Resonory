@@ -11,7 +11,7 @@ A link a User saved into Resonory, together with what Resonory learned about it.
 _Avoid_: Bookmark, save, entry, note
 
 **Source URL**:
-The address the User pasted to create an Item.
+The address of the page an Item was saved from.
 _Avoid_: Link, original URL
 
 **Thumbnail**:
