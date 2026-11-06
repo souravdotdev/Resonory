@@ -1,0 +1,25 @@
+:root {
+  --bg: #141414;
+  --accent: #d4621a;
+  --cream: #fafaf7;
+  --success: #16a34a; /* matches lib/badge.ts SUCCESS_COLOR */
+  --error: #dc2626; /* matches lib/badge.ts FAILURE_COLOR */
+}
+
+body {
+  margin: 0;
+  width: 280px;
+  background: var(--bg);
+  color: var(--cream);
+  font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+main {
+  padding: 20px;
+}
+
+p {
+  color: color-mix(in srgb, var(--cream) 80%, transparent);
+}
