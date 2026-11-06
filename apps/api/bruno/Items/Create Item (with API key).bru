@@ -1,0 +1,33 @@
+meta {
+  name: Create Item (with API key)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/items
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  x-api-key: {{apiKey}}
+}
+
+body:json {
+  {
+    "url": "https://youtu.be/dQw4w9WgXcQ"
+  }
+}
+
+docs {
+  Proves the key from "3. Create API Key" actually authenticates, the same
+  way the extension's background script does (`x-api-key` header, no Session
+  cookie) — `enableSessionForAPIKeys` means this hits the exact same
+  create-Item route as a cookie-authenticated request, no separate code path.
+  Should return `201` with a Processing Item card.
+
+  Try it with the header blank or an obviously wrong value too: should come
+  back as a clear `401`, never a silent no-op (#143's requirement).
+}
