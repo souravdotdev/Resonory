@@ -1,0 +1,17 @@
+/* Options-page-specific layout only — shared form styling lives in
+   lib/apiKeyForm.css, linked alongside this file in index.html. This opens
+   as a full browser tab, not a floating popup, so the form is centered as
+   a card instead of pinned to the popup's fixed narrow width. */
+body {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 48px 16px;
+}
+
+main {
+  width: 100%;
+  max-width: 360px;
+  height: fit-content;
+}
