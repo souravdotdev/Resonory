@@ -27,6 +27,7 @@ export class ItemsController {
     const card = await this.saveItemUseCase.execute({
       userId: signedInUser(request).id,
       sourceUrl: request.body.url,
+      html: request.body.html,
     });
     reply.code(201);
     return card;

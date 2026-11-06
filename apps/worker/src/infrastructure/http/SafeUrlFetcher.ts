@@ -17,7 +17,7 @@ import {
   thumbnailImageFormatOfContentType,
 } from "@/domain/rules/thumbnailImage";
 import { looksLikeHtml, SNIFF_BYTES } from "@/infrastructure/http/looksLikeHtml";
-import { parsePageHead } from "@/infrastructure/http/parsePageHead";
+import { HEAD_END, htmlHeadOf, parsePageHead } from "@/infrastructure/http/parsePageHead";
 import { isPublicAddress } from "@/infrastructure/http/publicAddress";
 import { readBody } from "@/infrastructure/http/readBody";
 
@@ -47,7 +47,6 @@ export class UrlRefusedError extends Error {
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const HTML_TYPES = new Set(["text/html", "application/xhtml+xml"]);
-const HEAD_END = /<\/head\s*>/i;
 // application/json, application/<x>+json, and the oEmbed spelling application/json+oembed.
 const JSON_TYPE = /^application\/([a-z0-9.+-]+\+)?json(\+oembed)?$/;
 const PAGE_ACCEPT = "text/html,application/xhtml+xml,*/*;q=0.8";
@@ -318,9 +317,7 @@ export class SafeUrlFetcher implements IUrlFetcher, IJsonFetcher, IImageFetcher 
 
 /** An HTML body's text up to and including `</head>` (all of it without one). */
 function headOf(body: Buffer): string {
-  const text = body.toString("utf8");
-  const end = HEAD_END.exec(text);
-  return end ? text.slice(0, end.index + end[0].length) : text;
+  return htmlHeadOf(body.toString("utf8"));
 }
 
 /** A `lookup` for `http.request` that answers only with already-checked addresses. */

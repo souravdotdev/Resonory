@@ -1,7 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { accounts, sessions, users, verifications } from "@resonory/db/schema";
+import { apiKey } from "@better-auth/api-key";
+import { accounts, apiKeys, sessions, users, verifications } from "@resonory/db/schema";
 import type { Database } from "@/infrastructure/database/Database";
 import { createSignInHook, type AdmitSignIn } from "./signInHook";
 
@@ -41,7 +42,14 @@ export function createAuth(db: Database, config: AuthConfig, deps: AuthDeps) {
       provider: "pg",
       // Better Auth's model names mapped to our plural tables. Its `image` field
       // is the `users` table's `image` key, stored in the `profile_img` column.
-      schema: { user: users, session: sessions, account: accounts, verification: verifications },
+      // "apikey" is the `@better-auth/api-key` plugin's own model name.
+      schema: {
+        user: users,
+        session: sessions,
+        account: accounts,
+        verification: verifications,
+        apikey: apiKeys,
+      },
     }),
     user: {
       additionalFields: {
@@ -95,6 +103,24 @@ export function createAuth(db: Database, config: AuthConfig, deps: AuthDeps) {
         ? { enabled: true, domain: config.cookieDomain }
         : undefined,
     },
+    plugins: [
+      // A key is only ever created by an explicit call to its create endpoint
+      // (never auto-issued at sign-up/sign-in); `enableSessionForAPIKeys` makes
+      // `getSession({ headers })` — the one call `BetterAuthSessionProvider`
+      // already uses — transparently resolve a valid `x-api-key` header the
+      // same way it resolves the Session cookie, with no separate code path
+      // (spec #143/#144). A leaked key then fully impersonates its User, same
+      // severity as a leaked Session cookie — accepted, per the plugin's own
+      // docs, since the key is meant to be a long-lived personal credential.
+      apiKey({
+        enableSessionForAPIKeys: true,
+        // Prepended to every generated key's raw value (plugin concatenates
+        // with no separator of its own — `resk_` includes it), so a key is
+        // recognizable at a glance (`resk_...`) the way GitHub's `ghp_` or
+        // Stripe's `sk_` are. Never applied retroactively to existing keys.
+        defaultPrefix: "resk_",
+      }),
+    ],
   });
 }
 

@@ -1,0 +1,7 @@
+/* Popup-specific layout only — shared form styling lives in
+   lib/apiKeyForm.css, linked alongside this file in index.html. A Chrome
+   popup is a floating panel, so it needs a fixed, narrow width; a full
+   browser tab (the options page) does not. */
+body {
+  width: 280px;
+}

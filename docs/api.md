@@ -138,10 +138,10 @@ The signed-in User, in `MeResponseSchema` (`@resonory/shared/schemas/auth`). Pro
 
 ### `POST /items`
 
-Saves a pasted URL as an Item for the signed-in User and answers straight away with its Item card, still Processing and with no Item type. Protected by the auth middleware. Served by `itemsRoutes` → `ItemsController` → `SaveItemUseCase`, which:
+Saves a pasted URL as an Item for the signed-in User and answers straight away with its Item card, still Processing and with no Item type. Protected by the auth middleware — a Session cookie or (issue #143) an `x-api-key` header, resolved identically (see [Security](./security.md#authentication)). Served by `itemsRoutes` → `ItemsController` → `SaveItemUseCase`, which:
 
 1. stores the Item through the `IItemRepository` port (`DrizzleItemRepository`): status `processing`, type null, the Source URL exactly as pasted after trimming. Source URLs aren't unique, so saving the same one twice creates two Items;
-2. enqueues its Processing through the `IQueueProvider` port (`BullMqQueueProvider`): a Process Item job with `{ itemId, userId }` on the Items queue (see [Queue](./queue.md));
+2. enqueues its Processing through the `IQueueProvider` port (`BullMqQueueProvider`): a Process Item job with `{ itemId, userId, html }` on the Items queue (see [Queue](./queue.md#captured-content-the-browser-extension-path));
 3. returns the Item card (`CreateItemResponseSchema`, the same shape as `ItemCardSchema`).
 
 ```
@@ -163,7 +163,9 @@ POST /items
 }
 ```
 
-- No valid Session → `401 unauthorized`. The User always comes from the Session, never from the body.
+**`html`** (`CreateItemSchema`, optional): the page's already-rendered HTML, as the browser extension's background script captures it from the active tab on a toolbar click (`document.documentElement.outerHTML`) and sends alongside the URL — never typed by hand, and additive: a caller sending only `url`, as the web app still does, behaves exactly as before this field existed. Carried unchanged through the enqueued job to the worker, which then skips its own fetch for that Item entirely (see [Queue](./queue.md#captured-content-the-browser-extension-path)).
+
+- No valid Session or API key → `401 unauthorized`. The User always comes from the authenticated identity, never from the body.
 - A missing URL, one that isn't `http`/`https`, or one over 2048 characters → `400 validation_failed` with the issue at `/url`.
 - If the job can't be enqueued (Redis is down), the request fails with `500 internal`. The Item is already stored and stays Processing; there is no retry endpoint yet.
 
