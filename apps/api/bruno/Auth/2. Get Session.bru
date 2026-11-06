@@ -1,0 +1,21 @@
+meta {
+  name: 2. Get Session
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/auth/get-session
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+docs {
+  Confirms the cookie copied in "1. Sign In (Google)" actually resolves to a
+  signed-in User. Returns `null` if `sessionCookie` is empty, expired, or
+  wrong — re-run step 1 in that case.
+}

@@ -1,0 +1,37 @@
+meta {
+  name: 3. Create API Key
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/auth/api-key/create
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+body:json {
+  {}
+}
+
+script:post-response {
+  if (res.body && res.body.key) {
+    bru.setEnvVar("apiKey", res.body.key);
+  }
+}
+
+docs {
+  Requires `sessionCookie` to be set (see "1. Sign In (Google)").
+
+  The raw `key` in the response is the only time it's ever shown — per
+  `@better-auth/api-key`'s design (packages/db/src/schema/apiKeys.ts), only
+  its hash is persisted, so losing this value means creating a new key. The
+  post-response script above stashes it straight into the `apiKey` secret
+  variable so "Create Item (with API key)" can reuse it without you copying
+  anything by hand.
+}
