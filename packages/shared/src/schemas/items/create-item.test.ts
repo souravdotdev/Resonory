@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CreateItemSchema } from "./index";
+import { CreateItemSchema, MAX_HTML_LENGTH } from "./index";
 
 describe("CreateItemSchema", () => {
   it.each(["https://example.com/article", "http://example.com/article"])("accepts %s", (url) => {
@@ -45,5 +45,16 @@ describe("CreateItemSchema", () => {
 
     expect(parsed).toEqual({ url: "https://example.com/a" });
     expect(parsed.html).toBeUndefined();
+  });
+
+  it(`accepts html of exactly ${MAX_HTML_LENGTH} characters and rejects one character more`, () => {
+    const atLimit = "a".repeat(MAX_HTML_LENGTH);
+
+    expect(
+      CreateItemSchema.safeParse({ url: "https://example.com/a", html: atLimit }).success,
+    ).toBe(true);
+    expect(
+      CreateItemSchema.safeParse({ url: "https://example.com/a", html: atLimit + "a" }).success,
+    ).toBe(false);
   });
 });
