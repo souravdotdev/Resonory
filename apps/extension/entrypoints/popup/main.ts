@@ -9,7 +9,7 @@ import { getStoredApiKey, setStoredApiKey } from "../../lib/apiKeyStorage";
 export function renderPopup(root: { innerHTML: string }): void {
   root.innerHTML = `
     <main>
-      <img class="logo" src="/resonory-logo.png" alt="Resonory" width="32" height="32" />
+      <img class="logo" src="/resonory-logo-extended.png" alt="Resonory" width="160" height="53" />
       <p>Paste your API key to start saving pages.</p>
       <form id="api-key-form">
         <label for="api-key-input">API key</label>
