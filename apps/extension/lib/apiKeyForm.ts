@@ -54,7 +54,10 @@ export function wireApiKeyForm(): void {
 
     void setStoredApiKey(value).then(() => {
       if (status) {
-        status.textContent = "Saved. You can close this popup.";
+        // Shown on both the popup and the options page (#154) — kept
+        // surface-neutral rather than "close this popup", which would read
+        // wrong on the options page's full tab.
+        status.textContent = "Saved.";
         status.className = "status-success";
       }
     });
