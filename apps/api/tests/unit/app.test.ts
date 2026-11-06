@@ -36,6 +36,7 @@ const env: Env = {
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
   WEB_ORIGIN: "https://allowed.example.com",
+  EXTENSION_ORIGIN: "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
 };
 
 // An active User with a Google avatar; each test overrides only what it's about.
@@ -132,21 +133,21 @@ describe("the API app", () => {
     expect(res.headers["x-frame-options"]).toBeTruthy();
   });
 
-  it("locks Access-Control-Allow-Origin to the web origin, never the requester's", async () => {
+  it("never reflects a requester's origin that isn't on the allow-list", async () => {
     const app = await buildApp(testContainer());
 
-    // With a static string `origin` config, @fastify/cors always sets this
-    // header to the *configured* value — it's the browser that then refuses
-    // a mismatched-origin page read access to the response, not the server
-    // omitting the header. The property worth testing is that this value
-    // never reflects whatever Origin the request actually sent.
+    // With an allow-list `origin` config (an array of exact origins, not a
+    // single static string), @fastify/cors sets this header only when the
+    // request's Origin matches one of the allowed origins, reflecting that
+    // matched value — never the requester's own, unmatched Origin, and never
+    // present at all for a mismatch. See the two tests below for the matched case.
     const res = await app.inject({
       method: "GET",
       url: "/health",
       headers: { origin: "https://evil.example.com" },
     });
 
-    expect(res.headers["access-control-allow-origin"]).toBe("https://allowed.example.com");
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
   it("lets the web origin send and receive the Session cookie", async () => {
@@ -163,6 +164,39 @@ describe("the API app", () => {
 
     expect(res.headers["access-control-allow-origin"]).toBe("https://allowed.example.com");
     expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
+
+  it("lets the extension's origin send and receive credentials too, alongside the web origin", async () => {
+    const app = await buildApp(testContainer());
+
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: "/health",
+      headers: {
+        origin: "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
+        "access-control-request-method": "POST",
+      },
+    });
+
+    expect(res.headers["access-control-allow-origin"]).toBe(
+      "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
+    );
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
+
+  it("rejects a non-web, non-extension origin: no Access-Control-Allow-Origin at all", async () => {
+    const app = await buildApp(testContainer());
+
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: "/health",
+      headers: {
+        origin: "chrome-extension://some-other-unrelated-extension-id",
+        "access-control-request-method": "POST",
+      },
+    });
+
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
   it("limits each client to 100 requests a minute app-wide", async () => {
@@ -301,6 +335,30 @@ describe("POST /items", () => {
       itemId: res.json().id,
       userId: USER_ID,
     });
+  });
+
+  it("enqueues the job with the request's captured page content, unchanged", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    const res = await save(app, { url: "https://example.com/post", html });
+
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith({
+      itemId: res.json().id,
+      userId: USER_ID,
+      html,
+    });
+  });
+
+  it("enqueues a URL-only request without captured content, same as today", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+
+    await save(app, { url: "https://example.com/post" });
+
+    const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(call.html).toBeUndefined();
   });
 
   it("saves the same URL twice as two Items", async () => {

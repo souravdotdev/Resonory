@@ -31,8 +31,11 @@ export async function buildApp(container: Container, options: FastifyServerOptio
   // Before plugins and routes, so they inherit the error and not-found handlers.
   registerErrorMiddleware(app);
 
-  // Credentials, so the browser sends and accepts the Session cookie cross-origin (ADR 0003).
-  await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true });
+  // An allow-list, not a wildcard (ADR 0003): the web app's origin and the
+  // extension's `chrome-extension://` origin, nothing else. Credentials, so the
+  // browser sends and accepts the Session cookie (or an API key header) cross-origin.
+  const allowedOrigins = [env.WEB_ORIGIN, env.EXTENSION_ORIGIN];
+  await app.register(cors, { origin: allowedOrigins, credentials: true });
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(rateLimit, {
     max: 100,

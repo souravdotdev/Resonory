@@ -1,4 +1,5 @@
 import { inject, injectable } from "inversify";
+import { APIError } from "better-auth/api";
 import { TOKENS } from "@/di/tokens";
 import type { User } from "@/domain/entities/User";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
@@ -28,7 +29,16 @@ export class BetterAuthSessionProvider implements ISessionProvider {
   constructor(@inject(TOKENS.Auth) private readonly auth: { api: SessionApi }) {}
 
   async resolve(headers: Headers): Promise<User | null> {
-    const session = await this.auth.api.getSession({ headers });
+    // Unlike a missing/malformed Session cookie (which `getSession` answers with a
+    // plain `null`), a present-but-invalid API key header makes `getSession` throw
+    // (e.g. a coded "Invalid API key" APIError) instead of returning null. That
+    // difference would otherwise surface as a 403/500, not the 401 a missing/invalid
+    // Session gets today (spec #144) — so it's normalized here to the same "no
+    // Session" null every other caller of this method already handles.
+    const session = await this.auth.api.getSession({ headers }).catch((error: unknown) => {
+      if (error instanceof APIError) return null;
+      throw error;
+    });
     if (session === null) return null;
 
     // Better Auth may leave the nullable columns out; as a row they're null.

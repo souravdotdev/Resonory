@@ -2,6 +2,14 @@
   "extends": "@resonory/typescript-config/library.json",
   "compilerOptions": {
     "outDir": "dist",
+    // An app, never a library another package imports .d.ts from (the shared
+    // config turns this on for actual libraries) — and it builds with tsup
+    // (esbuild), not tsc, so no declaration output is ever produced or consumed.
+    // Turned off because `tsc --noEmit` still computes it just to check it's
+    // possible, and `@better-auth/api-key`'s plugin type is too deep for that
+    // check to succeed (TS7056) even though nothing ever reads the result.
+    "declaration": false,
+    "declarationMap": false,
     // InversifyJS's @injectable/@inject are legacy (parameter) decorators.
     // No emitDecoratorMetadata: esbuild (tsup, tsx) can't emit it, so every
     // constructor parameter names its token with @inject(TOKENS.X).

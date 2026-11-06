@@ -2,6 +2,8 @@
 export interface ProcessItemRequest {
   itemId: string;
   userId: string;
+  /** Captured page content (issue #143/#145), passed through unchanged to the worker. */
+  html?: string;
 }
 
 /** Hands background work to the worker. The queue adapter implements it. */

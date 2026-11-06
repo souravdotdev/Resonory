@@ -7,6 +7,7 @@ const validEnv = {
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
   WEB_ORIGIN: "http://localhost:3000",
+  EXTENSION_ORIGIN: "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
 };
 
 // env.ts validates process.env once, at import time, so each test stubs the
@@ -61,6 +62,18 @@ describe("api env", () => {
     "refuses a web origin that isn't a bare origin (%s)",
     async (origin) => {
       await expect(loadEnv({ WEB_ORIGIN: origin })).rejects.toThrow("WEB_ORIGIN");
+    },
+  );
+
+  it.each([
+    "not a url",
+    "https://allowed.example.com", // the wrong scheme for an extension origin
+    "chrome-extension://abc/",
+    "chrome-extension://abc/path",
+  ])(
+    "refuses an extension origin that isn't a bare chrome-extension:// origin (%s)",
+    async (origin) => {
+      await expect(loadEnv({ EXTENSION_ORIGIN: origin })).rejects.toThrow("EXTENSION_ORIGIN");
     },
   );
 

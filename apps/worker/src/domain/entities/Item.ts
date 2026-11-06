@@ -20,6 +20,13 @@ export type ItemStatus = (typeof ITEM_STATUSES)[number];
 export interface ItemRef {
   itemId: string;
   userId: string;
+  /**
+   * Already-rendered page content (issue #143/#145), captured by the
+   * browser extension and carried on the job unchanged. When present,
+   * `ProcessItemUseCase` builds its page representation from it directly
+   * and never calls the network fetcher for this job.
+   */
+  html?: string;
 }
 
 /** What Processing needs to know about an Item. */

@@ -1,0 +1,46 @@
+meta {
+  name: 1. Sign In (Google)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/sign-in/social
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "provider": "google",
+    "callbackURL": "http://localhost:3000"
+  }
+}
+
+docs {
+  Bruno can't do the OAuth redirect/consent screen itself, so this step stays
+  manual:
+
+  1. Send this request. The response is `{ "url": "<google-oauth-url>" }`.
+  2. Paste that `url` into a real browser tab and complete Google's consent
+     screen. You need to already be signed into the Google account you want
+     to use, in that browser.
+  3. Google redirects back to the API's own callback
+     (`/api/auth/callback/google`), which is where the Session cookie is
+     actually set — on `localhost:4000`, since `AUTH_COOKIE_DOMAIN` isn't set
+     locally. It then redirects to `callbackURL` above, which will likely
+     404 since no page handles it yet — that's expected.
+  4. In DevTools on that browser tab: Application → Cookies →
+     `http://localhost:4000` → copy the value of `better-auth.session_token`.
+  5. Open this collection's "Local" environment in Bruno and paste that value
+     into the `sessionCookie` secret variable (the padlock icon next to a
+     variable marks it secret — its value is kept out of this committed
+     `.bru` file, stored only in your local Bruno settings).
+
+  Once `sessionCookie` is set, "2. Get Session" and "3. Create API Key" both
+  reuse it automatically via the `Cookie` header.
+}

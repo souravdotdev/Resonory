@@ -1,6 +1,7 @@
 export {
   CreateItemSchema,
   CreateItemResponseSchema,
+  MAX_HTML_LENGTH,
   MAX_URL_LENGTH,
   type CreateItemInput,
   type CreateItemResponse,

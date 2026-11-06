@@ -138,3 +138,43 @@ What runs today is auth, saving a URL and detecting its Item type from the URL (
 4. `curl http://localhost:4000/health` returns `{ "status": "ok" }`, and `curl http://localhost:4000/me` returns `401` in the `unauthorized` error envelope — see [API](./api.md)
 5. Sign in with Google through `POST /api/auth/sign-in/social`, then `GET /me` with the Session cookie returns the signed-in User
 6. `POST /items` with the Session cookie and `{ "url": "https://youtu.be/dQw4w9WgXcQ" }` returns `201` with a Processing Item card. With the worker running (`pnpm --filter worker dev`), the Item is `ready` with type `video` within seconds and the worker logs `[worker] Item <id> is Ready as video`
+
+## Signing in and creating an API key from the browser console
+
+There's no sign-in page anywhere in `apps/web` yet (see [#143](https://github.com/souravdotdev/Resonory/issues/143)) — Google is the only sign-in method, and the API key the extension needs is created by calling its endpoint directly, not through any UI. Until a real sign-in page and key-management UI exist, this is how to get a Session and a key locally.
+
+1. **Open a new tab at the API's own origin**, not the web app: `http://localhost:4000` (any path is fine, even a 404 page — you just need a JS context on that origin). Doing this same-origin avoids a CORS preflight on the JSON POST below, which `app.ts`'s origin allow-list (`WEB_ORIGIN` + `EXTENSION_ORIGIN`) would otherwise block.
+
+2. **Start the Google sign-in**, in that tab's DevTools console:
+
+   ```js
+   const res = await fetch("/api/auth/sign-in/social", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ provider: "google", callbackURL: "http://localhost:3000" }),
+   });
+   const { url } = await res.json();
+   window.location.href = url;
+   ```
+
+3. **Complete the Google consent screen.** Google redirects to the API's own callback (`/api/auth/callback/google`), which is where Better Auth actually sets the Session cookie — on the `localhost:4000` origin, since `AUTH_COOKIE_DOMAIN`/`crossSubDomainCookies` isn't set locally. It then redirects to `callbackURL` (`localhost:3000`), which will likely 404 since no page handles it there yet; that's expected, the cookie's already set.
+
+4. **Confirm the Session**, back on the `localhost:4000` tab (same-origin, so the cookie is sent automatically):
+
+   ```js
+   await fetch("/api/auth/get-session").then((r) => r.json());
+   ```
+
+5. **Create an API key** (same tab):
+
+   ```js
+   await fetch("/api/auth/api-key/create", { method: "POST" }).then((r) => r.json());
+   ```
+
+   Copy `key` from the response immediately — per [`@better-auth/api-key`](https://www.npmjs.com/package/@better-auth/api-key)'s `enableSessionForAPIKeys` design (see [ADR for #143](https://github.com/souravdotdev/Resonory/issues/143)), the raw value is never retrievable again; only its hash is stored (`packages/db/src/schema/apiKeys.ts`). This is the key to paste into the extension's popup.
+
+Once you're signed in this way, any other authenticated request from that same `localhost:4000` tab (e.g. `POST /items`) carries the Session cookie automatically — no need to repeat the sign-in for every request, only once per browser session (or whenever the cookie expires/is cleared).
+
+### Doing the same thing in Bruno
+
+`apps/api/bruno/` has a [Bruno](https://www.usebruno.com/) collection covering the same flow, for testing outside a browser console: "1. Sign In (Google)" (still needs a real browser for the consent screen — Bruno copies the resulting Session cookie out of DevTools, same as above), "2. Get Session", "3. Create API Key" (its post-response script stashes the raw key into the `apiKey` environment variable automatically), and "Create Item (with API key)" to prove the key actually authenticates. Open the collection, select the "Local" environment, and set the `sessionCookie` secret variable per the first request's docs tab.

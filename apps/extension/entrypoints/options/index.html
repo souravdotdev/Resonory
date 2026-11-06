@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Resonory</title>
+    <!-- Chrome's default is to embed the options page inside chrome://extensions
+         (a cramped iframe); open_in_tab gives it a full tab instead, matching
+         this page's centered-card layout. -->
+    <meta name="manifest.open_in_tab" content="true" />
+    <link rel="stylesheet" href="../../lib/apiKeyForm.css" />
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <!-- main.ts fills this in via renderApiKeyForm. -->
+    <div id="app"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -12,6 +12,9 @@ next-env.d.ts
 out/
 *.tsbuildinfo
 .vercel/
+# WXT (apps/extension) build output and generated cache/type-reference dir
+.output/
+.wxt/
 
 ## Env
 .env
@@ -43,3 +46,8 @@ apps/*/CLAUDE.md
 
 ## Agent worktrees (each a full checkout on its own branch)
 .claude/worktrees/
+
+## Bruno (apps/api/bruno): the app writes live secret values here when set
+## via its UI (collection-level pre-request vars), outside the environment
+## file's `vars:secret` mechanism — never commit it.
+apps/api/bruno/collection.bru

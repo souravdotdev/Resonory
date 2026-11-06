@@ -103,6 +103,36 @@ describe("SaveItemUseCase", () => {
     expect(queue.enqueueProcessItem).toHaveBeenCalledTimes(2);
   });
 
+  it("threads captured page content into the enqueued job when given, unchanged", async () => {
+    const { repository, saved } = itemsInMemory();
+    const queue = queueRecording();
+    const useCase = new SaveItemUseCase(repository, queue);
+    const html = "<!doctype html><html><head><title>A page</title></head></html>";
+
+    await useCase.execute({
+      userId: USER_ID,
+      sourceUrl: "https://example.com/post",
+      html,
+    });
+
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith({
+      itemId: saved[0]!.id,
+      userId: USER_ID,
+      html,
+    });
+  });
+
+  it("enqueues no captured content when none is given, same as today", async () => {
+    const { repository } = itemsInMemory();
+    const queue = queueRecording();
+    const useCase = new SaveItemUseCase(repository, queue);
+
+    await useCase.execute({ userId: USER_ID, sourceUrl: "https://example.com/post" });
+
+    const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(call.html).toBeUndefined();
+  });
+
   it("fails when the Processing can't be enqueued", async () => {
     const { repository } = itemsInMemory();
     const queue: IQueueProvider = {
