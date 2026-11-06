@@ -20,6 +20,12 @@ main {
   padding: 20px;
 }
 
+.logo {
+  display: block;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
 p {
   color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
