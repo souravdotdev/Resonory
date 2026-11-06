@@ -55,6 +55,27 @@ input:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
+button {
+  margin-top: 10px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--cream);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
+}
+
+button:active {
+  background: color-mix(in srgb, var(--accent) 85%, white);
+}
+
 p {
   color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
