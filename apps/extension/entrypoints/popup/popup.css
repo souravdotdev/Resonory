@@ -26,6 +26,35 @@ main {
   margin-bottom: 16px;
 }
 
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--cream) 70%, transparent);
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--cream) 20%, transparent);
+  background: color-mix(in srgb, var(--cream) 6%, var(--bg));
+  color: var(--cream);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+input::placeholder {
+  color: color-mix(in srgb, var(--cream) 40%, transparent);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 p {
   color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
