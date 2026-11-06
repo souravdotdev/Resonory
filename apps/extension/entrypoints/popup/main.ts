@@ -44,12 +44,18 @@ if (typeof document !== "undefined") {
       const value = input?.value.trim() ?? "";
 
       if (!value) {
-        if (status) status.textContent = "Enter an API key first.";
+        if (status) {
+          status.textContent = "Enter an API key first.";
+          status.className = "status-error";
+        }
         return;
       }
 
       void setStoredApiKey(value).then(() => {
-        if (status) status.textContent = "Saved. You can close this popup.";
+        if (status) {
+          status.textContent = "Saved. You can close this popup.";
+          status.className = "status-success";
+        }
       });
     });
   }

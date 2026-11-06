@@ -76,6 +76,16 @@ button:active {
   background: color-mix(in srgb, var(--accent) 85%, white);
 }
 
+/* Match lib/badge.ts's toolbar-badge colors, so the popup and the toolbar
+   never visually disagree about what "it worked" / "it failed" look like. */
+.status-success {
+  color: var(--success);
+}
+
+.status-error {
+  color: var(--error);
+}
+
 p {
   color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
