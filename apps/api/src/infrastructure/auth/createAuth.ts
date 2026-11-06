@@ -112,7 +112,14 @@ export function createAuth(db: Database, config: AuthConfig, deps: AuthDeps) {
       // (spec #143/#144). A leaked key then fully impersonates its User, same
       // severity as a leaked Session cookie — accepted, per the plugin's own
       // docs, since the key is meant to be a long-lived personal credential.
-      apiKey({ enableSessionForAPIKeys: true }),
+      apiKey({
+        enableSessionForAPIKeys: true,
+        // Prepended to every generated key's raw value (plugin concatenates
+        // with no separator of its own — `resk_` includes it), so a key is
+        // recognizable at a glance (`resk_...`) the way GitHub's `ghp_` or
+        // Stripe's `sk_` are. Never applied retroactively to existing keys.
+        defaultPrefix: "resk_",
+      }),
     ],
   });
 }

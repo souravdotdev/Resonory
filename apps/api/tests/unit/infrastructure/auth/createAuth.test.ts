@@ -187,6 +187,13 @@ describe.skipIf(!databaseReachable)("createAuth, with a real database (API key a
     expect(viaApiKey?.user.email).toBe(user.email);
   });
 
+  it("prefixes a created key's raw value with resk_", async () => {
+    const { cookie } = await seedSignedInUser();
+    const created = await auth.api.createApiKey({ headers: new Headers({ cookie }), body: {} });
+
+    expect(created.key.startsWith("resk_")).toBe(true);
+  });
+
   it("never re-exposes a created key's raw value from a later get or list call", async () => {
     const { cookie } = await seedSignedInUser();
     const created = await auth.api.createApiKey({ headers: new Headers({ cookie }), body: {} });
