@@ -2,8 +2,27 @@ import { isProbablyReaderable, Readability } from "@mozilla/readability";
 import { injectable } from "inversify";
 import { parseHTML } from "linkedom";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
-import { type KnownTextSource, knownTextSourceFor } from "@/domain/rules/knownTextSource";
-import { type PostNode, xPostText } from "@/infrastructure/http/xPostText";
+import type { KnownTextExtractor } from "@/domain/rules/knownSites";
+import { knownTextSourceFor } from "@/domain/rules/knownTextSource";
+import {
+  childrenTextOf,
+  type DomNode,
+  type TextRules,
+  textOf,
+} from "@/infrastructure/http/domText";
+import { xPostText } from "@/infrastructure/http/xPostText";
+
+/**
+ * Each known-site extractor (`knownSites.ts`), by name: what it reads from
+ * the captured page, or null when it finds nothing there. Adding one is one
+ * entry here; tsc asks for it as soon as the name is added.
+ */
+const KNOWN_SITE_TEXT: Record<
+  KnownTextExtractor,
+  (document: DomNode, postId: string) => string | null
+> = {
+  xPost: xPostText,
+};
 
 /** Elements whose start and end are a line break when a page is read as text. */
 const BLOCK_ELEMENTS = new Set([
@@ -39,17 +58,6 @@ const BLOCK_ELEMENTS = new Set([
   "UL",
 ]);
 
-const ELEMENT_NODE = 1;
-const TEXT_NODE = 3;
-
-/** The part of a DOM node (linkedom's) that reading it as text needs; the worker has no DOM lib. */
-interface ContentNode {
-  nodeType: number;
-  textContent: string | null;
-  tagName?: string;
-  childNodes: ArrayLike<ContentNode>;
-}
-
 /**
  * `ITextExtractor` over linkedom. A known site's extractor goes first (an X
  * post's own words, see `knownTextSource.ts`); when the URL has none, or it
@@ -64,35 +72,26 @@ export class ReadabilityTextExtractor implements ITextExtractor {
   extractText(html: string, pageUrl: string): string | null {
     const { document } = parseHTML(html);
     const known = knownTextSourceFor(pageUrl);
-    const knownText = known && knownSiteText(document, known);
+    const knownText = known && KNOWN_SITE_TEXT[known.extractor](document, known.postId);
     if (knownText) return knownText;
     if (!isProbablyReaderable(document)) return null;
-    const article = new Readability<ContentNode>(document, {
-      serializer: (node) => node as ContentNode,
+    const article = new Readability<DomNode>(document, {
+      serializer: (node) => node as DomNode,
     }).parse();
-    return article?.content ? textOf(article.content) : null;
+    return article?.content ? textOf(article.content, PAGE_TEXT) : null;
   }
 }
 
-/** What a known site's extractor reads from its captured page, or null when it finds nothing. */
-function knownSiteText(document: PostNode, { extractor, postId }: KnownTextSource): string | null {
-  switch (extractor) {
-    case "xPost":
-      return xPostText(document, postId);
-  }
-}
+/**
+ * How a page's main content reads as text: block boundaries as blank lines, a
+ * `<br>` as a line break, and runs of source whitespace as one space (as a
+ * browser renders them), except inside a `<pre>`, which keeps its own.
+ */
+const PAGE_TEXT: TextRules = { text: (data) => data.replace(/\s+/g, " "), element: pageElement };
+const PREFORMATTED: TextRules = { text: (data) => data, element: pageElement };
 
-/** The node's text, with block boundaries as blank lines. */
-function textOf(node: ContentNode, preformatted = false): string {
-  if (node.nodeType === TEXT_NODE) {
-    const data = node.textContent ?? "";
-    return preformatted ? data : data.replace(/\s+/g, " ");
-  }
-  if (node.nodeType !== ELEMENT_NODE) return "";
-  const name = node.tagName?.toUpperCase() ?? "";
+function pageElement(name: string, element: DomNode, children: () => string): string {
   if (name === "BR") return "\n";
-  const inner = Array.from(node.childNodes, (child) =>
-    textOf(child, preformatted || name === "PRE"),
-  ).join("");
+  const inner = name === "PRE" ? childrenTextOf(element, PREFORMATTED) : children();
   return BLOCK_ELEMENTS.has(name) ? `\n\n${inner}\n\n` : inner;
 }
