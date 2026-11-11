@@ -3,6 +3,7 @@ import { browser } from "wxt/browser";
 import { watchActionPopup } from "../lib/actionPopup";
 import { getStoredApiKey } from "../lib/apiKeyStorage";
 import { showFailureBadge, showSuccessBadge } from "../lib/badge";
+import { captureCaptions } from "../lib/captureCaptions";
 import { capturePage } from "../lib/capturePage";
 import { buildCreateItemRequest, type CapturedPage } from "../lib/createItemRequest";
 import { API_BASE_URL } from "../lib/config";
@@ -11,8 +12,9 @@ import { API_BASE_URL } from "../lib/config";
  * A toolbar-icon click only reaches here once an API key is stored (see
  * `lib/actionPopup.ts`) — otherwise the click opens the popup instead, to
  * collect one. Captures the active tab via a one-shot `activeTab`-scoped
- * injection, then POSTs it to the create-Item endpoint, with a badge change
- * as the only feedback (no notifications permission needed).
+ * injection (plus, on a YouTube video, its captions from the page's own
+ * world), then POSTs it to the create-Item endpoint, with a badge change as
+ * the only feedback (no notifications permission needed).
  */
 async function saveActiveTab(tab: { id?: number }): Promise<void> {
   if (!tab.id) {
@@ -37,7 +39,9 @@ async function saveActiveTab(tab: { id?: number }): Promise<void> {
       return;
     }
 
-    const request = buildCreateItemRequest(captured, apiKey);
+    // Never throws: a caption failure just means no captions.
+    const captions = await captureCaptions(tab.id, captured.url);
+    const request = buildCreateItemRequest({ ...captured, captions }, apiKey);
     const response = await fetch(`${API_BASE_URL}/items`, {
       method: request.method,
       headers: request.headers,
