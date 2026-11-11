@@ -17,15 +17,25 @@ export interface OEmbedEndpoint {
  *   Left out, every path on the host matches.
  * - `oEmbed`: the site's oEmbed endpoint, asked about these links directly
  *   (see `oEmbed.ts`); a `rich` answer from it is this row's type.
- * - `text`: the known-site extractor that reads these links' Text from their
- *   captured page, ahead of main-content extraction (see `knownTextSource.ts`).
+ * - `text`: how these links' Text is read from their captured page, ahead of
+ *   main-content extraction (see `knownTextSource.ts`).
  */
 export interface KnownSite {
   readonly hosts: readonly string[];
   readonly path?: RegExp;
   readonly type: ItemType;
   readonly oEmbed?: OEmbedEndpoint;
-  readonly text?: KnownTextExtractor;
+  readonly text?: KnownText;
+}
+
+/**
+ * A known site's Text: the extractor that reads it, and where in the link's
+ * path the id of the post it names is (the pattern's first group), so a
+ * reply's page reads the reply and never the post above it.
+ */
+export interface KnownText {
+  readonly extractor: KnownTextExtractor;
+  readonly postId: RegExp;
 }
 
 /**
@@ -115,7 +125,7 @@ export const KNOWN_SITES: readonly KnownSite[] = [
     path: /^\/[^/]+\/status\/\d+(\/|$)/,
     type: "post",
     oEmbed: OEMBED.x,
-    text: "xPost",
+    text: { extractor: "xPost", postId: /^\/[^/]+\/status\/(\d+)/ },
   },
   { hosts: ["threads.net", "threads.com"], path: /^\/@[^/]+\/post\/[^/]+/, type: "post" },
   { hosts: ["bsky.app"], path: /^\/profile\/[^/]+\/post\/[^/]+/, type: "post" },

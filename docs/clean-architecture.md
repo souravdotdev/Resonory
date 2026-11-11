@@ -162,8 +162,8 @@ apps/worker/src/
                         (the one list of accepted image formats), magicBytes.ts (file signatures, shared
                         with itemTypeFromMagicBytes.ts), thumbnailKey.ts,
                         itemTypeFromUrl.ts, knownSites.ts (the known-site table, with each site's oEmbed
-                        endpoint and Text extractor), knownTextSource.ts (which known-site Text
-                        extractor reads a page), itemTypeFromExtension.ts, itemTypeFromResponse.ts,
+                        endpoint, Text extractor and post-id pattern), knownTextSource.ts (which
+                        known-site Text extractor reads a page, and the post it reads), itemTypeFromExtension.ts, itemTypeFromResponse.ts,
                         itemTypeFromContentType.ts, itemTypeFromMagicBytes.ts, mediaType.ts,
                         itemTypeFromJsonLd.ts, itemTypeFromOpenGraph.ts, itemTypeFromTwitterCard.ts,
                         oEmbed.ts (which endpoint to ask, oEmbed types), pageMetadata.ts,
@@ -178,8 +178,10 @@ apps/worker/src/
                         reads), looksLikeHtml.ts (sniffs a body without a Content-Type),
                         parsePageHead.ts (htmlparser2), HtmlPageParser.ts (`IPageHeadParser` over
                         parsePageHead, for already-captured content), ReadabilityTextExtractor.ts
-                        (`ITextExtractor` with Readability over linkedom), xPostText.ts (an X post's
-                        words from its captured page), GuardedOEmbedProvider.ts
+                        (`ITextExtractor` with Readability over linkedom, and the one map from a
+                        known-site extractor's name to its reader), xPostText.ts (an X post's words
+                        from its captured page), domText.ts (the DOM node shape and the walk that
+                        reads a node as text, shared by both), GuardedOEmbedProvider.ts
                         (oEmbed over IJsonFetcher)
     images/             SharpThumbnailResizer.ts (the card Thumbnail, with sharp)
     storage/            SupabaseThumbnailStore.ts, supabaseEnv.ts (the optional SUPABASE_URL /
