@@ -3,12 +3,13 @@ import { ItemCardSchema } from "./item-card";
 
 export const MAX_URL_LENGTH = 2048;
 /**
- * Generous for a captured page's `<head>` alone (the extension sends only
- * that, not the full document — see `capturePage.ts`), while still bounded:
- * a clean validation error here beats an opaque 413 from the API's
- * request-body limit for an unusually bloated head.
+ * Room for a captured page's `<head>` plus its stripped `<body>` (the
+ * extension drops scripts, styles and other non-content elements first — see
+ * `capturePage.ts`), while still bounded. The API derives `POST /items`'
+ * request-body limit from this cap, so an oversized capture gets this clean
+ * validation error, never an opaque 413.
  */
-export const MAX_HTML_LENGTH = 2 * 1024 * 1024;
+export const MAX_HTML_LENGTH = 5 * 1024 * 1024;
 
 /** The link a User pastes to save an Item. Shared by the web save form and the API. */
 export const CreateItemSchema = z.object({
