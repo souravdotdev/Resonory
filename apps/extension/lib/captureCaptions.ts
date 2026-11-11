@@ -45,14 +45,17 @@ export async function captureCaptions(tabId: number, pageUrl: string): Promise<s
 
 /**
  * Injected into a YouTube tab's main world, so it can call the live player's
- * own `getPlayerResponse()`. That's the current video's response; the
- * initial-load `ytInitialPlayerResponse` goes stale after in-app navigation.
+ * own `getPlayerResponse()`: `#shorts-player` on a Short, `#movie_player`
+ * otherwise. That's the current video's response; the initial-load
+ * `ytInitialPlayerResponse` goes stale after in-app navigation (and the
+ * caller still checks the response's video id against the tab's).
  * Self-contained (no closures over anything outside itself), like
  * `capturePage`. Null when there's no player or it offers no captions.
  */
 export function readPlayerCaptions(): PlayerCaptions | null {
   try {
-    const player = document.getElementById("movie_player") as
+    const playerId = location.pathname.startsWith("/shorts/") ? "shorts-player" : "movie_player";
+    const player = document.getElementById(playerId) as
       (HTMLElement & { getPlayerResponse?: () => unknown }) | null;
     const response = player?.getPlayerResponse?.() as
       | {

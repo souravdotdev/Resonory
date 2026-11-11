@@ -12,7 +12,10 @@ describe("youTubeVideoId", () => {
     ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ"],
     ["https://youtube.com/watch?v=dQw4w9WgXcQ&t=42", "dQw4w9WgXcQ"],
     ["https://m.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ"],
-  ])("reads the video id of the watch page %s", (url, id) => {
+    ["https://www.youtube.com/shorts/aBcD3fGh1jK", "aBcD3fGh1jK"],
+    ["https://m.youtube.com/shorts/aBcD3fGh1jK?feature=share", "aBcD3fGh1jK"],
+    ["https://youtube.com/shorts/aBcD3fGh1jK/", "aBcD3fGh1jK"],
+  ])("reads the video id of the watch page or Short %s", (url, id) => {
     expect(youTubeVideoId(url)).toBe(id);
   });
 
@@ -21,6 +24,9 @@ describe("youTubeVideoId", () => {
     "https://www.youtube.com/",
     "https://www.youtube.com/@somechannel",
     "https://www.youtube.com/watch",
+    "https://www.youtube.com/shorts/",
+    "https://www.youtube.com/shorts/aBcD3fGh1jK/comments",
+    "https://www.youtube.com/@somechannel/shorts",
     "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
     "not a url",
   ])("is undefined for %s, which isn't a YouTube watch page", (url) => {
@@ -107,6 +113,21 @@ describe("captionTrackUrl", () => {
     expect(url).toBeUndefined();
   });
 
+  it("reads a Short's captions, when the player is on that Short", () => {
+    const short = "https://www.youtube.com/shorts/dQw4w9WgXcQ";
+
+    expect(languageOf(captionTrackUrl(player(), short))).toBe("fr");
+  });
+
+  it("is undefined when the player is on another video than the tab's Short", () => {
+    expect(
+      captionTrackUrl(
+        player({ videoId: "someOtherId" }),
+        "https://www.youtube.com/shorts/dQw4w9WgXcQ",
+      ),
+    ).toBeUndefined();
+  });
+
   it("is undefined when the tab isn't a YouTube watch page", () => {
     expect(captionTrackUrl(player(), "https://example.com/watch?v=dQw4w9WgXcQ")).toBeUndefined();
   });
@@ -148,5 +169,22 @@ describe("captionsFromJson3", () => {
     const body = json3([{ segs: [{ utf8: "a".repeat(MAX_CAPTIONS_LENGTH + 10) }] }]);
 
     expect(captionsFromJson3(body)).toHaveLength(MAX_CAPTIONS_LENGTH);
+  });
+
+  it("never ends in half an emoji when the cap falls inside one", () => {
+    // "😀" is two UTF-16 units; its first sits at the last position the cap keeps.
+    const words = `${"a".repeat(MAX_CAPTIONS_LENGTH - 1)}😀 after`;
+
+    expect(captionsFromJson3(json3([{ segs: [{ utf8: words }] }]))).toBe(
+      "a".repeat(MAX_CAPTIONS_LENGTH - 1),
+    );
+  });
+
+  it("keeps an emoji the cap ends right after", () => {
+    const words = `${"a".repeat(MAX_CAPTIONS_LENGTH - 2)}😀 after`;
+
+    expect(captionsFromJson3(json3([{ segs: [{ utf8: words }] }]))).toBe(
+      `${"a".repeat(MAX_CAPTIONS_LENGTH - 2)}😀`,
+    );
   });
 });

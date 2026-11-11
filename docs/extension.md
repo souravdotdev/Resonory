@@ -50,7 +50,7 @@ It watches `chrome.storage` for changes, so saving a key in the popup or the opt
 
 1. **Reads the stored key.** If there's none, it shows the failure badge.
 2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, html }`: `document.head` plus a clone of `document.body` with its scripts, styles, `noscript`, `svg`, `iframe` and `template` elements removed (the live page is never modified). The worker reads the head for the title, description and Thumbnail, and the body for the Item's Text. The create-Item schema caps `html` at 5 Mi characters, and `POST /items`' request-body limit is derived from that cap.
-3. **Reads a YouTube video's captions**, on a YouTube watch page only (see [YouTube captions](#youtube-captions)). Any other tab runs no second injection.
+3. **Reads a YouTube video's captions**, on a YouTube watch page or Short only (see [YouTube captions](#youtube-captions)). Any other tab runs no second injection.
 4. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` (plus `captions` when step 3 found any) and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
 5. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
 
@@ -58,14 +58,14 @@ After that, everything is server-side. The API resolves the `x-api-key` header t
 
 ## YouTube captions
 
-On a YouTube watch page (`youtube.com`, `www.` or `m.`, `/watch?v=…`), `lib/captureCaptions.ts` reads the video's captions, so the Item's Text is what's said in the video. It runs two more injections into the page's own (**main**) world, under the same `activeTab` grant, so it needs no host permission:
+On a YouTube watch page or Short (`youtube.com`, `www.` or `m.`, `/watch?v=…` or `/shorts/<id>`), `lib/captureCaptions.ts` reads the video's captions, so the Item's Text is what's said in the video. It runs two more injections into the page's own (**main**) world, under the same `activeTab` grant, so it needs no host permission:
 
-1. `readPlayerCaptions()` calls the live player's own `#movie_player.getPlayerResponse()` and returns the video id, the page's `<html lang>` and the caption tracks. It reads the live player, not the initial-load `ytInitialPlayerResponse`, which goes stale after in-app navigation between videos.
+1. `readPlayerCaptions()` calls the live player's own `getPlayerResponse()` (`#shorts-player` on a Short, `#movie_player` otherwise) and returns the video id, the page's `<html lang>` and the caption tracks. It reads the live player, not the initial-load `ytInitialPlayerResponse`, which goes stale after in-app navigation between videos.
 2. The background picks a track (`lib/youtubeCaptions.ts`, pure and unit-tested): the page's language (by primary subtag, a written track ahead of an auto-generated one), then English, then the first. It gives up when the player's video id isn't the tab's (a stale player), or when the track isn't on the page's own origin.
 3. `fetchCaptionTrack(url)` fetches that track with `fmt=json3`, same-origin from the page. YouTube's caption endpoint may want what only the page's own player has, which is why the fetch runs in the tab and not in the worker.
-4. The background joins the json3 track's segments into plain text, one caption per line, capped at the create-Item schema's 1 Mi characters (`MAX_CAPTIONS_LENGTH`) so a long video still saves.
+4. The background joins the json3 track's segments into plain text, one caption per line, capped at the create-Item schema's 1 Mi characters (`MAX_CAPTIONS_LENGTH`) so a long video still saves; the cut never splits an emoji's surrogate pair.
 
-Any failure (no player, no tracks, a stale player, a failed fetch, a body that isn't json3) means no captions, and the save goes on with the page alone. The worker then falls back to the page's text, or none. Like `capturePage`, both injected functions are self-contained (no closures), and they're checked by hand in Chrome: a captioned video, an uncaptioned video, and a save after navigating between videos inside YouTube.
+Any failure (no player, no tracks, a stale player, a failed fetch, a body that isn't json3) means no captions, and the save goes on with the page alone. The worker then falls back to the page's text, or none. Like `capturePage`, both injected functions are self-contained (no closures), and they're checked by hand in Chrome: a captioned video, an uncaptioned video, a captioned Short, and a save after navigating between videos (and between Shorts) inside YouTube. The Shorts player id is the one thing here not yet confirmed in a live tab: if it were wrong, the video-id check would turn it into no captions, never another video's.
 
 ## Permissions
 

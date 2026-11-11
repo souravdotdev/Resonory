@@ -210,6 +210,16 @@ describe("background entrypoint", () => {
       expect(await saveTab()).toEqual(page);
     });
 
+    it("reads a Short's captions the same way", async () => {
+      const short = { url: "https://www.youtube.com/shorts/dQw4w9WgXcQ", html: "<html></html>" };
+      injectionsAnswering(short, playerCaptions, json3);
+
+      const body = await saveTab();
+
+      expect(body).toEqual({ ...short, captions: "Never gonna give you up" });
+      expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(3);
+    });
+
     it("still saves when fetching the caption track fails", async () => {
       injectionsAnswering(page, playerCaptions, null);
 
