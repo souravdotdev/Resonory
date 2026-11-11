@@ -29,6 +29,12 @@ export interface ItemRef {
    * and never calls the network fetcher for this job.
    */
   html?: string;
+  /**
+   * A video's plain caption text (issue #164), read by the extension from
+   * the YouTube tab and carried on the job unchanged. When present, it is
+   * the Item's Text ahead of anything extracted from `html`.
+   */
+  captions?: string;
 }
 
 /** What Processing needs to know about an Item. */
