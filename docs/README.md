@@ -10,6 +10,7 @@ Reference docs for the `resonory` monorepo, covering what's been set up and why.
 - [API](./api.md) — HTTP endpoint reference for `apps/api`
 - [Queue & Background Jobs](./queue.md) — BullMQ-backed Item processing: type detection, oEmbed, Thumbnails
 - [Content capture](./content-capture.md) — server-fetched vs. browser-extension-captured content: the old path, the new path, and where they diverge/reconverge
+- [Browser extension](./extension.md) — how `apps/extension` captures and saves a page, its permissions, and configuring the API address (`WXT_API_URL`)
 - [Logging](./logging.md) — the shared Pino logger, its redaction and verbosity rules, and each app's correlation convention
 - [Code Quality](./code-quality.md) — linting, formatting, and type-checking conventions
 - [Security](./security.md) — CORS, helmet, rate limiting, `apps/web`'s response headers, and Dependabot
