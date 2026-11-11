@@ -31,7 +31,7 @@ User is already looking at the real, rendered page, in their own browser
   → clicks the toolbar icon
   → background script: activeTab grant + chrome.scripting.executeScript
       injects capturePage() into that exact tab only
-  → capturePage(): reads document.documentElement.outerHTML + location.href
+  → capturePage(): reads document.head.outerHTML + location.href
       directly off the live DOM — no network request happens here
   → POST /items { url, html }, authenticated via x-api-key (not a cookie)
   → SaveItemUseCase: creates Item (processing), enqueues { itemId, userId, html }
