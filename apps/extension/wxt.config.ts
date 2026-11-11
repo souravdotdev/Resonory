@@ -1,6 +1,15 @@
 import { defineConfig } from "wxt";
+import { resolveApiBaseUrl } from "./lib/apiBaseUrl";
 
 export default defineConfig({
+  hooks: {
+    // WXT has loaded the `.env` files into `process.env` by now, so an invalid
+    // `WXT_API_URL` fails `pnpm dev`/`pnpm build` immediately, not later at
+    // runtime inside the background service worker.
+    "config:resolved": () => {
+      resolveApiBaseUrl(process.env.WXT_API_URL);
+    },
+  },
   manifest: {
     name: "Resonory",
     description: "Save pages to Resonory.",
