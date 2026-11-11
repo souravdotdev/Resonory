@@ -5,3 +5,5 @@ dist/
 packages/db/migrations/
 supabase/.temp/
 supabase/.branches/
+# Captured pages, kept byte for byte as the extension sends them.
+apps/worker/tests/fixtures/
