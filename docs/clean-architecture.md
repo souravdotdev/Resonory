@@ -138,7 +138,7 @@ Don't create empty layer folders ahead of time. A folder appears with its first 
 
 ## The worker
 
-`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and `createContainer()` (`src/di/container.ts`), `reflect-metadata` loaded first in `index.ts`, `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/`, and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
+`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and `createContainer()` (`src/di/container.ts`), `reflect-metadata` loaded first in `index.ts`, `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/`, and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis, htmlparser2, linkedom, Readability, sharp, Supabase and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
 
 ```
 apps/worker/src/
@@ -146,7 +146,7 @@ apps/worker/src/
   di/                   tokens.ts (WORKER_TOKENS), container.ts
   domain/
     entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; ReadyItem, what Processing
-                        learned; Item types and statuses),
+                        learned: the cached preview plus Text; Item types and statuses),
                         PageHead.ts (a page head's extracted tags)
     repositories/       IItemRepository.ts (findById, markReady, markFailed)
     providers/          IUrlFetcher.ts (fetchPage → FetchedPage: html | file | unsuccessful),
@@ -154,7 +154,9 @@ apps/worker/src/
                         IImageFetcher.ts (fetchImage), IThumbnailResizer.ts (toCardThumbnail),
                         IThumbnailStore.ts (put), IPageHeadParser.ts (parseHead: an already-captured
                         page's HTML → PageHead, the same shape IUrlFetcher's HtmlPage carries, so
-                        already-rendered content (issue #143/#145) skips the fetch but not this step)
+                        already-rendered content (issue #143/#145) skips the fetch but not this step),
+                        ITextExtractor.ts (extractText: an already-captured page's HTML → its
+                        main-content text, or null)
     rules/              thumbnailCandidates.ts (which images, in which order), thumbnailImage.ts
                         (the one list of accepted image formats), magicBytes.ts (file signatures, shared
                         with itemTypeFromMagicBytes.ts), thumbnailKey.ts,
@@ -163,7 +165,8 @@ apps/worker/src/
                         itemTypeFromContentType.ts, itemTypeFromMagicBytes.ts, mediaType.ts,
                         itemTypeFromJsonLd.ts, itemTypeFromOpenGraph.ts, itemTypeFromTwitterCard.ts,
                         oEmbed.ts (which endpoint to ask, oEmbed types), pageMetadata.ts,
-                        parsedUrl.ts, collapseWhitespace.ts (pure functions)
+                        parsedUrl.ts, collapseWhitespace.ts, itemText.ts (an Item's Text: normalised,
+                        capped) (pure functions)
   application/
     use-cases/items/    ProcessItemUseCase, FailItemUseCase
     dto/items/          ProcessItemResult.ts, FailItemResult.ts
@@ -172,7 +175,8 @@ apps/worker/src/
     http/               SafeUrlFetcher.ts, publicAddress.ts (the guarded fetch), readBody.ts (bounded body
                         reads), looksLikeHtml.ts (sniffs a body without a Content-Type),
                         parsePageHead.ts (htmlparser2), HtmlPageParser.ts (`IPageHeadParser` over
-                        parsePageHead, for already-captured content), GuardedOEmbedProvider.ts
+                        parsePageHead, for already-captured content), ReadabilityTextExtractor.ts
+                        (`ITextExtractor` with Readability over linkedom), GuardedOEmbedProvider.ts
                         (oEmbed over IJsonFetcher)
     images/             SharpThumbnailResizer.ts (the card Thumbnail, with sharp)
     storage/            SupabaseThumbnailStore.ts, supabaseEnv.ts (the optional SUPABASE_URL /
