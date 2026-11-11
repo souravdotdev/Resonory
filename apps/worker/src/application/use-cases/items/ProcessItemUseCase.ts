@@ -174,18 +174,22 @@ export class ProcessItemUseCase {
    * without captured content, even one carrying captions (the fetch path,
    * failed or not, writes no Text).
    */
-  private textOf({ html, captions }: ItemRef, sourceUrl: string): string | null {
-    if (html === undefined) return null;
-    return itemText({ captions, pageText: () => this.pageTextOf(html, sourceUrl) });
-  }
-
-  /** The captured page's main-content text; none when the extractor fails. */
-  private pageTextOf(html: string, sourceUrl: string): string | null {
-    try {
-      return this.textExtractor.extractText(html, sourceUrl);
-    } catch {
-      return null;
-    }
+  private textOf({ html, captions }: ItemRef, sourceUrl: string): TextOutcome {
+    if (html === undefined) return { text: null };
+    const outcome: TextOutcome = { text: null };
+    outcome.text = itemText({
+      captions,
+      pageText: () => {
+        try {
+          return this.textExtractor.extractText(html, sourceUrl);
+        } catch (error) {
+          // No page text, but the error is handed back so the processor logs it.
+          outcome.textError = error;
+          return null;
+        }
+      },
+    });
+    return outcome;
   }
 
   /**
@@ -252,11 +256,11 @@ export class ProcessItemUseCase {
   private async ready(
     ref: ItemRef,
     preview: CachedPreview,
-    text: string | null,
+    { text, ...textError }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
     await this.items.markReady(ref, ready);
-    return { outcome: "ready", ...ready };
+    return { outcome: "ready", ...ready, ...textError };
   }
 }
 
@@ -307,6 +311,12 @@ function metadataOf(head: PageHead | null, answer: OEmbedAnswer | null): ItemMet
   if (head)
     sources.push(openGraphMetadata(head), twitterCardMetadata(head), documentMetadata(head));
   return sources.length === 0 ? NO_METADATA : pickMetadata(sources);
+}
+
+/** An Item's Text, plus the extractor's error when it threw (`textError` is absent otherwise). */
+interface TextOutcome {
+  text: string | null;
+  textError?: unknown;
 }
 
 /** An oEmbed answer and the known provider it came from, if any. */

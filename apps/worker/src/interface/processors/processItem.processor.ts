@@ -2,7 +2,7 @@ import { UnrecoverableError } from "bullmq";
 import type { Container } from "inversify";
 import { z } from "zod";
 import { ProcessItemJobSchema } from "@resonory/shared/schemas/queue";
-import type { Logger } from "@resonory/logger";
+import { describeError, type Logger } from "@resonory/logger";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 
@@ -28,6 +28,12 @@ export async function processItem(container: Container, data: unknown): Promise<
   const result = await useCase.execute(payload.data);
 
   if (result.outcome === "ready") {
+    if ("textError" in result) {
+      logger.warn(
+        { err: describeError(result.textError) },
+        "Text extraction failed; the Item is Ready without Text",
+      );
+    }
     logger.info(
       {
         type: result.type,
