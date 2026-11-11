@@ -14,11 +14,17 @@ sequenceDiagram
     User->>BG: clicks toolbar icon
     BG->>Tab: executeScript(capturePage)
     Tab-->>BG: { url, html: head + stripped body }
-    BG->>API: POST /items { url, html }, x-api-key
+    opt YouTube video only, in the page's main world
+        BG->>Tab: executeScript(readPlayerCaptions)
+        Tab-->>BG: video id, page language, caption tracks
+        BG->>Tab: executeScript(fetchCaptionTrack, [track URL])
+        Tab-->>BG: json3 track → captions
+    end
+    BG->>API: POST /items { url, html, captions? }, x-api-key
     API-->>BG: 201 (Item created, processing)
     BG-->>User: green ✓ badge (red ! on any failure)
-    API->>W: job { itemId, userId, html }
-    W->>W: skip fetch, read title / description / Thumbnail from html
+    API->>W: job { itemId, userId, html, captions? }
+    W->>W: skip fetch, read title / description / Thumbnail from html, Text from captions or body
 ```
 
 ## The two click modes
@@ -44,18 +50,30 @@ It watches `chrome.storage` for changes, so saving a key in the popup or the opt
 
 1. **Reads the stored key.** If there's none, it shows the failure badge.
 2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, html }`: `document.head` plus a clone of `document.body` with its scripts, styles, `noscript`, `svg`, `iframe` and `template` elements removed (the live page is never modified). The worker reads the head for the title, description and Thumbnail, and the body for the Item's Text. The create-Item schema caps `html` at 5 Mi characters, and `POST /items`' request-body limit is derived from that cap.
-3. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
-4. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
+3. **Reads a YouTube video's captions**, on a YouTube watch page only (see [YouTube captions](#youtube-captions)). Any other tab runs no second injection.
+4. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` (plus `captions` when step 3 found any) and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
+5. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
 
 After that, everything is server-side. The API resolves the `x-api-key` header to a User through the same `getSession()` call it uses for Session cookies, creates the Item, and enqueues the job with the captured HTML. The worker uses that HTML instead of fetching the page. See [Content capture](./content-capture.md) for that half.
 
+## YouTube captions
+
+On a YouTube watch page (`youtube.com`, `www.` or `m.`, `/watch?v=…`), `lib/captureCaptions.ts` reads the video's captions, so the Item's Text is what's said in the video. It runs two more injections into the page's own (**main**) world, under the same `activeTab` grant, so it needs no host permission:
+
+1. `readPlayerCaptions()` calls the live player's own `#movie_player.getPlayerResponse()` and returns the video id, the page's `<html lang>` and the caption tracks. It reads the live player, not the initial-load `ytInitialPlayerResponse`, which goes stale after in-app navigation between videos.
+2. The background picks a track (`lib/youtubeCaptions.ts`, pure and unit-tested): the page's language (by primary subtag, a written track ahead of an auto-generated one), then English, then the first. It gives up when the player's video id isn't the tab's (a stale player), or when the track isn't on the page's own origin.
+3. `fetchCaptionTrack(url)` fetches that track with `fmt=json3`, same-origin from the page. YouTube's caption endpoint may want what only the page's own player has, which is why the fetch runs in the tab and not in the worker.
+4. The background joins the json3 track's segments into plain text, one caption per line, capped at the create-Item schema's 1 Mi characters (`MAX_CAPTIONS_LENGTH`) so a long video still saves.
+
+Any failure (no player, no tracks, a stale player, a failed fetch, a body that isn't json3) means no captions, and the save goes on with the page alone. The worker then falls back to the page's text, or none. Like `capturePage`, both injected functions are self-contained (no closures), and they're checked by hand in Chrome: a captioned video, an uncaptioned video, and a save after navigating between videos inside YouTube.
+
 ## Permissions
 
-| Permission  | Why                                                                         |
-| ----------- | --------------------------------------------------------------------------- |
-| `activeTab` | Gives access to the current tab only, only at the moment of a toolbar click |
-| `scripting` | Lets the background script inject `capturePage()` into that tab             |
-| `storage`   | Keeps the API key in `chrome.storage.local`                                 |
+| Permission  | Why                                                                                                  |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| `activeTab` | Gives access to the current tab only, only at the moment of a toolbar click                          |
+| `scripting` | Lets the background script inject `capturePage()` (and, on YouTube, the caption reads) into that tab |
+| `storage`   | Keeps the API key in `chrome.storage.local`                                                          |
 
 There are no `host_permissions` and no always-on content script, so the extension can't read any page the User didn't click save on. The call to the API needs no host permission either: it's a cross-origin `fetch` that the API allows through its CORS allow-list (`EXTENSION_ORIGIN`, see [Security](./security.md)).
 
@@ -102,9 +120,11 @@ apps/extension/
 │   ├── apiKeyForm.ts    # the key form both pages share
 │   ├── apiKeyStorage.ts # chrome.storage.local read/write/watch
 │   ├── badge.ts         # ✓ / ! on the toolbar icon
+│   ├── captureCaptions.ts # YouTube only: reads captions in the page's main world
 │   ├── capturePage.ts   # runs in the tab: url + head + stripped body
 │   ├── config.ts        # API_BASE_URL, from WXT_API_URL
-│   └── createItemRequest.ts # builds the POST /items request
+│   ├── createItemRequest.ts # builds the POST /items request
+│   └── youtubeCaptions.ts # pure: picks a caption track, json3 → text
 ├── .env.example         # WXT_API_URL
 └── wxt.config.ts        # manifest, permissions, env check
 ```
