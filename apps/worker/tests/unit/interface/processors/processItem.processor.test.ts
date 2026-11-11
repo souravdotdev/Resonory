@@ -63,6 +63,34 @@ describe("a Process Item job", () => {
     ]);
   });
 
+  it("warns, with the error's name and never its message, when Text extraction failed", async () => {
+    const { container, logger } = testContainer(async () => ({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "A title", description: null },
+      thumbnailKey: null,
+      text: null,
+      textError: new TypeError("Cannot read properties of null (reading 'secret page words')"),
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "warn",
+        bindings: { itemId: ITEM_ID },
+        fields: { err: "TypeError" },
+        msg: "Text extraction failed; the Item is Ready without Text",
+      },
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { type: "article", titled: true, pictured: false, texted: false },
+        msg: "Item is Ready",
+      },
+    ]);
+  });
+
   it("logs that a missing Item has nothing to process, carrying that Item's id", async () => {
     const { container, logger } = testContainer(async () => ({ outcome: "missing" }));
 

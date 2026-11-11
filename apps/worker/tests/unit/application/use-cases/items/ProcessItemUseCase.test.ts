@@ -1492,6 +1492,29 @@ describe("ProcessItemUseCase, Text", () => {
     expect(item).toMatchObject({ status: "ready", type: "article", text: null });
   });
 
+  it("hands back the extractor's error, so the failure is logged rather than lost", async () => {
+    const failure = new Error("linkedom choked on the page");
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw failure;
+      },
+    };
+
+    const { result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: throwing });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      text: null,
+      textError: failure,
+    });
+  });
+
+  it("hands back no error when the extractor answers", async () => {
+    const { result } = processCaptured(articlePage());
+
+    expect(await result).not.toHaveProperty("textError");
+  });
+
   it("caps Text at 100,000 characters", async () => {
     const long: ITextExtractor = { extractText: () => "word ".repeat(30_000) };
 
