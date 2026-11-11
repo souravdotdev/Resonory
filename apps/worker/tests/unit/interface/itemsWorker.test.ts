@@ -20,6 +20,7 @@ function testContainer(
     type: "video",
     metadata: NO_METADATA,
     thumbnailKey: null,
+    text: null,
   },
 ) {
   const useCase = { execute: vi.fn(async () => result) };

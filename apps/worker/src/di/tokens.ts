@@ -28,6 +28,8 @@ export const WORKER_TOKENS = {
   ThumbnailStore: Symbol("IThumbnailStore"),
   /** `IPageHeadParser`: turns already-captured page content into a head, skipping the fetch. */
   PageHeadParser: Symbol("IPageHeadParser"),
+  /** `ITextExtractor`: turns already-captured page content into its main-content text. */
+  TextExtractor: Symbol("ITextExtractor"),
   /** `ProcessItemUseCase`: what a Process Item job runs. */
   ProcessItemUseCase: Symbol("ProcessItemUseCase"),
   /** `FailItemUseCase`: what a Process Item job's last failed attempt runs. */

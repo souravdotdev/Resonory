@@ -12,6 +12,10 @@ const toolImports = [
     group: ["htmlparser2", "htmlparser2/*"],
     message: "HTML parsing belongs in infrastructure; rules read the extracted PageHead.",
   },
+  {
+    group: ["linkedom", "linkedom/*", "@mozilla/readability", "@mozilla/readability/*"],
+    message: "Text extraction belongs in infrastructure; rules read the extracted text.",
+  },
   { group: ["sharp", "sharp/*"], message: "Image decoding belongs in infrastructure." },
   { group: ["@supabase/*"], message: "Supabase Storage belongs in infrastructure." },
   {

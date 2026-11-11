@@ -6,8 +6,11 @@ import type { Item, ItemRef, ItemStatus, ItemType, ReadyItem } from "@/domain/en
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { Database } from "@/infrastructure/database/Database";
 
-/** The `items` columns ending Processing sets: a Failed Item keeps no title, description or Thumbnail key. */
-type FinishedFields = Pick<typeof items.$inferInsert, "title" | "description" | "thumbnailKey"> & {
+/** The `items` columns ending Processing sets: a Failed Item keeps no title, description, Thumbnail key or Text. */
+type FinishedFields = Pick<
+  typeof items.$inferInsert,
+  "title" | "description" | "thumbnailKey" | "extractedText"
+> & {
   status: ItemStatus;
   type: ItemType;
 };
@@ -32,8 +35,14 @@ export class DrizzleItemRepository implements IItemRepository {
     return row ?? null;
   }
 
-  async markReady(ref: ItemRef, { type, metadata, thumbnailKey }: ReadyItem): Promise<void> {
-    await this.finish(ref, { status: "ready", type, ...metadata, thumbnailKey });
+  async markReady(ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem): Promise<void> {
+    await this.finish(ref, {
+      status: "ready",
+      type,
+      ...metadata,
+      thumbnailKey,
+      extractedText: text,
+    });
   }
 
   async markFailed(ref: ItemRef, type: ItemType): Promise<void> {

@@ -17,10 +17,12 @@ import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
 import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
+import { ReadabilityTextExtractor } from "@/infrastructure/http/ReadabilityTextExtractor";
 
 // A Thumbnail key for a URL, the way Processing itself derives one.
 const keyFor = (url: string): string => {
@@ -36,7 +38,8 @@ const REF = { itemId: ITEM_ID, userId: USER_ID };
 
 // An in-memory Item repository holding one Processing Item for USER_ID.
 function itemsInMemory(sourceUrl: string) {
-  const item: Item & Partial<ItemMetadata> & { thumbnailKey?: string | null } = {
+  const item: Item &
+    Partial<ItemMetadata> & { thumbnailKey?: string | null; text?: string | null } = {
     id: ITEM_ID,
     userId: USER_ID,
     sourceUrl,
@@ -46,8 +49,9 @@ function itemsInMemory(sourceUrl: string) {
   const owns = ({ itemId, userId }: ItemRef) => itemId === item.id && userId === item.userId;
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => (owns(ref) ? { ...item } : null)),
-    markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey }: ReadyItem) => {
-      if (owns(ref)) Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey });
+    markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem) => {
+      if (owns(ref))
+        Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey, text });
     }),
     markFailed: vi.fn(async () => {}),
   };
@@ -243,8 +247,20 @@ const useCaseFor = (
   // The real adapter: deterministic and side-effect free, so tests use it as-is
   // rather than faking it, just like a pure domain rule.
   pageParser: IPageHeadParser = new HtmlPageParser(),
+  // The real adapter too, for the same reason.
+  textExtractor: ITextExtractor = new ReadabilityTextExtractor(),
 ) =>
-  new ProcessItemUseCase(repository, fetcher, cache, oEmbeds, images, resizer, pageParser, store);
+  new ProcessItemUseCase(
+    repository,
+    fetcher,
+    cache,
+    oEmbeds,
+    images,
+    resizer,
+    pageParser,
+    textExtractor,
+    store,
+  );
 
 const run = (
   sourceUrl: string,
@@ -379,6 +395,7 @@ describe("ProcessItemUseCase, Item type", () => {
       type: "video",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -398,11 +415,13 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "link",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(repository.markReady).toHaveBeenCalledWith(REF, {
       type: "link",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", ...metadata });
   });
@@ -417,6 +436,7 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "video",
       metadata: { title: "Never Gonna Give You Up", description: null },
       thumbnailKey: null,
+      text: null,
     });
   });
 
@@ -443,6 +463,7 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "pdf",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -480,6 +501,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "post",
       metadata: { title: "A post on X", description: null },
       thumbnailKey: null,
+      text: null,
     });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
     const endpoint = new URL(oEmbeds.fetchOEmbed.mock.calls[0]![0]);
@@ -601,6 +623,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "post",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", type: "post", ...metadata });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
@@ -621,6 +644,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "video",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 
@@ -658,11 +682,13 @@ describe("ProcessItemUseCase, failed fetches", () => {
         type: "video",
         metadata: NO_METADATA,
         thumbnailKey: null,
+        text: null,
       });
       expect(repository.markReady).toHaveBeenCalledWith(REF, {
         type: "video",
         metadata: NO_METADATA,
         thumbnailKey: null,
+        text: null,
       });
       expect(item).toMatchObject({ status: "ready", type: "video", title: null });
     },
@@ -739,6 +765,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     // Downloaded from where the Source URL led, then resized, then stored.
     expect(images.fetchImage).toHaveBeenCalledWith(PHOTO_URL);
@@ -750,6 +777,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", type: "image", thumbnailKey: KEY });
   });
@@ -821,11 +849,13 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
     expect(repository.markReady).toHaveBeenCalledWith(REF, {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", thumbnailKey: null });
   });
@@ -878,6 +908,7 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
       type: "article",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", thumbnailKey: KEY });
   });
@@ -996,6 +1027,7 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
       type: "link",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -1079,6 +1111,7 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
       type: "audio",
       metadata: { title: "A track", description: null },
       thumbnailKey: keyFor(sourceUrl),
+      text: null,
     });
     expect(images.fetchImage).toHaveBeenCalledWith(cover);
     expect(item).toMatchObject({ status: "ready", thumbnailKey: keyFor(sourceUrl) });
@@ -1311,3 +1344,213 @@ describe("ProcessItemUseCase, supplied content", () => {
     expect(item).toMatchObject({ status: "ready", type: "video" });
   });
 });
+
+describe("ProcessItemUseCase, Text", () => {
+  const ARTICLE_URL = "https://example.com/blog/a-long-read";
+  // Paragraphs long enough that the page reads as having main content.
+  const PARAGRAPHS = [
+    "The first paragraph of the article explains, at some length, why the topic matters to anyone who has ever tried to keep track of everything they read on the web across many devices.",
+    "The second paragraph goes deeper, walking through the history of bookmarks, read-later services and note-taking apps, and where each of them fell short for people with large libraries.",
+    "The third paragraph closes the argument, suggesting that a library which understands what each saved page is about would make finding things again far easier than folders ever did.",
+  ];
+  const articlePage = (paragraphs: string[] = PARAGRAPHS) => `
+    <!doctype html>
+    <html>
+      <head>
+        <title>A long read</title>
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="A long read">
+      </head>
+      <body>
+        <nav><a href="/">Home</a> <a href="/about">About the site navigation</a></nav>
+        <aside class="sidebar">Sidebar: popular posts you might also like</aside>
+        <article>
+          <h1>A long read</h1>
+          ${paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("\n")}
+        </article>
+        <footer>Footer: copyright and contact links</footer>
+      </body>
+    </html>
+  `;
+
+  const processCaptured = (html: string, sourceUrl = ARTICLE_URL, ports: Ports = {}) => {
+    const { repository, item } = itemsInMemory(sourceUrl);
+    const cache = ports.cache ?? cacheMissing();
+    const useCase = useCaseFor(
+      repository,
+      fetcherFailing(new Error("must not be called")),
+      undefined,
+      ports.thumbnails ?? {},
+      cache,
+      undefined,
+      ports.textExtractor,
+    );
+    return { item, cache, result: useCase.execute({ ...REF, html }) };
+  };
+
+  it("fills an article's Text with its body, without navigation, footer or sidebar text", async () => {
+    const { item, result } = processCaptured(articlePage());
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
+    for (const paragraph of PARAGRAPHS) expect(item.text).toContain(paragraph);
+    expect(item.text).not.toMatch(/navigation|Sidebar|Footer/);
+  });
+
+  it("keeps the article's paragraphs apart, one blank line between them", async () => {
+    const { item, result } = processCaptured(articlePage());
+
+    await result;
+
+    expect(item.text).toContain(`${PARAGRAPHS[0]}\n\n${PARAGRAPHS[1]}\n\n${PARAGRAPHS[2]}`);
+  });
+
+  it("leaves a homepage with no main content Ready with no Text", async () => {
+    const homepage = `
+      <!doctype html>
+      <html>
+        <head><title>Example</title><meta property="og:type" content="website"></head>
+        <body>
+          <nav><a href="/">Home</a> <a href="/products">Products</a> <a href="/pricing">Pricing</a></nav>
+          <ul>
+            <li><a href="/a">Product A</a></li>
+            <li><a href="/b">Product B</a></li>
+          </ul>
+          <footer>© Example Inc.</footer>
+        </body>
+      </html>
+    `;
+
+    const { item, result } = processCaptured(homepage, "https://example.com/");
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "link", text: null });
+    expect(item).toMatchObject({ status: "ready", title: "Example", text: null });
+  });
+
+  it("still writes this Item's Text on a cache hit, and never caches Text", async () => {
+    const preview: CachedPreview = {
+      type: "article",
+      metadata: { title: "A long read", description: null },
+      thumbnailKey: "shared/abc123.webp",
+    };
+    const hit = cacheAnswering(preview);
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { cache: hit });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+    expect(item.text).toContain(PARAGRAPHS[0]);
+    expect(hit.set).not.toHaveBeenCalled();
+  });
+
+  it("never puts Text in the cache it writes on a miss", async () => {
+    const { item, cache, result } = processCaptured(articlePage());
+
+    await result;
+
+    expect(item.text).toContain(PARAGRAPHS[0]);
+    expect(cache.set).toHaveBeenCalledWith(canonicalUrl(ARTICLE_URL), {
+      type: "article",
+      metadata: { title: "A long read", description: null },
+      thumbnailKey: null,
+    });
+  });
+
+  it("leaves an Item Ready with its type, title, description and Thumbnail, and no Text, when the extractor throws", async () => {
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw new Error("linkedom choked on the page");
+      },
+    };
+    const OG_IMAGE = "https://cdn.example.com/cover.jpg";
+    const html = articlePage().replace(
+      "</head>",
+      `<meta property="og:description" content="Why it matters"><meta property="og:image" content="${OG_IMAGE}"></head>`,
+    );
+    const { store } = thumbnailsInMemory();
+
+    const { item, result } = processCaptured(html, ARTICLE_URL, {
+      textExtractor: throwing,
+      thumbnails: { images: imagesAt(OG_IMAGE), resizer: resizerAnswering(), store },
+    });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "A long read", description: "Why it matters" },
+      thumbnailKey: keyFor(ARTICLE_URL),
+      text: null,
+    });
+    expect(item).toMatchObject({ status: "ready", type: "article", text: null });
+  });
+
+  it("caps Text at 100,000 characters", async () => {
+    const long: ITextExtractor = { extractText: () => "word ".repeat(30_000) };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: long });
+
+    await result;
+
+    expect(item.text).toHaveLength(100_000 - 1); // trailing space trimmed after the cut
+    expect(item.text!.startsWith("word word")).toBe(true);
+  });
+
+  it("normalises whitespace, keeping paragraph breaks", async () => {
+    const messy: ITextExtractor = {
+      extractText: () =>
+        "\n\n  First \t  line here  \nnext line\n\n\n\n\n  Second   paragraph  \n\n",
+    };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: messy });
+
+    await result;
+
+    expect(item.text).toBe("First line here\nnext line\n\nSecond paragraph");
+  });
+
+  it("treats blank page text as no Text", async () => {
+    const blank: ITextExtractor = { extractText: () => " \n\t\n " };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: blank });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", text: null });
+    expect(item.text).toBeNull();
+  });
+
+  it("writes no Text for a job without captured content, and never asks the extractor", async () => {
+    const extractor = { extractText: vi.fn(() => "should not be used") } satisfies ITextExtractor;
+    const { repository, item } = itemsInMemory(ARTICLE_URL);
+    const page = { ...htmlPage({ "og:type": "article" }), finalUrl: ARTICLE_URL };
+    const useCase = useCaseFor(
+      repository,
+      fetcherAnswering(page),
+      undefined,
+      {},
+      undefined,
+      undefined,
+      extractor,
+    );
+
+    await expect(useCase.execute(REF)).resolves.toMatchObject({
+      outcome: "ready",
+      type: "article",
+      text: null,
+    });
+    expect(item).toMatchObject({ status: "ready", text: null });
+    expect(extractor.extractText).not.toHaveBeenCalled();
+  });
+
+  it("writes no Text when the fetch fails", async () => {
+    const { item, result } = run(
+      "https://youtu.be/dQw4w9WgXcQ",
+      fetcherFailing(new Error("ETIMEDOUT")),
+    );
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video", text: null });
+    expect(item.text).toBeNull();
+  });
+});
+
+interface Ports {
+  cache?: IUrlPreviewCache;
+  thumbnails?: ThumbnailPorts;
+  textExtractor?: ITextExtractor;
+}
