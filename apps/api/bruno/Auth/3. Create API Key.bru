@@ -13,6 +13,7 @@ post {
 headers {
   Content-Type: application/json
   Cookie: better-auth.session_token={{sessionCookie}}
+  Origin: http://localhost:3000
 }
 
 body:json {
@@ -27,7 +28,7 @@ script:post-response {
 
 docs {
   Requires `sessionCookie` to be set (see "1. Sign In (Google)").
-
+  
   The raw `key` in the response is the only time it's ever shown — per
   `@better-auth/api-key`'s design (packages/db/src/schema/apiKeys.ts), only
   its hash is persisted, so losing this value means creating a new key. The
