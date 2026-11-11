@@ -1,5 +1,3 @@
-import type { CachedPreview } from "@/domain/providers/IUrlPreviewCache";
-
 // The same Item types and statuses as the API's Items domain and the database
 // enums; tests/unit/domain/schema-agreement.test.ts keeps them in step.
 export const ITEM_TYPES = [
@@ -56,6 +54,18 @@ export interface ItemMetadata {
 
 /** No title and no description: the page couldn't be read, or said nothing. */
 export const NO_METADATA: ItemMetadata = { title: null, description: null };
+
+/**
+ * What Processing decided for a URL, worth reusing for every later Item that
+ * saves the same one: its Item type, its title and description, and its
+ * Thumbnail key — explicitly including `null` when there is no Thumbnail, so
+ * a page confirmed to offer none isn't retried on every save.
+ */
+export interface CachedPreview {
+  type: ItemType;
+  metadata: ItemMetadata;
+  thumbnailKey: string | null;
+}
 
 /**
  * What Processing learned about an Item, written to it in one update when it

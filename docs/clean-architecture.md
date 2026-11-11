@@ -145,8 +145,9 @@ apps/worker/src/
   index.ts              reflect-metadata first; createContainer(), ping Redis, createItemsWorker
   di/                   tokens.ts (WORKER_TOKENS), container.ts
   domain/
-    entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; ReadyItem, what Processing
-                        learned: the cached preview plus Text; Item types and statuses),
+    entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; CachedPreview, a URL's
+                        shared preview; ReadyItem, what Processing learned: the CachedPreview plus
+                        Text; Item types and statuses),
                         PageHead.ts (a page head's extracted tags)
     repositories/       IItemRepository.ts (findById, markReady, markFailed)
     providers/          IUrlFetcher.ts (fetchPage → FetchedPage: html | file | unsuccessful),
