@@ -13,7 +13,7 @@ sequenceDiagram
     participant W as apps/worker
     User->>BG: clicks toolbar icon
     BG->>Tab: executeScript(capturePage)
-    Tab-->>BG: { url, html: document.head }
+    Tab-->>BG: { url, html: head + stripped body }
     BG->>API: POST /items { url, html }, x-api-key
     API-->>BG: 201 (Item created, processing)
     BG-->>User: green ✓ badge (red ! on any failure)
@@ -43,7 +43,7 @@ It watches `chrome.storage` for changes, so saving a key in the popup or the opt
 `saveActiveTab` in `entrypoints/background.ts`:
 
 1. **Reads the stored key.** If there's none, it shows the failure badge.
-2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, html: document.head.outerHTML }`. Only the `<head>` is sent: the worker never reads past it, and a full page body (YouTube's, for example) can exceed the API's request-body limit.
+2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, html }`: `document.head` plus a clone of `document.body` with its scripts, styles, `noscript`, `svg`, `iframe` and `template` elements removed (the live page is never modified). The worker reads the head for the title, description and Thumbnail, and the body for the Item's Text. The create-Item schema caps `html` at 5 Mi characters, and `POST /items`' request-body limit is derived from that cap.
 3. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
 4. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
 
@@ -102,7 +102,7 @@ apps/extension/
 │   ├── apiKeyForm.ts    # the key form both pages share
 │   ├── apiKeyStorage.ts # chrome.storage.local read/write/watch
 │   ├── badge.ts         # ✓ / ! on the toolbar icon
-│   ├── capturePage.ts   # runs in the tab: url + document.head
+│   ├── capturePage.ts   # runs in the tab: url + head + stripped body
 │   ├── config.ts        # API_BASE_URL, from WXT_API_URL
 │   └── createItemRequest.ts # builds the POST /items request
 ├── .env.example         # WXT_API_URL

@@ -57,7 +57,7 @@ Everything from the moment a `FetchedPage` exists onward is **one pipeline, not 
 | **Auth to the API**                             | Session cookie                                                            | `x-api-key` header (see [Security: Authentication](./security.md#authentication)) — resolved through the identical `getSession()` call, no separate code path |
 | **Redirect-following**                          | Yes — `finalUrl` can differ from the pasted URL, and the cache keys on it | No — there's no fetch, so `finalUrl` is always exactly `sourceUrl`                                                                                            |
 | **Type/title/description/Thumbnail extraction** | `ProcessItemUseCase`'s pipeline                                           | The identical pipeline                                                                                                                                        |
-| **Full-text extraction (page body)**            | Out of scope                                                              | Out of scope (deferred either way — see [Queue: Not yet built](./queue.md#not-yet-built))                                                                     |
+| **Text (the page's main content)**              | None                                                                      | Extracted in the worker from the captured body (see [Queue: Text](./queue.md#text)), never shared with another User                                           |
 
 ## Why the redirect difference matters
 

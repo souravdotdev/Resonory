@@ -163,10 +163,11 @@ POST /items
 }
 ```
 
-**`html`** (`CreateItemSchema`, optional): the page's already-rendered HTML, as the browser extension's background script captures it from the active tab on a toolbar click (`document.head.outerHTML` — only the head, since the worker reads nothing past it) and sends alongside the URL — never typed by hand, and additive: a caller sending only `url`, as the web app still does, behaves exactly as before this field existed. Carried unchanged through the enqueued job to the worker, which then skips its own fetch for that Item entirely (see [Queue](./queue.md#captured-content-the-browser-extension-path)).
+**`html`** (`CreateItemSchema`, optional): the page's already-rendered HTML, as the browser extension's background script captures it from the active tab on a toolbar click (`document.head` plus a clone of `document.body` stripped of scripts, styles, `noscript`, `svg`, `iframe` and `template`; the worker reads the head for the title, description and Thumbnail and the body for the Item's Text) and sends alongside the URL, at most 5 Mi characters (`MAX_HTML_LENGTH`) — never typed by hand, and additive: a caller sending only `url`, as the web app still does, behaves exactly as before this field existed. Carried unchanged through the enqueued job to the worker, which then skips its own fetch for that Item entirely (see [Queue](./queue.md#captured-content-the-browser-extension-path)).
 
 - No valid Session or API key → `401 unauthorized`. The User always comes from the authenticated identity, never from the body.
 - A missing URL, one that isn't `http`/`https`, or one over 2048 characters → `400 validation_failed` with the issue at `/url`.
+- Captured content over 5 Mi characters → `400 validation_failed` with the issue at `/html`. The route sets its own request-body limit (`CREATE_ITEM_BODY_LIMIT`, derived from the schema's caps: two bytes per character plus headroom), so an oversized capture reaches the schema instead of getting Fastify's 413 from its 1 MiB default.
 - If the job can't be enqueued (Redis is down), the request fails with `500 internal`. The Item is already stored and stays Processing; there is no retry endpoint yet.
 
 ## `GET /health`
