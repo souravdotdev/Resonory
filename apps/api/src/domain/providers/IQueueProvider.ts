@@ -4,6 +4,8 @@ export interface ProcessItemRequest {
   userId: string;
   /** Captured page content (issue #143/#145), passed through unchanged to the worker. */
   html?: string;
+  /** A video's plain caption text (issue #164), passed through unchanged to the worker. */
+  captions?: string;
 }
 
 /** Hands background work to the worker. The queue adapter implements it. */

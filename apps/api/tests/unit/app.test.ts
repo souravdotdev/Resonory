@@ -4,7 +4,11 @@ import { Container } from "inversify";
 import { z } from "zod";
 import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
-import { CreateItemResponseSchema, MAX_HTML_LENGTH } from "@resonory/shared/schemas/items";
+import {
+  CreateItemResponseSchema,
+  MAX_CAPTIONS_LENGTH,
+  MAX_HTML_LENGTH,
+} from "@resonory/shared/schemas/items";
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
@@ -396,6 +400,60 @@ describe("POST /items", () => {
     const body = ErrorResponseSchema.parse(res.json());
     expect(body.error.code).toBe("validation_failed");
     expect(body.error.details).toEqual([expect.objectContaining({ path: "/html" })]);
+    expect(saved).toHaveLength(0);
+  });
+
+  it("enqueues the job with the request's captions, unchanged", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = "<html><body>A video page</body></html>";
+    const captions = "Hello and welcome to the show.";
+
+    const res = await save(app, { url: "https://www.youtube.com/watch?v=abc", html, captions });
+
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith({
+      itemId: res.json().id,
+      userId: USER_ID,
+      html,
+      captions,
+    });
+  });
+
+  it("enqueues an html-only request without captions, same as today", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+
+    await save(app, { url: "https://example.com/post", html: "<html></html>" });
+
+    const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(call.captions).toBeUndefined();
+  });
+
+  it("saves a captured page and captions both at their caps, every character two bytes", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, {
+      url: "https://www.youtube.com/watch?v=abc",
+      html: "é".repeat(MAX_HTML_LENGTH),
+      captions: "é".repeat(MAX_CAPTIONS_LENGTH),
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("is 400 validation_failed for captions over the cap, not a 413", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(signedIn(), { items: repository }));
+
+    const res = await save(app, {
+      url: "https://www.youtube.com/watch?v=abc",
+      captions: "a".repeat(MAX_CAPTIONS_LENGTH + 1),
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = ErrorResponseSchema.parse(res.json());
+    expect(body.error.code).toBe("validation_failed");
+    expect(body.error.details).toEqual([expect.objectContaining({ path: "/captions" })]);
     expect(saved).toHaveLength(0);
   });
 

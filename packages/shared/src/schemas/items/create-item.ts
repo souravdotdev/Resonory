@@ -10,6 +10,12 @@ export const MAX_URL_LENGTH = 2048;
  * validation error, never an opaque 413.
  */
 export const MAX_HTML_LENGTH = 5 * 1024 * 1024;
+/**
+ * Room for a long video's plain caption text, read by the extension from a
+ * YouTube tab. Like `MAX_HTML_LENGTH`, the API's `POST /items` body limit is
+ * derived from it.
+ */
+export const MAX_CAPTIONS_LENGTH = 1024 * 1024;
 
 /** The link a User pastes to save an Item. Shared by the web save form and the API. */
 export const CreateItemSchema = z.object({
@@ -27,6 +33,15 @@ export const CreateItemSchema = z.object({
   html: z
     .string()
     .max(MAX_HTML_LENGTH, `Captured page content can be at most ${MAX_HTML_LENGTH} characters`)
+    .optional(),
+  /**
+   * A video's captions as plain text, read by the extension from the
+   * YouTube tab the User is watching (issue #164). Additive and optional,
+   * like `html`: the worker prefers them over page text for the Item's Text.
+   */
+  captions: z
+    .string()
+    .max(MAX_CAPTIONS_LENGTH, `Captions can be at most ${MAX_CAPTIONS_LENGTH} characters`)
     .optional(),
 });
 
