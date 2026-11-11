@@ -67,13 +67,14 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * upload that fails moves on to the next candidate image, and with none left
  * the Item is Ready without one.
  *
- * An Item with captured page content also gets its Text: the page's main
- * content, extracted from that content once per job, before the cache is
- * looked up, so a cache hit and a miss both write it. It depends on nothing
- * but what was captured (not the Item type, not the oEmbed answer), and is
- * never cached (Items ADR 0003). A page with no main content, or one the
- * extractor fails on, has none; a job without captured content (the fetch
- * path, failed or not) has none either. Missing Text never fails Processing.
+ * An Item with captured content also gets its Text: a video's captions when
+ * the job carries them, otherwise the page's main content, extracted from the
+ * captured HTML. It's decided once per job, before the cache is looked up, so
+ * a cache hit and a miss both write it. It depends on nothing but what was
+ * captured (not the Item type, not the oEmbed answer), and is never cached
+ * (Items ADR 0003). A page with no main content, or one the extractor fails
+ * on, has none; a job without captured content (the fetch path, failed or
+ * not) has none either. Missing Text never fails Processing.
  */
 @injectable()
 export class ProcessItemUseCase {
@@ -98,7 +99,10 @@ export class ProcessItemUseCase {
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
     // Before the cache short-circuit below: Text is this Item's own, never cached.
-    const text = ref.html === undefined ? null : this.textOf(ref.html, item.sourceUrl);
+    const text = itemText({
+      captions: ref.captions,
+      pageText: () => (ref.html === undefined ? null : this.pageTextOf(ref.html, item.sourceUrl)),
+    });
     let page: FetchedPage;
     if (ref.html !== undefined) {
       // Already-rendered content (issue #143/#145): build the page
@@ -166,10 +170,10 @@ export class ProcessItemUseCase {
     };
   }
 
-  /** The Item's Text from its captured page content; none when the extractor fails. */
-  private textOf(html: string, sourceUrl: string): string | null {
+  /** The captured page's main-content text; none when the extractor fails. */
+  private pageTextOf(html: string, sourceUrl: string): string | null {
     try {
-      return itemText(this.textExtractor.extractText(html, sourceUrl));
+      return this.textExtractor.extractText(html, sourceUrl);
     } catch {
       return null;
     }

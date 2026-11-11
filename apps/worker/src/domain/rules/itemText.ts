@@ -1,15 +1,33 @@
 /** The longest Text an Item keeps: the search vector reads no further. */
 export const MAX_TEXT_LENGTH = 100_000;
 
+/** Where an Item's Text can come from, in order of precedence. */
+export interface TextSources {
+  /** A video's captions, read from the User's own tab (issue #164). */
+  captions?: string;
+  /**
+   * The page's main-content text, or null when it has none. Only asked for
+   * when the captions don't answer, so a captioned video's page is never
+   * extracted.
+   */
+  pageText: () => string | null;
+}
+
 /**
- * An Item's Text from its page's main-content text: whitespace normalised
- * (each line's runs of spaces and tabs turned into one space and trimmed, and
- * blank lines between paragraphs kept, at most one in a row), capped at
- * `MAX_TEXT_LENGTH` characters. Null when there is no page text, or it's blank.
+ * An Item's Text: its captions when it has any, otherwise its page's
+ * main-content text. Either one is whitespace normalised (each line's runs of
+ * spaces and tabs turned into one space and trimmed, and blank lines between
+ * paragraphs kept, at most one in a row) and capped at `MAX_TEXT_LENGTH`
+ * characters; a blank one counts as none. Null when neither answers.
  */
-export function itemText(pageText: string | null): string | null {
-  if (pageText === null) return null;
-  const text = normaliseText(pageText);
+export function itemText({ captions, pageText }: TextSources): string | null {
+  return textOf(captions ?? null) ?? textOf(pageText());
+}
+
+/** Normalised and capped; null when absent or blank. */
+function textOf(source: string | null): string | null {
+  if (source === null) return null;
+  const text = normaliseText(source);
   return text === "" ? null : capped(text);
 }
 

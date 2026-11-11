@@ -1373,7 +1373,14 @@ describe("ProcessItemUseCase, Text", () => {
     </html>
   `;
 
-  const processCaptured = (html: string, sourceUrl = ARTICLE_URL, ports: Ports = {}) => {
+  const processCaptured = (html: string, sourceUrl = ARTICLE_URL, ports: Ports = {}) =>
+    processJob({ html }, sourceUrl, ports);
+
+  const processJob = (
+    job: { html?: string; captions?: string },
+    sourceUrl = ARTICLE_URL,
+    ports: Ports = {},
+  ) => {
     const { repository, item } = itemsInMemory(sourceUrl);
     const cache = ports.cache ?? cacheMissing();
     const useCase = useCaseFor(
@@ -1385,7 +1392,7 @@ describe("ProcessItemUseCase, Text", () => {
       undefined,
       ports.textExtractor,
     );
-    return { item, cache, result: useCase.execute({ ...REF, html }) };
+    return { item, cache, result: useCase.execute({ ...REF, ...job }) };
   };
 
   it("fills an article's Text with its body, without navigation, footer or sidebar text", async () => {
@@ -1536,6 +1543,82 @@ describe("ProcessItemUseCase, Text", () => {
     });
     expect(item).toMatchObject({ status: "ready", text: null });
     expect(extractor.extractText).not.toHaveBeenCalled();
+  });
+
+  describe("a video's captions", () => {
+    const VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    const CAPTIONS = "Never gonna give you up\nnever gonna let you down";
+
+    it("fills a YouTube video's Text with its captions, even when the page has text", async () => {
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL);
+
+      await expect(result).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: CAPTIONS,
+      });
+      expect(item.text).toBe(CAPTIONS);
+    });
+
+    it("never asks the extractor when the captions answer", async () => {
+      const extractor = { extractText: vi.fn(() => "page text") } satisfies ITextExtractor;
+
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL, {
+        textExtractor: extractor,
+      });
+
+      await result;
+
+      expect(item.text).toBe(CAPTIONS);
+      expect(extractor.extractText).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the page's text for a video without captions", async () => {
+      const { item, result } = processJob({ html: articlePage() }, VIDEO_URL);
+
+      await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video" });
+      expect(item.text).toContain(PARAGRAPHS[0]);
+    });
+
+    it("falls back to the page's text when the captions are blank", async () => {
+      const { item, result } = processJob({ html: articlePage(), captions: " \n\t " }, VIDEO_URL);
+
+      await result;
+
+      expect(item.text).toContain(PARAGRAPHS[0]);
+    });
+
+    it("normalises the captions' whitespace and caps them like page text", async () => {
+      const { item, result } = processJob(
+        {
+          html: articlePage(),
+          captions: `  Never   gonna \t give\n\n\n\nyou up  ${"la ".repeat(40_000)}`,
+        },
+        VIDEO_URL,
+      );
+
+      await result;
+
+      expect(item.text!.startsWith("Never gonna give\n\nyou up la la")).toBe(true);
+      expect(item.text!.length).toBeLessThanOrEqual(100_000);
+    });
+
+    it("still writes the captions as Text on a cache hit, and never caches them", async () => {
+      const preview: CachedPreview = {
+        type: "video",
+        metadata: { title: "A video", description: null },
+        thumbnailKey: null,
+      };
+      const hit = cacheAnswering(preview);
+
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL, {
+        cache: hit,
+      });
+
+      await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+      expect(item.text).toBe(CAPTIONS);
+      expect(hit.set).not.toHaveBeenCalled();
+    });
   });
 
   it("writes no Text when the fetch fails", async () => {
