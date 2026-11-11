@@ -31,8 +31,9 @@ export interface ItemRef {
   html?: string;
   /**
    * A video's plain caption text (issue #164), read by the extension from
-   * the YouTube tab and carried on the job unchanged. When present, it is
-   * the Item's Text ahead of anything extracted from `html`.
+   * the YouTube tab and carried on the job unchanged. When present alongside
+   * `html`, it is the Item's Text ahead of anything extracted from `html`;
+   * without `html` it is ignored (Text comes only from captured content).
    */
   captions?: string;
 }

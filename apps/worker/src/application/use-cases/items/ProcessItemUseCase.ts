@@ -74,7 +74,8 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * captured (not the Item type, not the oEmbed answer), and is never cached
  * (Items ADR 0003). A page with no main content, or one the extractor fails
  * on, has none; a job without captured content (the fetch path, failed or
- * not) has none either. Missing Text never fails Processing.
+ * not) has none either, even one that carries captions. Missing Text never
+ * fails Processing.
  */
 @injectable()
 export class ProcessItemUseCase {
@@ -99,10 +100,7 @@ export class ProcessItemUseCase {
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
     // Before the cache short-circuit below: Text is this Item's own, never cached.
-    const text = itemText({
-      captions: ref.captions,
-      pageText: () => (ref.html === undefined ? null : this.pageTextOf(ref.html, item.sourceUrl)),
-    });
+    const text = this.textOf(ref, item.sourceUrl);
     let page: FetchedPage;
     if (ref.html !== undefined) {
       // Already-rendered content (issue #143/#145): build the page
@@ -168,6 +166,16 @@ export class ProcessItemUseCase {
       contentType: "text/html",
       head: this.pageParser.parseHead(html, sourceUrl),
     };
+  }
+
+  /**
+   * This Item's Text, from what its User's browser captured: none for a job
+   * without captured content, even one carrying captions (the fetch path,
+   * failed or not, writes no Text).
+   */
+  private textOf({ html, captions }: ItemRef, sourceUrl: string): string | null {
+    if (html === undefined) return null;
+    return itemText({ captions, pageText: () => this.pageTextOf(html, sourceUrl) });
   }
 
   /** The captured page's main-content text; none when the extractor fails. */
