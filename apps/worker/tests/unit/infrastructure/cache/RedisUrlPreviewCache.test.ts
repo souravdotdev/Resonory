@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CachedPreview } from "@/domain/providers/IUrlPreviewCache";
+import type { CachedPreview } from "@/domain/entities/Item";
 import { RedisUrlPreviewCache } from "@/infrastructure/cache/RedisUrlPreviewCache";
 
 // A fake of just the two ioredis commands this adapter calls, backed by an

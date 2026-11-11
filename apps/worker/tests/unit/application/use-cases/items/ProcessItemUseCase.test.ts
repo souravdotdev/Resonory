@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import {
+  type CachedPreview,
   type Item,
   type ItemMetadata,
   type ItemRef,
@@ -17,7 +18,7 @@ import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";

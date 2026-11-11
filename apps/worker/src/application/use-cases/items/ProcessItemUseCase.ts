@@ -2,6 +2,7 @@ import { inject, injectable, optional } from "inversify";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
+  type CachedPreview,
   type ItemMetadata,
   type ItemRef,
   type ItemType,
@@ -15,7 +16,7 @@ import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
