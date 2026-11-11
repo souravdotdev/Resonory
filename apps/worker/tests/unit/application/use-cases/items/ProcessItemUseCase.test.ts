@@ -1621,6 +1621,31 @@ describe("ProcessItemUseCase, Text", () => {
       expect(item.text).toBe(CAPTIONS);
       expect(hit.set).not.toHaveBeenCalled();
     });
+
+    it("writes no Text for captions on a job without captured content", async () => {
+      const { repository, item } = itemsInMemory(VIDEO_URL);
+      const page = { ...htmlPage(), finalUrl: VIDEO_URL };
+      const useCase = useCaseFor(repository, fetcherAnswering(page));
+
+      await expect(useCase.execute({ ...REF, captions: CAPTIONS })).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: null,
+      });
+      expect(item).toMatchObject({ status: "ready", text: null });
+    });
+
+    it("writes no Text for captions when the fetch fails", async () => {
+      const { repository, item } = itemsInMemory(VIDEO_URL);
+      const useCase = useCaseFor(repository, fetcherFailing(new Error("ETIMEDOUT")));
+
+      await expect(useCase.execute({ ...REF, captions: CAPTIONS })).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: null,
+      });
+      expect(item).toMatchObject({ status: "ready", text: null });
+    });
   });
 
   it("writes no Text when the fetch fails", async () => {
