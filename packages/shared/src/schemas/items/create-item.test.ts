@@ -47,6 +47,10 @@ describe("CreateItemSchema", () => {
     expect(parsed.html).toBeUndefined();
   });
 
+  it("caps html at 5 Mi characters, so a captured body and head fit", () => {
+    expect(MAX_HTML_LENGTH).toBe(5 * 1024 * 1024);
+  });
+
   it(`accepts html of exactly ${MAX_HTML_LENGTH} characters and rejects one character more`, () => {
     const atLimit = "a".repeat(MAX_HTML_LENGTH);
 

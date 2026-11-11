@@ -4,7 +4,7 @@ import { Container } from "inversify";
 import { z } from "zod";
 import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
-import { CreateItemResponseSchema } from "@resonory/shared/schemas/items";
+import { CreateItemResponseSchema, MAX_HTML_LENGTH } from "@resonory/shared/schemas/items";
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
@@ -359,6 +359,44 @@ describe("POST /items", () => {
 
     const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(call.html).toBeUndefined();
+  });
+
+  it("saves a captured page over 1 MiB (Fastify's default body limit)", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = `<html><body>${"a".repeat(2 * 1024 * 1024)}</body></html>`;
+
+    const res = await save(app, { url: "https://example.com/post", html });
+
+    expect(res.statusCode).toBe(201);
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith(expect.objectContaining({ html }));
+  });
+
+  it("saves a captured page at the cap even when every character takes two bytes", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, {
+      url: "https://example.com/post",
+      html: "é".repeat(MAX_HTML_LENGTH),
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("is 400 validation_failed for a captured page over the cap, not a 413", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(signedIn(), { items: repository }));
+
+    const res = await save(app, {
+      url: "https://example.com/post",
+      html: "a".repeat(MAX_HTML_LENGTH + 1),
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = ErrorResponseSchema.parse(res.json());
+    expect(body.error.code).toBe("validation_failed");
+    expect(body.error.details).toEqual([expect.objectContaining({ path: "/html" })]);
+    expect(saved).toHaveLength(0);
   });
 
   it("saves the same URL twice as two Items", async () => {
