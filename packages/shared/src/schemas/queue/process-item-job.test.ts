@@ -42,4 +42,14 @@ describe("ProcessItemJobSchema", () => {
     expect(ProcessItemJobSchema.parse(job)).toEqual(job);
     expect(ProcessItemJobSchema.parse(job).html).toBeUndefined();
   });
+
+  it("carries a video's captions alongside the ids when given", () => {
+    const captions = "Hello and welcome to the show.";
+
+    expect(ProcessItemJobSchema.parse({ ...job, captions })).toEqual({ ...job, captions });
+  });
+
+  it("leaves captions undefined when the job carries none, same as today", () => {
+    expect(ProcessItemJobSchema.parse(job).captions).toBeUndefined();
+  });
 });

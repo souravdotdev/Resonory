@@ -28,6 +28,7 @@ export class ItemsController {
       userId: signedInUser(request).id,
       sourceUrl: request.body.url,
       html: request.body.html,
+      captions: request.body.captions,
     });
     reply.code(201);
     return card;
