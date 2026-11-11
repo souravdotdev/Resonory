@@ -163,7 +163,7 @@ POST /items
 }
 ```
 
-**`html`** (`CreateItemSchema`, optional): the page's already-rendered HTML, as the browser extension's background script captures it from the active tab on a toolbar click (`document.documentElement.outerHTML`) and sends alongside the URL — never typed by hand, and additive: a caller sending only `url`, as the web app still does, behaves exactly as before this field existed. Carried unchanged through the enqueued job to the worker, which then skips its own fetch for that Item entirely (see [Queue](./queue.md#captured-content-the-browser-extension-path)).
+**`html`** (`CreateItemSchema`, optional): the page's already-rendered HTML, as the browser extension's background script captures it from the active tab on a toolbar click (`document.head.outerHTML` — only the head, since the worker reads nothing past it) and sends alongside the URL — never typed by hand, and additive: a caller sending only `url`, as the web app still does, behaves exactly as before this field existed. Carried unchanged through the enqueued job to the worker, which then skips its own fetch for that Item entirely (see [Queue](./queue.md#captured-content-the-browser-extension-path)).
 
 - No valid Session or API key → `401 unauthorized`. The User always comes from the authenticated identity, never from the body.
 - A missing URL, one that isn't `http`/`https`, or one over 2048 characters → `400 validation_failed` with the issue at `/url`.
