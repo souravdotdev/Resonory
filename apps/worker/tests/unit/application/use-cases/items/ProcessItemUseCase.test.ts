@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import {
@@ -1637,3 +1639,128 @@ interface Ports {
   thumbnails?: ThumbnailPorts;
   textExtractor?: ITextExtractor;
 }
+
+describe("ProcessItemUseCase, an X post's Text", () => {
+  const POST_URL = "https://x.com/resonory/status/1856001234567890123";
+  // The post's page as the extension captures it, with replies, "Who to follow" and trends loaded.
+  const X_POST_PAGE = readFileSync(
+    fileURLToPath(new URL("../../../../fixtures/x-post.html", import.meta.url)),
+    "utf8",
+  );
+  const POST_TEXT = [
+    "Shipping full-text search today.",
+    "",
+    "It reads what you saved, not just the titles 🎉",
+    "",
+    "Your articles, threads and videos, findable by the words inside them. #buildinpublic https://resonory.app/changelog",
+  ].join("\n");
+
+  const processCaptured = (
+    html: string,
+    sourceUrl = POST_URL,
+    cache: IUrlPreviewCache = cacheMissing(),
+  ) => {
+    const { repository, item } = itemsInMemory(sourceUrl);
+    const useCase = useCaseFor(
+      repository,
+      fetcherFailing(new Error("must not be called")),
+      undefined,
+      {},
+      cache,
+    );
+    return { item, cache, result: useCase.execute({ ...REF, html }) };
+  };
+
+  it("fills an X post's Text with the post's own words only", async () => {
+    const { item, result } = processCaptured(X_POST_PAGE);
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      type: "post",
+      text: POST_TEXT,
+    });
+    expect(item).toMatchObject({ status: "ready", type: "post", text: POST_TEXT });
+    expect(item.text).not.toMatch(/tide pools|Markdown|Who to follow|Trending|Views/);
+  });
+
+  it("reads a reply's own words from its page, never the post it replies to", async () => {
+    const replyUrl = "https://x.com/ada_reads/status/1856004444444444444";
+
+    const { item, result } = processCaptured(X_POST_PAGE, replyUrl);
+
+    await result;
+    expect(item.text).toBe(
+      "Finally. I have four hundred saved essays and could never find the one about tide pools. Does it work on paywalled pieces I read while logged in?",
+    );
+  });
+
+  it("still gets the post's Text when another User's save already cached the post", async () => {
+    const preview: CachedPreview = {
+      type: "post",
+      metadata: { title: "Resonory on X", description: null },
+      thumbnailKey: "shared/abc123.webp",
+    };
+
+    const { item, result, cache } = processCaptured(X_POST_PAGE, POST_URL, cacheAnswering(preview));
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview, text: POST_TEXT });
+    expect(item.text).toBe(POST_TEXT);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  // Long enough that the page reads as having main content.
+  const WRITE_UP =
+    "A long write-up of the launch, in plain paragraphs, explaining what full-text search does, how it reads each saved page, and why the words inside an article matter more than its title.";
+  const writeUpPage = `
+    <!doctype html>
+    <html>
+      <head><title>Launch notes</title></head>
+      <body>
+        <nav><a href="/">Home</a></nav>
+        <article><p>${WRITE_UP}</p><p>${WRITE_UP}</p><p>${WRITE_UP}</p></article>
+      </body>
+    </html>
+  `;
+
+  it("falls back to main-content extraction for an X page without the post's node", async () => {
+    const { item, result } = processCaptured(writeUpPage);
+
+    await result;
+    expect(item.text).toContain(WRITE_UP);
+  });
+
+  it("leaves an X page without the post's node or any main content with no Text", async () => {
+    const loginWall = `
+      <!doctype html>
+      <html>
+        <head><title>X</title></head>
+        <body>
+          <main><h1>Something went wrong. Try reloading.</h1><a href="/login">Log in</a> <a href="/i/flow/signup">Sign up</a></main>
+        </body>
+      </html>
+    `;
+
+    const { item, result } = processCaptured(loginWall);
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "post", text: null });
+    expect(item.text).toBeNull();
+  });
+
+  it("reads another network's post with main-content extraction, not the X post node", async () => {
+    const redditUrl = "https://www.reddit.com/r/selfhosted/comments/1abcde/full_text_search/";
+
+    const { item, result } = processCaptured(writeUpPage, redditUrl);
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "post" });
+    expect(item.text).toContain(WRITE_UP);
+  });
+
+  it("never reads the X post node on another network's page, even when one is there", async () => {
+    const blueskyUrl = "https://bsky.app/profile/resonory.app/post/3kxyz";
+
+    const { item, result } = processCaptured(X_POST_PAGE, blueskyUrl);
+
+    await result;
+    expect(item.text).not.toBe(POST_TEXT);
+  });
+});
