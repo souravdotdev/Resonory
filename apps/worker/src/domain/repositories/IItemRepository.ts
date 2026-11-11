@@ -6,7 +6,7 @@ export interface IItemRepository {
   findById(ref: ItemRef): Promise<Item | null>;
   /**
    * Marks the User's Item Ready with what Processing learned (Item type, title,
-   * description and Thumbnail key), all in one update.
+   * description, Thumbnail key and Text), all in one update.
    */
   markReady(ref: ItemRef, ready: ReadyItem): Promise<void>;
   /** Marks the User's Item Failed with this Item type. */

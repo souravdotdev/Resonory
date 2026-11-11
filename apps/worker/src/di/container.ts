@@ -11,6 +11,7 @@ import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IJsonFetcher } from "@/domain/providers/IJsonFetcher";
 import type { IOEmbedProvider } from "@/domain/providers/IOEmbedProvider";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IUrlFetcher } from "@/domain/providers/IUrlFetcher";
@@ -21,6 +22,7 @@ import type { Database } from "@/infrastructure/database/Database";
 import { db } from "@/infrastructure/database/db";
 import { GuardedOEmbedProvider } from "@/infrastructure/http/GuardedOEmbedProvider";
 import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
+import { ReadabilityTextExtractor } from "@/infrastructure/http/ReadabilityTextExtractor";
 import { SafeUrlFetcher } from "@/infrastructure/http/SafeUrlFetcher";
 import { SharpThumbnailResizer } from "@/infrastructure/images/SharpThumbnailResizer";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
@@ -66,6 +68,10 @@ export function createContainer(): Container {
   container
     .bind<IPageHeadParser>(WORKER_TOKENS.PageHeadParser)
     .to(HtmlPageParser)
+    .inSingletonScope();
+  container
+    .bind<ITextExtractor>(WORKER_TOKENS.TextExtractor)
+    .to(ReadabilityTextExtractor)
     .inSingletonScope();
   // Without Supabase Storage there's no Thumbnail store, and Processing fetches no image.
   const store = thumbnailStore(logger);

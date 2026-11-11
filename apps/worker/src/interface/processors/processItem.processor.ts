@@ -33,6 +33,7 @@ export async function processItem(container: Container, data: unknown): Promise<
         type: result.type,
         titled: result.metadata.title !== null,
         pictured: result.thumbnailKey !== null,
+        texted: result.text !== null,
       },
       "Item is Ready",
     );

@@ -27,6 +27,7 @@ describe("a Process Item job", () => {
       type: "link",
       metadata: { title: "A title", description: null },
       thumbnailKey: "key-1",
+      text: "The page's words",
     }));
 
     await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
@@ -35,18 +36,19 @@ describe("a Process Item job", () => {
       {
         level: "info",
         bindings: { itemId: ITEM_ID },
-        fields: { type: "link", titled: true, pictured: true },
+        fields: { type: "link", titled: true, pictured: true, texted: true },
         msg: "Item is Ready",
       },
     ]);
   });
 
-  it("logs an Item Ready without a title or a Thumbnail", async () => {
+  it("logs an Item Ready without a title, a Thumbnail or Text", async () => {
     const { container, logger } = testContainer(async () => ({
       outcome: "ready",
       type: "link",
       metadata: { title: null, description: null },
       thumbnailKey: null,
+      text: null,
     }));
 
     await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
@@ -55,7 +57,7 @@ describe("a Process Item job", () => {
       {
         level: "info",
         bindings: { itemId: ITEM_ID },
-        fields: { type: "link", titled: false, pictured: false },
+        fields: { type: "link", titled: false, pictured: false, texted: false },
         msg: "Item is Ready",
       },
     ]);

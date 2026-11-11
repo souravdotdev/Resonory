@@ -1,3 +1,5 @@
+import type { CachedPreview } from "@/domain/providers/IUrlPreviewCache";
+
 // The same Item types and statuses as the API's Items domain and the database
 // enums; tests/unit/domain/schema-agreement.test.ts keeps them in step.
 export const ITEM_TYPES = [
@@ -50,11 +52,12 @@ export const NO_METADATA: ItemMetadata = { title: null, description: null };
 
 /**
  * What Processing learned about an Item, written to it in one update when it
- * becomes Ready: its Item type, title and description, and its Thumbnail key
- * (null without a Thumbnail).
+ * becomes Ready: the URL's preview (its Item type, title and description, and
+ * its Thumbnail key, null without a Thumbnail) plus this Item's own Text (null
+ * without one). Text is the User's own, from what their browser captured, so
+ * it's never part of the preview every User saving the URL shares (Items ADR
+ * 0003): a `CachedPreview` can't carry it.
  */
-export interface ReadyItem {
-  type: ItemType;
-  metadata: ItemMetadata;
-  thumbnailKey: string | null;
+export interface ReadyItem extends CachedPreview {
+  text: string | null;
 }
