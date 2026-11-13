@@ -4,8 +4,9 @@ import { watchActionPopup } from "../lib/actionPopup";
 import { getStoredApiKey } from "../lib/apiKeyStorage";
 import { showFailureBadge, showSuccessBadge } from "../lib/badge";
 import { captureCaptions } from "../lib/captureCaptions";
+import { capturedHtml, type CapturedDocument } from "../lib/capturedHtml";
 import { capturePage } from "../lib/capturePage";
-import { buildCreateItemRequest, type CapturedPage } from "../lib/createItemRequest";
+import { buildCreateItemRequest } from "../lib/createItemRequest";
 import { API_BASE_URL } from "../lib/config";
 
 /**
@@ -33,7 +34,7 @@ async function saveActiveTab(tab: { id?: number }): Promise<void> {
       target: { tabId: tab.id },
       func: capturePage,
     });
-    const captured = injection?.result as CapturedPage | undefined;
+    const captured = injection?.result as CapturedDocument | undefined;
     if (!captured) {
       await showFailureBadge();
       return;
@@ -41,7 +42,10 @@ async function saveActiveTab(tab: { id?: number }): Promise<void> {
 
     // Never throws: a caption failure just means no captions.
     const captions = await captureCaptions(tab.id, captured.url);
-    const request = buildCreateItemRequest({ ...captured, captions }, apiKey);
+    const request = buildCreateItemRequest(
+      { url: captured.url, html: capturedHtml(captured), captions },
+      apiKey,
+    );
     const response = await fetch(`${API_BASE_URL}/items`, {
       method: request.method,
       headers: request.headers,

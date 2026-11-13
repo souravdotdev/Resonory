@@ -1,4 +1,4 @@
-import type { CapturedPage } from "./createItemRequest";
+import type { CapturedDocument } from "./capturedHtml";
 
 /**
  * Injected into the active tab via `chrome.scripting.executeScript` on a
@@ -12,18 +12,15 @@ import type { CapturedPage } from "./createItemRequest";
  * the head for the title, description and Thumbnail, and the body for the
  * Item's Text (its main content, extracted there). Only the clone is
  * stripped of what never holds readable words (scripts, styles, `noscript`,
- * `svg`, `iframe`, `template`), so the live page is never modified, and
- * those are what make a heavy page's capture large (YouTube's inline player
- * state, for instance). The create-Item schema caps the result at 5 Mi
- * characters.
+ * `svg`, `iframe`, `template`), so the live page is never modified, and those
+ * are what make a heavy page's capture large (YouTube's inline player state,
+ * for instance). `capturedHtml` joins the two, falling back to the head alone
+ * when they're over the create-Item schema's cap.
  */
-export function capturePage(): CapturedPage {
+export function capturePage(): CapturedDocument {
   const body = document.body.cloneNode(true) as HTMLElement;
   for (const element of body.querySelectorAll("script, style, noscript, svg, iframe, template")) {
     element.remove();
   }
-  return {
-    url: location.href,
-    html: `<!doctype html><html>${document.head.outerHTML}${body.outerHTML}</html>`,
-  };
+  return { url: location.href, head: document.head.outerHTML, body: body.outerHTML };
 }
