@@ -1,13 +1,13 @@
 import type { CreateItemInput } from "@resonory/shared/schemas/items";
 
-/** Whatever the injected capture functions return from the active tab. */
+/** A captured tab, ready to send: its URL and page content (`capturedHtml`), plus captions on a YouTube video. */
 export interface CapturedPage {
   url: string;
   html: string;
   /**
    * A YouTube video's plain caption text, from the second, main-world
-   * injection (`lib/youtubeCaptions.ts`). `capturePage` never sets it, and
-   * it's absent on every other tab, or when the video has none.
+   * injection (`lib/captureCaptions.ts`). Absent on every other tab, or when
+   * the video has none.
    */
   captions?: string;
 }

@@ -13,7 +13,7 @@ sequenceDiagram
     participant W as apps/worker
     User->>BG: clicks toolbar icon
     BG->>Tab: executeScript(capturePage)
-    Tab-->>BG: { url, html: head + stripped body }
+    Tab-->>BG: { url, head, stripped body }
     opt YouTube video only, in the page's main world
         BG->>Tab: executeScript(readPlayerCaptions)
         Tab-->>BG: video id, page language, caption tracks
@@ -49,7 +49,7 @@ It watches `chrome.storage` for changes, so saving a key in the popup or the opt
 `saveActiveTab` in `entrypoints/background.ts`:
 
 1. **Reads the stored key.** If there's none, it shows the failure badge.
-2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, html }`: `document.head` plus a clone of `document.body` with its scripts, styles, `noscript`, `svg`, `iframe` and `template` elements removed (the live page is never modified). The worker reads the head for the title, description and Thumbnail, and the body for the Item's Text. The create-Item schema caps `html` at 5 Mi characters, and `POST /items`' request-body limit is derived from that cap.
+2. **Captures the tab.** It injects `capturePage()` (`lib/capturePage.ts`) into the active tab with `chrome.scripting.executeScript`, which returns `{ url: location.href, head, body }`: `document.head` and a clone of `document.body` with its scripts, styles, `noscript`, `svg`, `iframe` and `template` elements removed (the live page is never modified). The pure `capturedHtml` (`lib/capturedHtml.ts`) joins them into the `html` it sends. The worker reads the head for the title, description and Thumbnail, and the body for the Item's Text. The create-Item schema caps `html` at 5 Mi characters (`POST /items`' request-body limit is derived from that cap), so a page still over it after stripping is sent as its head alone with an empty body: it saves with its title, description and Thumbnail, just without Text, instead of failing the save on the API's 400.
 3. **Reads a YouTube video's captions**, on a YouTube watch page or Short only (see [YouTube captions](#youtube-captions)). Any other tab runs no second injection.
 4. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` (plus `captions` when step 3 found any) and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
 5. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
@@ -121,6 +121,7 @@ apps/extension/
 │   ├── apiKeyStorage.ts # chrome.storage.local read/write/watch
 │   ├── badge.ts         # ✓ / ! on the toolbar icon
 │   ├── captureCaptions.ts # YouTube only: reads captions in the page's main world
+│   ├── capturedHtml.ts  # pure: head + body, or the head alone when over the cap
 │   ├── capturePage.ts   # runs in the tab: url + head + stripped body
 │   ├── config.ts        # API_BASE_URL, from WXT_API_URL
 │   ├── createItemRequest.ts # builds the POST /items request

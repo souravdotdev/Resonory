@@ -87,7 +87,7 @@ describe("background entrypoint", () => {
   it("captures the tab, posts it with the stored key, and shows a success badge", async () => {
     browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "key_abc123" });
     browserMock.scripting.executeScript.mockResolvedValue([
-      { result: { url: "https://example.com", html: "<html></html>" } },
+      { result: { url: "https://example.com", head: "<head></head>", body: "<body></body>" } },
     ]);
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
@@ -107,7 +107,7 @@ describe("background entrypoint", () => {
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("key_abc123");
     expect(JSON.parse(init.body as string)).toEqual({
       url: "https://example.com",
-      html: "<html></html>",
+      html: "<!doctype html><html><head></head><body></body></html>",
     });
 
     vi.unstubAllGlobals();
@@ -116,7 +116,7 @@ describe("background entrypoint", () => {
   it("shows a failure badge when the API rejects the request", async () => {
     browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "bad-key" });
     browserMock.scripting.executeScript.mockResolvedValue([
-      { result: { url: "https://example.com", html: "<html></html>" } },
+      { result: { url: "https://example.com", head: "<head></head>", body: "<body></body>" } },
     ]);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
 
@@ -133,7 +133,8 @@ describe("background entrypoint", () => {
 
   describe("on a YouTube video", () => {
     const VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    const page = { url: VIDEO_URL, html: "<html></html>" };
+    const page = { url: VIDEO_URL, head: "<head></head>", body: "<body></body>" };
+    const sent = { url: VIDEO_URL, html: "<!doctype html><html><head></head><body></body></html>" };
     const playerCaptions = {
       videoId: "dQw4w9WgXcQ",
       language: "en",
@@ -176,7 +177,7 @@ describe("background entrypoint", () => {
 
       const body = await saveTab();
 
-      expect(body).toEqual({ ...page, captions: "Never gonna give you up" });
+      expect(body).toEqual({ ...sent, captions: "Never gonna give you up" });
       expect(browserMock.scripting.executeScript).toHaveBeenCalledWith(
         expect.objectContaining({ target: { tabId: 7 }, world: "MAIN" }),
       );
@@ -193,37 +194,37 @@ describe("background entrypoint", () => {
 
       const body = await saveTab();
 
-      expect(body).toEqual(page);
+      expect(body).toEqual(sent);
       expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(2);
     });
 
     it("saves without captions for a video that has none", async () => {
       injectionsAnswering(page, null);
 
-      expect(await saveTab()).toEqual(page);
+      expect(await saveTab()).toEqual(sent);
     });
 
     it("still saves when reading the captions fails", async () => {
       injectionsAnswering(page);
       browserMock.scripting.executeScript.mockRejectedValueOnce(new Error("Frame was removed"));
 
-      expect(await saveTab()).toEqual(page);
+      expect(await saveTab()).toEqual(sent);
     });
 
     it("reads a Short's captions the same way", async () => {
-      const short = { url: "https://www.youtube.com/shorts/dQw4w9WgXcQ", html: "<html></html>" };
-      injectionsAnswering(short, playerCaptions, json3);
+      const url = "https://www.youtube.com/shorts/dQw4w9WgXcQ";
+      injectionsAnswering({ ...page, url }, playerCaptions, json3);
 
       const body = await saveTab();
 
-      expect(body).toEqual({ ...short, captions: "Never gonna give you up" });
+      expect(body).toEqual({ ...sent, url, captions: "Never gonna give you up" });
       expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(3);
     });
 
     it("still saves when fetching the caption track fails", async () => {
       injectionsAnswering(page, playerCaptions, null);
 
-      expect(await saveTab()).toEqual(page);
+      expect(await saveTab()).toEqual(sent);
     });
   });
 
