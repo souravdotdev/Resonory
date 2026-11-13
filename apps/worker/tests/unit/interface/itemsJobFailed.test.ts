@@ -43,6 +43,7 @@ function processItemJob(
     data,
     attemptsMade,
     opts: { attempts: 3 },
+    updateData: vi.fn(async (_data: unknown) => {}),
     ...(finished ? { finishedOn: FINISHED_ON } : {}),
   } satisfies FailedItemsJob;
 }
@@ -58,6 +59,26 @@ describe("a failed job on the Items queue", () => {
     await onItemsJobFailed(container, processItemJob(3), new Error("Postgres is down"));
 
     expect(useCase.execute).toHaveBeenCalledWith({ itemId: ITEM_ID, userId: USER_ID });
+  });
+
+  it("drops the job's captured content and captions once it has failed for good", async () => {
+    const { container } = testContainer();
+    const data = { itemId: ITEM_ID, userId: USER_ID, html: "<html></html>", captions: "Hi" };
+    const job = processItemJob(3, { data });
+
+    await onItemsJobFailed(container, job, new Error("Postgres is down"));
+
+    expect(job.updateData).toHaveBeenCalledWith({ itemId: ITEM_ID, userId: USER_ID });
+  });
+
+  it("keeps the job's captured content for the attempts still to come", async () => {
+    const { container } = testContainer();
+    const data = { itemId: ITEM_ID, userId: USER_ID, html: "<html></html>" };
+    const job = processItemJob(1, { data });
+
+    await onItemsJobFailed(container, job, new Error("Postgres is down"));
+
+    expect(job.updateData).not.toHaveBeenCalled();
   });
 
   it.each([1, 2])("leaves the Item Processing after attempt %i of 3", async (attemptsMade) => {
