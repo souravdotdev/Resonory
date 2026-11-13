@@ -27,6 +27,13 @@ export interface ItemRef {
    * and never calls the network fetcher for this job.
    */
   html?: string;
+  /**
+   * A video's plain caption text (issue #164), read by the extension from
+   * the YouTube tab and carried on the job unchanged. When present alongside
+   * `html`, it is the Item's Text ahead of anything extracted from `html`;
+   * without `html` it is ignored (Text comes only from captured content).
+   */
+  captions?: string;
 }
 
 /** What Processing needs to know about an Item. */
@@ -49,12 +56,25 @@ export interface ItemMetadata {
 export const NO_METADATA: ItemMetadata = { title: null, description: null };
 
 /**
- * What Processing learned about an Item, written to it in one update when it
- * becomes Ready: its Item type, title and description, and its Thumbnail key
- * (null without a Thumbnail).
+ * What Processing decided for a URL, worth reusing for every later Item that
+ * saves the same one: its Item type, its title and description, and its
+ * Thumbnail key — explicitly including `null` when there is no Thumbnail, so
+ * a page confirmed to offer none isn't retried on every save.
  */
-export interface ReadyItem {
+export interface CachedPreview {
   type: ItemType;
   metadata: ItemMetadata;
   thumbnailKey: string | null;
+}
+
+/**
+ * What Processing learned about an Item, written to it in one update when it
+ * becomes Ready: the URL's preview (its Item type, title and description, and
+ * its Thumbnail key, null without a Thumbnail) plus this Item's own Text (null
+ * without one). Text is the User's own, from what their browser captured, so
+ * it's never part of the preview every User saving the URL shares (Items ADR
+ * 0003): a `CachedPreview` can't carry it.
+ */
+export interface ReadyItem extends CachedPreview {
+  text: string | null;
 }

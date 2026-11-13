@@ -27,6 +27,7 @@ describe("a Process Item job", () => {
       type: "link",
       metadata: { title: "A title", description: null },
       thumbnailKey: "key-1",
+      text: "The page's words",
     }));
 
     await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
@@ -35,18 +36,20 @@ describe("a Process Item job", () => {
       {
         level: "info",
         bindings: { itemId: ITEM_ID },
-        fields: { type: "link", titled: true, pictured: true },
+        fields: { type: "link", titled: true, pictured: true, texted: true },
         msg: "Item is Ready",
       },
     ]);
   });
 
-  it("logs an Item Ready without a title or a Thumbnail", async () => {
+  it("logs how long Text extraction took, when it ran", async () => {
     const { container, logger } = testContainer(async () => ({
       outcome: "ready",
-      type: "link",
-      metadata: { title: null, description: null },
+      type: "article",
+      metadata: { title: "A title", description: null },
       thumbnailKey: null,
+      text: "The page's words",
+      textMs: 42,
     }));
 
     await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
@@ -55,7 +58,56 @@ describe("a Process Item job", () => {
       {
         level: "info",
         bindings: { itemId: ITEM_ID },
-        fields: { type: "link", titled: false, pictured: false },
+        fields: { type: "article", titled: true, pictured: false, texted: true, textMs: 42 },
+        msg: "Item is Ready",
+      },
+    ]);
+  });
+
+  it("logs an Item Ready without a title, a Thumbnail or Text", async () => {
+    const { container, logger } = testContainer(async () => ({
+      outcome: "ready",
+      type: "link",
+      metadata: { title: null, description: null },
+      thumbnailKey: null,
+      text: null,
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { type: "link", titled: false, pictured: false, texted: false },
+        msg: "Item is Ready",
+      },
+    ]);
+  });
+
+  it("warns, with the error's name and never its message, when Text extraction failed", async () => {
+    const { container, logger } = testContainer(async () => ({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "A title", description: null },
+      thumbnailKey: null,
+      text: null,
+      textError: new TypeError("Cannot read properties of null (reading 'secret page words')"),
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "warn",
+        bindings: { itemId: ITEM_ID },
+        fields: { err: "TypeError" },
+        msg: "Text extraction failed; the Item is Ready without Text",
+      },
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { type: "article", titled: true, pictured: false, texted: false },
         msg: "Item is Ready",
       },
     ]);

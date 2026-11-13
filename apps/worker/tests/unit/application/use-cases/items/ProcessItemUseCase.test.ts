@@ -1,7 +1,10 @@
 import "reflect-metadata";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import {
+  type CachedPreview,
   type Item,
   type ItemMetadata,
   type ItemRef,
@@ -15,12 +18,14 @@ import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
 import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
+import { ReadabilityTextExtractor } from "@/infrastructure/http/ReadabilityTextExtractor";
 
 // A Thumbnail key for a URL, the way Processing itself derives one.
 const keyFor = (url: string): string => {
@@ -36,7 +41,8 @@ const REF = { itemId: ITEM_ID, userId: USER_ID };
 
 // An in-memory Item repository holding one Processing Item for USER_ID.
 function itemsInMemory(sourceUrl: string) {
-  const item: Item & Partial<ItemMetadata> & { thumbnailKey?: string | null } = {
+  const item: Item &
+    Partial<ItemMetadata> & { thumbnailKey?: string | null; text?: string | null } = {
     id: ITEM_ID,
     userId: USER_ID,
     sourceUrl,
@@ -46,8 +52,9 @@ function itemsInMemory(sourceUrl: string) {
   const owns = ({ itemId, userId }: ItemRef) => itemId === item.id && userId === item.userId;
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => (owns(ref) ? { ...item } : null)),
-    markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey }: ReadyItem) => {
-      if (owns(ref)) Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey });
+    markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem) => {
+      if (owns(ref))
+        Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey, text });
     }),
     markFailed: vi.fn(async () => {}),
   };
@@ -243,8 +250,20 @@ const useCaseFor = (
   // The real adapter: deterministic and side-effect free, so tests use it as-is
   // rather than faking it, just like a pure domain rule.
   pageParser: IPageHeadParser = new HtmlPageParser(),
+  // The real adapter too, for the same reason.
+  textExtractor: ITextExtractor = new ReadabilityTextExtractor(),
 ) =>
-  new ProcessItemUseCase(repository, fetcher, cache, oEmbeds, images, resizer, pageParser, store);
+  new ProcessItemUseCase(
+    repository,
+    fetcher,
+    cache,
+    oEmbeds,
+    images,
+    resizer,
+    pageParser,
+    textExtractor,
+    store,
+  );
 
 const run = (
   sourceUrl: string,
@@ -379,6 +398,7 @@ describe("ProcessItemUseCase, Item type", () => {
       type: "video",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -398,11 +418,13 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "link",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(repository.markReady).toHaveBeenCalledWith(REF, {
       type: "link",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", ...metadata });
   });
@@ -417,6 +439,7 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "video",
       metadata: { title: "Never Gonna Give You Up", description: null },
       thumbnailKey: null,
+      text: null,
     });
   });
 
@@ -443,6 +466,7 @@ describe("ProcessItemUseCase, title and description", () => {
       type: "pdf",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -480,6 +504,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "post",
       metadata: { title: "A post on X", description: null },
       thumbnailKey: null,
+      text: null,
     });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
     const endpoint = new URL(oEmbeds.fetchOEmbed.mock.calls[0]![0]);
@@ -601,6 +626,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "post",
       metadata,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", type: "post", ...metadata });
     expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(1);
@@ -621,6 +647,7 @@ describe("ProcessItemUseCase, oEmbed", () => {
       type: "video",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 
@@ -658,11 +685,13 @@ describe("ProcessItemUseCase, failed fetches", () => {
         type: "video",
         metadata: NO_METADATA,
         thumbnailKey: null,
+        text: null,
       });
       expect(repository.markReady).toHaveBeenCalledWith(REF, {
         type: "video",
         metadata: NO_METADATA,
         thumbnailKey: null,
+        text: null,
       });
       expect(item).toMatchObject({ status: "ready", type: "video", title: null });
     },
@@ -739,6 +768,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     // Downloaded from where the Source URL led, then resized, then stored.
     expect(images.fetchImage).toHaveBeenCalledWith(PHOTO_URL);
@@ -750,6 +780,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", type: "image", thumbnailKey: KEY });
   });
@@ -821,11 +852,13 @@ describe("ProcessItemUseCase, Thumbnail", () => {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
     expect(repository.markReady).toHaveBeenCalledWith(REF, {
       type: "image",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", thumbnailKey: null });
   });
@@ -878,6 +911,7 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
       type: "article",
       metadata: NO_METADATA,
       thumbnailKey: KEY,
+      text: null,
     });
     expect(item).toMatchObject({ status: "ready", thumbnailKey: KEY });
   });
@@ -996,6 +1030,7 @@ describe("ProcessItemUseCase, a page's Thumbnail", () => {
       type: "link",
       metadata: NO_METADATA,
       thumbnailKey: null,
+      text: null,
     });
   });
 });
@@ -1079,6 +1114,7 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
       type: "audio",
       metadata: { title: "A track", description: null },
       thumbnailKey: keyFor(sourceUrl),
+      text: null,
     });
     expect(images.fetchImage).toHaveBeenCalledWith(cover);
     expect(item).toMatchObject({ status: "ready", thumbnailKey: keyFor(sourceUrl) });
@@ -1309,5 +1345,486 @@ describe("ProcessItemUseCase, supplied content", () => {
 
     await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video" });
     expect(item).toMatchObject({ status: "ready", type: "video" });
+  });
+});
+
+describe("ProcessItemUseCase, Text", () => {
+  const ARTICLE_URL = "https://example.com/blog/a-long-read";
+  // Paragraphs long enough that the page reads as having main content.
+  const PARAGRAPHS = [
+    "The first paragraph of the article explains, at some length, why the topic matters to anyone who has ever tried to keep track of everything they read on the web across many devices.",
+    "The second paragraph goes deeper, walking through the history of bookmarks, read-later services and note-taking apps, and where each of them fell short for people with large libraries.",
+    "The third paragraph closes the argument, suggesting that a library which understands what each saved page is about would make finding things again far easier than folders ever did.",
+  ];
+  const articlePage = (paragraphs: string[] = PARAGRAPHS) => `
+    <!doctype html>
+    <html>
+      <head>
+        <title>A long read</title>
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="A long read">
+      </head>
+      <body>
+        <nav><a href="/">Home</a> <a href="/about">About the site navigation</a></nav>
+        <aside class="sidebar">Sidebar: popular posts you might also like</aside>
+        <article>
+          <h1>A long read</h1>
+          ${paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("\n")}
+        </article>
+        <footer>Footer: copyright and contact links</footer>
+      </body>
+    </html>
+  `;
+
+  const processCaptured = (html: string, sourceUrl = ARTICLE_URL, ports: Ports = {}) =>
+    processJob({ html }, sourceUrl, ports);
+
+  const processJob = (
+    job: { html?: string; captions?: string },
+    sourceUrl = ARTICLE_URL,
+    ports: Ports = {},
+  ) => {
+    const { repository, item } = itemsInMemory(sourceUrl);
+    const cache = ports.cache ?? cacheMissing();
+    const useCase = useCaseFor(
+      repository,
+      fetcherFailing(new Error("must not be called")),
+      undefined,
+      ports.thumbnails ?? {},
+      cache,
+      undefined,
+      ports.textExtractor,
+    );
+    return { item, cache, result: useCase.execute({ ...REF, ...job }) };
+  };
+
+  it("fills an article's Text with its body, without navigation, footer or sidebar text", async () => {
+    const { item, result } = processCaptured(articlePage());
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
+    for (const paragraph of PARAGRAPHS) expect(item.text).toContain(paragraph);
+    expect(item.text).not.toMatch(/navigation|Sidebar|Footer/);
+  });
+
+  it("keeps the article's paragraphs apart, one blank line between them", async () => {
+    const { item, result } = processCaptured(articlePage());
+
+    await result;
+
+    expect(item.text).toContain(`${PARAGRAPHS[0]}\n\n${PARAGRAPHS[1]}\n\n${PARAGRAPHS[2]}`);
+  });
+
+  it("leaves a homepage with no main content Ready with no Text", async () => {
+    const homepage = `
+      <!doctype html>
+      <html>
+        <head><title>Example</title><meta property="og:type" content="website"></head>
+        <body>
+          <nav><a href="/">Home</a> <a href="/products">Products</a> <a href="/pricing">Pricing</a></nav>
+          <ul>
+            <li><a href="/a">Product A</a></li>
+            <li><a href="/b">Product B</a></li>
+          </ul>
+          <footer>© Example Inc.</footer>
+        </body>
+      </html>
+    `;
+
+    const { item, result } = processCaptured(homepage, "https://example.com/");
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "link", text: null });
+    expect(item).toMatchObject({ status: "ready", title: "Example", text: null });
+  });
+
+  it("still writes this Item's Text on a cache hit, and never caches Text", async () => {
+    const preview: CachedPreview = {
+      type: "article",
+      metadata: { title: "A long read", description: null },
+      thumbnailKey: "shared/abc123.webp",
+    };
+    const hit = cacheAnswering(preview);
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { cache: hit });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+    expect(item.text).toContain(PARAGRAPHS[0]);
+    expect(hit.set).not.toHaveBeenCalled();
+  });
+
+  it("never puts Text in the cache it writes on a miss", async () => {
+    const { item, cache, result } = processCaptured(articlePage());
+
+    await result;
+
+    expect(item.text).toContain(PARAGRAPHS[0]);
+    expect(cache.set).toHaveBeenCalledWith(canonicalUrl(ARTICLE_URL), {
+      type: "article",
+      metadata: { title: "A long read", description: null },
+      thumbnailKey: null,
+    });
+  });
+
+  it("leaves an Item Ready with its type, title, description and Thumbnail, and no Text, when the extractor throws", async () => {
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw new Error("linkedom choked on the page");
+      },
+    };
+    const OG_IMAGE = "https://cdn.example.com/cover.jpg";
+    const html = articlePage().replace(
+      "</head>",
+      `<meta property="og:description" content="Why it matters"><meta property="og:image" content="${OG_IMAGE}"></head>`,
+    );
+    const { store } = thumbnailsInMemory();
+
+    const { item, result } = processCaptured(html, ARTICLE_URL, {
+      textExtractor: throwing,
+      thumbnails: { images: imagesAt(OG_IMAGE), resizer: resizerAnswering(), store },
+    });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "A long read", description: "Why it matters" },
+      thumbnailKey: keyFor(ARTICLE_URL),
+      text: null,
+    });
+    expect(item).toMatchObject({ status: "ready", type: "article", text: null });
+  });
+
+  it("hands back the extractor's error, so the failure is logged rather than lost", async () => {
+    const failure = new Error("linkedom choked on the page");
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw failure;
+      },
+    };
+
+    const { result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: throwing });
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      text: null,
+      textError: failure,
+    });
+  });
+
+  it("hands back no error when the extractor answers", async () => {
+    const { result } = processCaptured(articlePage());
+
+    expect(await result).not.toHaveProperty("textError");
+  });
+
+  it("hands back how long the extractor ran, whether it answered or threw", async () => {
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw new Error("linkedom choked on the page");
+      },
+    };
+
+    const answered = await processCaptured(articlePage()).result;
+    const threw = await processCaptured(articlePage(), ARTICLE_URL, { textExtractor: throwing })
+      .result;
+
+    expect(answered).toMatchObject({ textMs: expect.any(Number) });
+    expect(threw).toMatchObject({ textMs: expect.any(Number) });
+  });
+
+  it("caps Text at 100,000 characters", async () => {
+    const long: ITextExtractor = { extractText: () => "word ".repeat(30_000) };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: long });
+
+    await result;
+
+    expect(item.text).toHaveLength(100_000 - 1); // trailing space trimmed after the cut
+    expect(item.text!.startsWith("word word")).toBe(true);
+  });
+
+  it("normalises whitespace, keeping paragraph breaks", async () => {
+    const messy: ITextExtractor = {
+      extractText: () =>
+        "\n\n  First \t  line here  \nnext line\n\n\n\n\n  Second   paragraph  \n\n",
+    };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: messy });
+
+    await result;
+
+    expect(item.text).toBe("First line here\nnext line\n\nSecond paragraph");
+  });
+
+  it("treats blank page text as no Text", async () => {
+    const blank: ITextExtractor = { extractText: () => " \n\t\n " };
+
+    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { textExtractor: blank });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", text: null });
+    expect(item.text).toBeNull();
+  });
+
+  it("writes no Text for a job without captured content, and never asks the extractor", async () => {
+    const extractor = { extractText: vi.fn(() => "should not be used") } satisfies ITextExtractor;
+    const { repository, item } = itemsInMemory(ARTICLE_URL);
+    const page = { ...htmlPage({ "og:type": "article" }), finalUrl: ARTICLE_URL };
+    const useCase = useCaseFor(
+      repository,
+      fetcherAnswering(page),
+      undefined,
+      {},
+      undefined,
+      undefined,
+      extractor,
+    );
+
+    await expect(useCase.execute(REF)).resolves.toMatchObject({
+      outcome: "ready",
+      type: "article",
+      text: null,
+    });
+    expect(item).toMatchObject({ status: "ready", text: null });
+    expect(extractor.extractText).not.toHaveBeenCalled();
+    expect(await useCase.execute(REF)).not.toHaveProperty("textMs");
+  });
+
+  describe("a video's captions", () => {
+    const VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    const CAPTIONS = "Never gonna give you up\nnever gonna let you down";
+
+    it("fills a YouTube video's Text with its captions, even when the page has text", async () => {
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL);
+
+      await expect(result).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: CAPTIONS,
+      });
+      expect(item.text).toBe(CAPTIONS);
+    });
+
+    it("never asks the extractor when the captions answer", async () => {
+      const extractor = { extractText: vi.fn(() => "page text") } satisfies ITextExtractor;
+
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL, {
+        textExtractor: extractor,
+      });
+
+      expect(await result).not.toHaveProperty("textMs");
+      expect(item.text).toBe(CAPTIONS);
+      expect(extractor.extractText).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the page's text for a video without captions", async () => {
+      const { item, result } = processJob({ html: articlePage() }, VIDEO_URL);
+
+      await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video" });
+      expect(item.text).toContain(PARAGRAPHS[0]);
+    });
+
+    it("falls back to the page's text when the captions are blank", async () => {
+      const { item, result } = processJob({ html: articlePage(), captions: " \n\t " }, VIDEO_URL);
+
+      await result;
+
+      expect(item.text).toContain(PARAGRAPHS[0]);
+    });
+
+    it("normalises the captions' whitespace and caps them like page text", async () => {
+      const { item, result } = processJob(
+        {
+          html: articlePage(),
+          captions: `  Never   gonna \t give\n\n\n\nyou up  ${"la ".repeat(40_000)}`,
+        },
+        VIDEO_URL,
+      );
+
+      await result;
+
+      expect(item.text!.startsWith("Never gonna give\n\nyou up la la")).toBe(true);
+      expect(item.text!.length).toBeLessThanOrEqual(100_000);
+    });
+
+    it("still writes the captions as Text on a cache hit, and never caches them", async () => {
+      const preview: CachedPreview = {
+        type: "video",
+        metadata: { title: "A video", description: null },
+        thumbnailKey: null,
+      };
+      const hit = cacheAnswering(preview);
+
+      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL, {
+        cache: hit,
+      });
+
+      await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
+      expect(item.text).toBe(CAPTIONS);
+      expect(hit.set).not.toHaveBeenCalled();
+    });
+
+    it("writes no Text for captions on a job without captured content", async () => {
+      const { repository, item } = itemsInMemory(VIDEO_URL);
+      const page = { ...htmlPage(), finalUrl: VIDEO_URL };
+      const useCase = useCaseFor(repository, fetcherAnswering(page));
+
+      await expect(useCase.execute({ ...REF, captions: CAPTIONS })).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: null,
+      });
+      expect(item).toMatchObject({ status: "ready", text: null });
+    });
+
+    it("writes no Text for captions when the fetch fails", async () => {
+      const { repository, item } = itemsInMemory(VIDEO_URL);
+      const useCase = useCaseFor(repository, fetcherFailing(new Error("ETIMEDOUT")));
+
+      await expect(useCase.execute({ ...REF, captions: CAPTIONS })).resolves.toMatchObject({
+        outcome: "ready",
+        type: "video",
+        text: null,
+      });
+      expect(item).toMatchObject({ status: "ready", text: null });
+    });
+  });
+
+  it("writes no Text when the fetch fails", async () => {
+    const { item, result } = run(
+      "https://youtu.be/dQw4w9WgXcQ",
+      fetcherFailing(new Error("ETIMEDOUT")),
+    );
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "video", text: null });
+    expect(item.text).toBeNull();
+  });
+});
+
+interface Ports {
+  cache?: IUrlPreviewCache;
+  thumbnails?: ThumbnailPorts;
+  textExtractor?: ITextExtractor;
+}
+
+describe("ProcessItemUseCase, an X post's Text", () => {
+  const POST_URL = "https://x.com/resonory/status/1856001234567890123";
+  // The post's page as the extension captures it, with replies, "Who to follow" and trends loaded.
+  const X_POST_PAGE = readFileSync(
+    fileURLToPath(new URL("../../../../fixtures/x-post.html", import.meta.url)),
+    "utf8",
+  );
+  const POST_TEXT = [
+    "Shipping full-text search today.",
+    "",
+    "It reads what you saved, not just the titles 🎉",
+    "",
+    "Your articles, threads and videos, findable by the words inside them. #buildinpublic https://resonory.app/changelog",
+  ].join("\n");
+
+  const processCaptured = (
+    html: string,
+    sourceUrl = POST_URL,
+    cache: IUrlPreviewCache = cacheMissing(),
+  ) => {
+    const { repository, item } = itemsInMemory(sourceUrl);
+    const useCase = useCaseFor(
+      repository,
+      fetcherFailing(new Error("must not be called")),
+      undefined,
+      {},
+      cache,
+    );
+    return { item, cache, result: useCase.execute({ ...REF, html }) };
+  };
+
+  it("fills an X post's Text with the post's own words only", async () => {
+    const { item, result } = processCaptured(X_POST_PAGE);
+
+    await expect(result).resolves.toMatchObject({
+      outcome: "ready",
+      type: "post",
+      text: POST_TEXT,
+    });
+    expect(item).toMatchObject({ status: "ready", type: "post", text: POST_TEXT });
+    expect(item.text).not.toMatch(/tide pools|Markdown|Who to follow|Trending|Views/);
+  });
+
+  it("reads a reply's own words from its page, never the post it replies to", async () => {
+    const replyUrl = "https://x.com/ada_reads/status/1856004444444444444";
+
+    const { item, result } = processCaptured(X_POST_PAGE, replyUrl);
+
+    await result;
+    expect(item.text).toBe(
+      "Finally. I have four hundred saved essays and could never find the one about tide pools. Does it work on paywalled pieces I read while logged in?",
+    );
+  });
+
+  it("still gets the post's Text when another User's save already cached the post", async () => {
+    const preview: CachedPreview = {
+      type: "post",
+      metadata: { title: "Resonory on X", description: null },
+      thumbnailKey: "shared/abc123.webp",
+    };
+
+    const { item, result, cache } = processCaptured(X_POST_PAGE, POST_URL, cacheAnswering(preview));
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview, text: POST_TEXT });
+    expect(item.text).toBe(POST_TEXT);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  // Long enough that the page reads as having main content.
+  const WRITE_UP =
+    "A long write-up of the launch, in plain paragraphs, explaining what full-text search does, how it reads each saved page, and why the words inside an article matter more than its title.";
+  const writeUpPage = `
+    <!doctype html>
+    <html>
+      <head><title>Launch notes</title></head>
+      <body>
+        <nav><a href="/">Home</a></nav>
+        <article><p>${WRITE_UP}</p><p>${WRITE_UP}</p><p>${WRITE_UP}</p></article>
+      </body>
+    </html>
+  `;
+
+  it("falls back to main-content extraction for an X page without the post's node", async () => {
+    const { item, result } = processCaptured(writeUpPage);
+
+    await result;
+    expect(item.text).toContain(WRITE_UP);
+  });
+
+  it("leaves an X page without the post's node or any main content with no Text", async () => {
+    const loginWall = `
+      <!doctype html>
+      <html>
+        <head><title>X</title></head>
+        <body>
+          <main><h1>Something went wrong. Try reloading.</h1><a href="/login">Log in</a> <a href="/i/flow/signup">Sign up</a></main>
+        </body>
+      </html>
+    `;
+
+    const { item, result } = processCaptured(loginWall);
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "post", text: null });
+    expect(item.text).toBeNull();
+  });
+
+  it("reads another network's post with main-content extraction, not the X post node", async () => {
+    const redditUrl = "https://www.reddit.com/r/selfhosted/comments/1abcde/full_text_search/";
+
+    const { item, result } = processCaptured(writeUpPage, redditUrl);
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "post" });
+    expect(item.text).toContain(WRITE_UP);
+  });
+
+  it("never reads the X post node on another network's page, even when one is there", async () => {
+    const blueskyUrl = "https://bsky.app/profile/resonory.app/post/3kxyz";
+
+    const { item, result } = processCaptured(X_POST_PAGE, blueskyUrl);
+
+    await result;
+    expect(item.text).not.toBe(POST_TEXT);
   });
 });

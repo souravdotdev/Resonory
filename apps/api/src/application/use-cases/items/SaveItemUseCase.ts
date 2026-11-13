@@ -10,6 +10,8 @@ export interface SaveItemInput {
   sourceUrl: string;
   /** Captured page content (issue #143/#145), threaded unchanged into the enqueued job. */
   html?: string;
+  /** A video's plain caption text (issue #164), threaded unchanged into the enqueued job. */
+  captions?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export class SaveItemUseCase {
       itemId: item.id,
       userId: item.userId,
       html: input.html,
+      captions: input.captions,
     });
     // A just-saved Item has no Thumbnail key, so its card needs no Thumbnail provider.
     return toItemCardOutput(item, []);

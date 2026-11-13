@@ -2,6 +2,7 @@ import { inject, injectable, optional } from "inversify";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
+  type CachedPreview,
   type ItemMetadata,
   type ItemRef,
   type ItemType,
@@ -12,9 +13,10 @@ import type { PageHead } from "@/domain/entities/PageHead";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IOEmbedProvider, OEmbed } from "@/domain/providers/IOEmbedProvider";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
@@ -22,6 +24,7 @@ import { itemTypeFromJsonLd } from "@/domain/rules/itemTypeFromJsonLd";
 import { itemTypeFromOpenGraph } from "@/domain/rules/itemTypeFromOpenGraph";
 import { itemTypeFromResponse } from "@/domain/rules/itemTypeFromResponse";
 import { itemTypeFromTwitterCard } from "@/domain/rules/itemTypeFromTwitterCard";
+import { itemText } from "@/domain/rules/itemText";
 import { itemTypeFromUrl } from "@/domain/rules/itemTypeFromUrl";
 import {
   itemTypeFromOEmbed,
@@ -64,6 +67,16 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * download that is refused or fails, an image that can't be resized, or an
  * upload that fails moves on to the next candidate image, and with none left
  * the Item is Ready without one.
+ *
+ * An Item with captured content also gets its Text: a video's captions when
+ * the job carries them, otherwise the page's main content, extracted from the
+ * captured HTML. It's decided once per job, before the cache is looked up, so
+ * a cache hit and a miss both write it. It depends on nothing but what was
+ * captured (not the Item type, not the oEmbed answer), and is never cached
+ * (Items ADR 0003). A page with no main content, or one the extractor fails
+ * on, has none; a job without captured content (the fetch path, failed or
+ * not) has none either, even one that carries captions. Missing Text never
+ * fails Processing.
  */
 @injectable()
 export class ProcessItemUseCase {
@@ -75,6 +88,7 @@ export class ProcessItemUseCase {
     @inject(WORKER_TOKENS.ImageFetcher) private readonly images: IImageFetcher,
     @inject(WORKER_TOKENS.ThumbnailResizer) private readonly resizer: IThumbnailResizer,
     @inject(WORKER_TOKENS.PageHeadParser) private readonly pageParser: IPageHeadParser,
+    @inject(WORKER_TOKENS.TextExtractor) private readonly textExtractor: ITextExtractor,
     // Unbound without Supabase Storage configured: then no image is fetched.
     @inject(WORKER_TOKENS.ThumbnailStore)
     @optional()
@@ -86,6 +100,8 @@ export class ProcessItemUseCase {
     if (!item) return { outcome: "missing" };
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
+    // Before the cache short-circuit below: Text is this Item's own, never cached.
+    const text = this.textOf(ref, item.sourceUrl);
     let page: FetchedPage;
     if (ref.html !== undefined) {
       // Already-rendered content (issue #143/#145): build the page
@@ -100,23 +116,27 @@ export class ProcessItemUseCase {
         // A known provider still describes a post its site wouldn't serve.
         // There's no final URL here, so this path never touches the cache.
         const answer = await this.ask(knownOEmbedRequestFor(item.sourceUrl));
-        return this.ready(ref, {
-          type: typeFromSourceUrl,
-          metadata: metadataOf(null, answer),
-          thumbnailKey: await this.keepThumbnail(
-            item.sourceUrl,
-            canonicalUrl(item.sourceUrl),
-            false,
-            null,
-            answer,
-          ),
-        });
+        return this.ready(
+          ref,
+          {
+            type: typeFromSourceUrl,
+            metadata: metadataOf(null, answer),
+            thumbnailKey: await this.keepThumbnail(
+              item.sourceUrl,
+              canonicalUrl(item.sourceUrl),
+              false,
+              null,
+              answer,
+            ),
+          },
+          text,
+        );
       }
     }
 
     const canonical = canonicalUrl(page.finalUrl);
     const cached = canonical && (await this.cached(canonical));
-    if (cached) return this.ready(ref, cached);
+    if (cached) return this.ready(ref, cached, text);
 
     const head = page.kind === "html" ? page.head : null;
     // A file says nothing oEmbed could add; an unsuccessful answer may still be a known provider's.
@@ -130,7 +150,7 @@ export class ProcessItemUseCase {
       thumbnailKey: await this.keepThumbnail(page.finalUrl, canonical, isImage, head, answer),
     };
     if (canonical) await this.remember(canonical, result);
-    return this.ready(ref, result);
+    return this.ready(ref, result, text);
   }
 
   /**
@@ -147,6 +167,33 @@ export class ProcessItemUseCase {
       contentType: "text/html",
       head: this.pageParser.parseHead(html, sourceUrl),
     };
+  }
+
+  /**
+   * This Item's Text, from what its User's browser captured: none for a job
+   * without captured content, even one carrying captions (the fetch path,
+   * failed or not, writes no Text).
+   */
+  private textOf({ html, captions }: ItemRef, sourceUrl: string): TextOutcome {
+    if (html === undefined) return { text: null };
+    const outcome: TextOutcome = { text: null };
+    outcome.text = itemText({
+      captions,
+      pageText: () => {
+        const start = performance.now();
+        try {
+          return this.textExtractor.extractText(html, sourceUrl);
+        } catch (error) {
+          // No page text, but the error is handed back so the processor logs it.
+          outcome.textError = error;
+          return null;
+        } finally {
+          // Extraction runs synchronously and holds the worker up, so how long it took is logged too.
+          outcome.textMs = Math.round(performance.now() - start);
+        }
+      },
+    });
+    return outcome;
   }
 
   /**
@@ -209,9 +256,15 @@ export class ProcessItemUseCase {
     }
   }
 
-  private async ready(ref: ItemRef, ready: ReadyItem): Promise<ProcessItemResult> {
+  /** Marks the Item Ready with the URL's preview plus its own Text, in one update. */
+  private async ready(
+    ref: ItemRef,
+    preview: CachedPreview,
+    { text, ...extraction }: TextOutcome,
+  ): Promise<ProcessItemResult> {
+    const ready: ReadyItem = { ...preview, text };
     await this.items.markReady(ref, ready);
-    return { outcome: "ready", ...ready };
+    return { outcome: "ready", ...ready, ...extraction };
   }
 }
 
@@ -262,6 +315,13 @@ function metadataOf(head: PageHead | null, answer: OEmbedAnswer | null): ItemMet
   if (head)
     sources.push(openGraphMetadata(head), twitterCardMetadata(head), documentMetadata(head));
   return sources.length === 0 ? NO_METADATA : pickMetadata(sources);
+}
+
+/** An Item's Text, plus the extractor's error when it threw (`textError` is absent otherwise). */
+interface TextOutcome {
+  text: string | null;
+  textError?: unknown;
+  textMs?: number;
 }
 
 /** An oEmbed answer and the known provider it came from, if any. */
