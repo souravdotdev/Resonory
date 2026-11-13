@@ -2,7 +2,7 @@ import type { Container } from "inversify";
 import { describeError, type Logger } from "@resonory/logger";
 import { ITEMS_QUEUE } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
-import { itemsJobHandler, type ItemsJob } from "@/interface/itemsJobs";
+import { itemsJobHandler, type ItemsJob, slimFinishedJob } from "@/interface/itemsJobs";
 
 /** What the `failed` handler reads from a BullMQ job. */
 export interface FailedItemsJob extends ItemsJob {
@@ -22,7 +22,8 @@ export interface FailedItemsJob extends ItemsJob {
  * The Items worker's `failed` handler. Every failed attempt is logged with its
  * reason. Once no attempt is left, however the job failed (its last retry, an
  * unrecoverable error, or a stall), its name's final-failure step runs: a
- * Process Item job's Item becomes Failed. A payload that names no Item, or an
+ * Process Item job's Item becomes Failed, and then the job keeps only the
+ * data worth keeping (`slimFinishedJob`). A payload that names no Item, or an
  * unknown job name, changes no Item. It never throws: it runs from an event listener.
  */
 export async function onItemsJobFailed(
@@ -54,4 +55,5 @@ export async function onItemsJobFailed(
   } catch (markError) {
     jobLogger.error({ err: describeError(markError) }, "couldn't mark the Item Failed");
   }
+  await slimFinishedJob(container, job);
 }
