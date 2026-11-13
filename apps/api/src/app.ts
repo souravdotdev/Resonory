@@ -22,7 +22,11 @@ import type { RateLimitRedis } from "@/rate-limit-store";
  */
 export async function buildApp(container: Container, options: FastifyServerOptions = {}) {
   const env = container.get<Env>(TOKENS.Env);
-  const app = Fastify(options).withTypeProvider<ZodTypeProvider>();
+  // `TRUST_PROXY` decides whose IP `request.ip` is, and so what every per-IP rate limit counts.
+  const app = Fastify({
+    trustProxy: env.TRUST_PROXY ?? false,
+    ...options,
+  }).withTypeProvider<ZodTypeProvider>();
 
   // Routes validate their request and serialize their response through the shared zod
   // schemas they declare (undeclared response fields are stripped).

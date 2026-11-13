@@ -372,6 +372,43 @@ describe("POST /items", () => {
     expect(saved).toHaveLength(0);
   });
 
+  describe("behind a proxy", () => {
+    const saveFrom = (app: Awaited<ReturnType<typeof buildApp>>, clientIp: string, key: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        remoteAddress: "10.0.0.1",
+        headers: { "x-forwarded-for": clientIp, "x-api-key": key },
+        payload: { url: "https://example.com/post" },
+      });
+    const appTrusting = async (trustProxy: Env["TRUST_PROXY"]) => {
+      const container = testContainer();
+      await container.unbind(TOKENS.Env);
+      container.bind(TOKENS.Env).toConstantValue({ ...env, TRUST_PROXY: trustProxy });
+      return buildApp(container);
+    };
+
+    it("counts each client's IP from X-Forwarded-For when TRUST_PROXY trusts the proxy", async () => {
+      const app = await appTrusting("10.0.0.1");
+
+      for (let i = 0; i < CREATE_ITEM_IP_LIMIT; i++) await saveFrom(app, "203.0.113.7", `k${i}`);
+      const limited = await saveFrom(app, "203.0.113.7", "another");
+      const otherClient = await saveFrom(app, "198.51.100.9", "another");
+
+      expect(limited.statusCode).toBe(429);
+      expect(otherClient.statusCode).toBe(401);
+    });
+
+    it("ignores X-Forwarded-For without TRUST_PROXY, so a client can't pick its own IP", async () => {
+      const app = await appTrusting(undefined);
+
+      for (let i = 0; i < CREATE_ITEM_IP_LIMIT; i++) await saveFrom(app, `203.0.113.${i}`, `k${i}`);
+      const limited = await saveFrom(app, "198.51.100.9", "another");
+
+      expect(limited.statusCode).toBe(429);
+    });
+  });
+
   it("counts saves without an API key per client IP", async () => {
     const app = await buildApp(testContainer(signedIn()));
 

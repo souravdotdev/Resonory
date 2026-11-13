@@ -24,6 +24,7 @@ beforeEach(() => {
   vi.stubEnv("AUTH_COOKIE_DOMAIN", undefined);
   vi.stubEnv("SUPABASE_URL", undefined);
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", undefined);
+  vi.stubEnv("TRUST_PROXY", undefined);
 });
 
 afterEach(() => {
@@ -74,6 +75,25 @@ describe("api env", () => {
     "refuses an extension origin that isn't a bare chrome-extension:// origin (%s)",
     async (origin) => {
       await expect(loadEnv({ EXTENSION_ORIGIN: origin })).rejects.toThrow("EXTENSION_ORIGIN");
+    },
+  );
+
+  it("trusts no proxy by default, or when TRUST_PROXY is empty", async () => {
+    expect((await loadEnv()).TRUST_PROXY).toBeUndefined();
+    expect((await loadEnv({ TRUST_PROXY: "" })).TRUST_PROXY).toBeUndefined();
+  });
+
+  it("reads TRUST_PROXY as proxy addresses and CIDR ranges", async () => {
+    const value = "10.0.0.1, 172.16.0.0/12,::1";
+
+    expect((await loadEnv({ TRUST_PROXY: value })).TRUST_PROXY).toBe(value);
+  });
+
+  // "1": a hop count, which Fastify 5 ignores, so it would silently trust no one.
+  it.each(["true", "1", "load-balancer", "10.0.0.1/8/8", "10.0.0.0/x"])(
+    "refuses TRUST_PROXY=%s",
+    async (value) => {
+      await expect(loadEnv({ TRUST_PROXY: value })).rejects.toThrow("TRUST_PROXY");
     },
   );
 
