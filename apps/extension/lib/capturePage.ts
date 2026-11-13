@@ -30,8 +30,17 @@ export function capturePage(): CapturedDocument {
     for (const element of clone.querySelectorAll(selector)) {
       if (!keep(element)) element.remove();
     }
-    for (const name of ["src", "srcset", "href", "poster", "style"]) {
-      for (const element of clone.querySelectorAll(`[${name}*="data:"]`)) {
+    // A URL attribute holds a data URI only from its start, so `/big-data:intro`
+    // stays; a candidate list or CSS can hold one anywhere. Schemes are any case.
+    const dataUris: [name: string, match: string][] = [
+      ["src", "^="],
+      ["href", "^="],
+      ["poster", "^="],
+      ["srcset", "*="],
+      ["style", "*="],
+    ];
+    for (const [name, match] of dataUris) {
+      for (const element of clone.querySelectorAll(`[${name}${match}"data:" i]`)) {
         element.removeAttribute(name);
       }
     }
