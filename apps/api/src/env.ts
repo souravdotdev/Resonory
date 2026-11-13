@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { z } from "zod";
 
 // zod's plain url() also accepts "localhost:4000" (as a "localhost:" scheme).
@@ -26,6 +27,28 @@ const extensionOrigin = z
 const unsetWhenEmpty = <T extends z.ZodType>(value: T) =>
   z.preprocess((raw) => (raw === "" ? undefined : raw), value.optional());
 
+// Which proxies in front of the API Fastify trusts to say who the client is
+// (`X-Forwarded-For`), so `request.ip`, and every per-IP rate limit, is the
+// client's rather than the load balancer's: a comma-separated list of proxy
+// addresses or CIDR ranges (e.g. the platform's private network, `10.0.0.0/8`).
+// Never "trust everyone", which directly exposed would let any client pick its
+// own IP, and no hop count: Fastify 5 ignores one (it can't tell the immediate
+// peer is a proxy), so it would silently trust no one.
+const trustProxy = unsetWhenEmpty(
+  z.string().refine(
+    (value) =>
+      value.split(",").every((entry) => {
+        const [address = "", prefix, ...rest] = entry.trim().split("/");
+        return (
+          isIP(address) !== 0 &&
+          rest.length === 0 &&
+          (prefix === undefined || /^\d{1,3}$/.test(prefix))
+        );
+      }),
+    { message: "Must be comma-separated proxy addresses or CIDR ranges, such as 10.0.0.0/8" },
+  ),
+);
+
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   // The interface the server binds to. 0.0.0.0 (every interface) suits containers and hosts;
@@ -52,6 +75,9 @@ const schema = z.object({
   // Storage's row-level security; server only.
   SUPABASE_URL: unsetWhenEmpty(httpUrl),
   SUPABASE_SERVICE_ROLE_KEY: unsetWhenEmpty(z.string()),
+  // Unset (the default) trusts no proxy: right when clients reach the API directly.
+  // Set it behind a load balancer, or every client shares the proxy's IP (and its rate limits).
+  TRUST_PROXY: trustProxy,
 });
 
 export type Env = z.infer<typeof schema>;
