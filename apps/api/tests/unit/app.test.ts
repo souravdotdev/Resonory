@@ -31,6 +31,7 @@ import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
 import { authMiddleware, signedInUser } from "@/interface/middleware/auth.middleware";
 import type { AuthRequestHandler } from "@/interface/routes/auth.routes";
+import { CREATE_ITEM_IP_LIMIT } from "@/interface/routes/items.routes";
 
 const env: Env = {
   PORT: 4000,
@@ -347,6 +348,28 @@ describe("POST /items", () => {
     expect(limited.statusCode).toBe(429);
     expect(ErrorResponseSchema.parse(limited.json()).error.code).toBe("rate_limited");
     expect(otherKey.statusCode).toBe(201);
+  });
+
+  it("cuts off made-up keys at 60 saves a minute per IP, before auth reads them", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(sessionsReturning(null), { items: repository }));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    const answers = [];
+    for (let i = 0; i <= CREATE_ITEM_IP_LIMIT; i++) answers.push(await saveWithKey(`made_up_${i}`));
+    const limited = answers.at(-1)!;
+
+    expect(answers.slice(0, -1).every((res) => res.statusCode === 401)).toBe(true);
+    expect(limited.statusCode).toBe(429);
+    expect(ErrorResponseSchema.parse(limited.json()).error.code).toBe("rate_limited");
+    expect(limited.headers["retry-after"]).toBeDefined();
+    expect(saved).toHaveLength(0);
   });
 
   it("counts saves without an API key per client IP", async () => {
