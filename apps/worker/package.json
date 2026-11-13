@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "@resonory/db": "workspace:*",
     "@resonory/logger": "workspace:*",
     "@resonory/shared": "workspace:*",
@@ -21,6 +22,7 @@
     "htmlparser2": "^12.0.0",
     "inversify": "^8.2.3",
     "ioredis": "^6.0.0",
+    "linkedom": "^0.18.15",
     "postgres": "^3.4.9",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.35.5",

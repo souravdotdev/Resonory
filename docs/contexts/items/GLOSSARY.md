@@ -73,8 +73,12 @@ _Avoid_: Other, generic, unknown
 ### Processing
 
 **Processing**:
-The work Resonory does after an Item is saved to learn its type, title, description, thumbnail, and text.
+The work Resonory does after an Item is saved to learn its type, title, description, Thumbnail, and Text.
 _Avoid_: Ingestion, enrichment, parsing
+
+**Text**:
+The readable words of an Item: an Article's body, a Post's own words, a Video's captions, an Audio's transcript or show notes. It comes from what that User's own browser captured, never from another User's save of the same page. Some Items have none.
+_Avoid_: Extracted text, content, body, full text
 
 **Ready**:
 An Item whose processing finished, so its content is available.

@@ -87,7 +87,7 @@ describe("background entrypoint", () => {
   it("captures the tab, posts it with the stored key, and shows a success badge", async () => {
     browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "key_abc123" });
     browserMock.scripting.executeScript.mockResolvedValue([
-      { result: { url: "https://example.com", html: "<html></html>" } },
+      { result: { url: "https://example.com", head: "<head></head>", body: "<body></body>" } },
     ]);
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
@@ -107,7 +107,7 @@ describe("background entrypoint", () => {
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("key_abc123");
     expect(JSON.parse(init.body as string)).toEqual({
       url: "https://example.com",
-      html: "<html></html>",
+      html: "<!doctype html><html><head></head><body></body></html>",
     });
 
     vi.unstubAllGlobals();
@@ -116,7 +116,7 @@ describe("background entrypoint", () => {
   it("shows a failure badge when the API rejects the request", async () => {
     browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "bad-key" });
     browserMock.scripting.executeScript.mockResolvedValue([
-      { result: { url: "https://example.com", html: "<html></html>" } },
+      { result: { url: "https://example.com", head: "<head></head>", body: "<body></body>" } },
     ]);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
 
@@ -128,6 +128,124 @@ describe("background entrypoint", () => {
       expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: "!" });
     });
 
+    vi.unstubAllGlobals();
+  });
+
+  describe("on a YouTube video", () => {
+    const VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    const page = { url: VIDEO_URL, head: "<head></head>", body: "<body></body>" };
+    const sent = { url: VIDEO_URL, html: "<!doctype html><html><head></head><body></body></html>" };
+    const playerCaptions = {
+      videoId: "dQw4w9WgXcQ",
+      language: "en",
+      tracks: [
+        {
+          baseUrl: "https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=en",
+          languageCode: "en",
+        },
+      ],
+    };
+    const json3 = JSON.stringify({
+      events: [{ segs: [{ utf8: "Never gonna give you up" }] }],
+    });
+
+    /** Answers each injection in turn: the page capture, then the main-world ones. */
+    const injectionsAnswering = (...results: unknown[]) => {
+      for (const result of results) {
+        browserMock.scripting.executeScript.mockResolvedValueOnce([{ result }]);
+      }
+    };
+
+    const saveTab = async () => {
+      browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "key_abc123" });
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      vi.stubGlobal("fetch", fetchMock);
+      const background = await import("../entrypoints/background");
+      background.default.main?.();
+
+      onClickedListener?.({ id: 7 });
+      await vi.waitFor(() => {
+        expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: "✓" });
+      });
+      vi.unstubAllGlobals();
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      return JSON.parse(init.body as string);
+    };
+
+    it("reads the live player's captions in the page's own world and sends them", async () => {
+      injectionsAnswering(page, playerCaptions, json3);
+
+      const body = await saveTab();
+
+      expect(body).toEqual({ ...sent, captions: "Never gonna give you up" });
+      expect(browserMock.scripting.executeScript).toHaveBeenCalledWith(
+        expect.objectContaining({ target: { tabId: 7 }, world: "MAIN" }),
+      );
+      expect(browserMock.scripting.executeScript).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          world: "MAIN",
+          args: ["https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=en&fmt=json3"],
+        }),
+      );
+    });
+
+    it("saves without captions when the player is on another video (stale after in-app navigation)", async () => {
+      injectionsAnswering(page, { ...playerCaptions, videoId: "someOtherId" });
+
+      const body = await saveTab();
+
+      expect(body).toEqual(sent);
+      expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(2);
+    });
+
+    it("saves without captions for a video that has none", async () => {
+      injectionsAnswering(page, null);
+
+      expect(await saveTab()).toEqual(sent);
+    });
+
+    it("still saves when reading the captions fails", async () => {
+      injectionsAnswering(page);
+      browserMock.scripting.executeScript.mockRejectedValueOnce(new Error("Frame was removed"));
+
+      expect(await saveTab()).toEqual(sent);
+    });
+
+    it("reads a Short's captions the same way", async () => {
+      const url = "https://www.youtube.com/shorts/dQw4w9WgXcQ";
+      injectionsAnswering({ ...page, url }, playerCaptions, json3);
+
+      const body = await saveTab();
+
+      expect(body).toEqual({ ...sent, url, captions: "Never gonna give you up" });
+      expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(3);
+    });
+
+    it("still saves when fetching the caption track fails", async () => {
+      injectionsAnswering(page, playerCaptions, null);
+
+      expect(await saveTab()).toEqual(sent);
+    });
+  });
+
+  it("runs no caption injection on a tab that isn't a YouTube video", async () => {
+    browserMock.storage.local.get.mockResolvedValue({ resonory_api_key: "key_abc123" });
+    browserMock.scripting.executeScript.mockResolvedValue([
+      { result: { url: "https://example.com/article", html: "<html></html>" } },
+    ]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    const background = await import("../entrypoints/background");
+    background.default.main?.();
+
+    onClickedListener?.({ id: 7 });
+    await vi.waitFor(() => {
+      expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: "✓" });
+    });
+
+    expect(browserMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(browserMock.scripting.executeScript).not.toHaveBeenCalledWith(
+      expect.objectContaining({ world: "MAIN" }),
+    );
     vi.unstubAllGlobals();
   });
 });

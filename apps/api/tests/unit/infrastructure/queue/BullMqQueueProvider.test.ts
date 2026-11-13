@@ -58,4 +58,17 @@ describe("BullMqQueueProvider", () => {
 
     expect(queue.add).toHaveBeenCalledWith(PROCESS_ITEM_JOB, job, expect.anything());
   });
+
+  it("threads the video's captions into the job payload when given", async () => {
+    const queue = queueRecording();
+    const captions = "Hello and welcome to the show.";
+
+    await new BullMqQueueProvider(queue).enqueueProcessItem({ ...job, captions });
+
+    expect(queue.add).toHaveBeenCalledWith(
+      PROCESS_ITEM_JOB,
+      { ...job, captions },
+      expect.anything(),
+    );
+  });
 });

@@ -23,23 +23,24 @@ Versions match the [product plan](../product-plan.md). Resonory is a mymind-styl
 14. **Uploads** — images, PDFs, documents
 15. **Text notes** — Items with no Source URL
 16. **Saving highlighted text** — capture a highlight + backlink to its source
+17. **Richer Text** — speech-to-text for Videos and Audio without captions, captions beyond YouTube (Vimeo, TikTok, Instagram), podcast transcripts from RSS (`podcast:transcript`), dedicated Post extractors beyond X (Reddit, LinkedIn, Bluesky, Mastodon, Threads)
 
 ## V2 — Knowledge graph
 
-17. **Topic clustering** across the library
-18. **Graph view** of how Items connect
-19. **Smart spaces** — auto-grouped topics, never folders you maintain
-20. **Bidirectional links** between Items
-21. **Duplicate detection**
+18. **Topic clustering** across the library
+19. **Graph view** of how Items connect
+20. **Smart spaces** — auto-grouped topics, never folders you maintain
+21. **Bidirectional links** between Items
+22. **Duplicate detection**
 
 ## V3 — Capture everywhere
 
-22. **Mobile apps** (iOS, Android) with **share sheet** capture
-23. **Safari and Firefox extensions**
-24. **AI summaries (TL;DR)**
-25. **Text recognition from images (OCR)**
-26. **Import tools** — browser bookmarks, Pocket export, Pinterest, Instagram
-27. **Save entire articles** (reader-mode archive) and full-page screenshots
+23. **Mobile apps** (iOS, Android) with **share sheet** capture
+24. **Safari and Firefox extensions**
+25. **AI summaries (TL;DR)**
+26. **Text recognition from images (OCR)**
+27. **Import tools** — browser bookmarks, Pocket export, Pinterest, Instagram
+28. **Save entire articles** (reader-mode archive) and full-page screenshots
 
 ## Later — long tail
 

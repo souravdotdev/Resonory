@@ -1,7 +1,8 @@
 import type { Redis } from "ioredis";
 import { inject, injectable } from "inversify";
 import { WORKER_TOKENS } from "@/di/tokens";
-import type { CachedPreview, IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
+import type { CachedPreview } from "@/domain/entities/Item";
+import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import { sha256Hex } from "@/domain/rules/sha256Hex";
 
 /** How long a cached preview is trusted before Processing runs fresh again. */

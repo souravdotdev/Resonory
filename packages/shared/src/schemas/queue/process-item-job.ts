@@ -15,6 +15,8 @@ export const ProcessItemJobSchema = z.object({
   userId: z.uuid(),
   /** Captured page content (issue #143/#145), carried unchanged from the create-Item request. */
   html: z.string().optional(),
+  /** A video's plain caption text (issue #164), carried unchanged from the create-Item request. */
+  captions: z.string().optional(),
 });
 
 export type ProcessItemJob = z.infer<typeof ProcessItemJobSchema>;

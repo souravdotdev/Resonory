@@ -4,7 +4,11 @@ import { Container } from "inversify";
 import { z } from "zod";
 import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
-import { CreateItemResponseSchema } from "@resonory/shared/schemas/items";
+import {
+  CreateItemResponseSchema,
+  MAX_CAPTIONS_LENGTH,
+  MAX_HTML_LENGTH,
+} from "@resonory/shared/schemas/items";
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
@@ -27,6 +31,7 @@ import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
 import { authMiddleware, signedInUser } from "@/interface/middleware/auth.middleware";
 import type { AuthRequestHandler } from "@/interface/routes/auth.routes";
+import { CREATE_ITEM_IP_LIMIT } from "@/interface/routes/items.routes";
 
 const env: Env = {
   PORT: 4000,
@@ -316,6 +321,129 @@ describe("POST /items", () => {
     expect(CreateItemResponseSchema.safeParse(res.json()).success).toBe(true);
   });
 
+  it("limits saves to 30 a minute, while other routes keep 100", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, { url: "https://example.com/post" });
+    const elsewhere = await app.inject({ method: "GET", url: "/health" });
+
+    expect(res.headers["x-ratelimit-limit"]).toBe("30");
+    expect(elsewhere.headers["x-ratelimit-limit"]).toBe("100");
+  });
+
+  it("counts saves per API key: the 31st from one key is 429 rate_limited, another key still saves", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    for (let i = 0; i < 30; i++) await saveWithKey("key_one");
+    const limited = await saveWithKey("key_one");
+    const otherKey = await saveWithKey("key_two");
+
+    expect(limited.statusCode).toBe(429);
+    expect(ErrorResponseSchema.parse(limited.json()).error.code).toBe("rate_limited");
+    expect(otherKey.statusCode).toBe(201);
+  });
+
+  it("cuts off made-up keys at 60 saves a minute per IP, before auth reads them", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(sessionsReturning(null), { items: repository }));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    const answers = [];
+    for (let i = 0; i <= CREATE_ITEM_IP_LIMIT; i++) answers.push(await saveWithKey(`made_up_${i}`));
+    const limited = answers.at(-1)!;
+
+    expect(answers.slice(0, -1).every((res) => res.statusCode === 401)).toBe(true);
+    expect(limited.statusCode).toBe(429);
+    expect(ErrorResponseSchema.parse(limited.json()).error.code).toBe("rate_limited");
+    expect(limited.headers["retry-after"]).toBeDefined();
+    expect(saved).toHaveLength(0);
+  });
+
+  it("counts every save toward the IP limit, even one the per-key limit refuses", async () => {
+    // The IP check runs first, so a key's refused saves still count from its IP.
+    // Run after the per-key check instead, the 10 refused ones below wouldn't, and
+    // the 61st save would get the 401 of a made-up key, not 429.
+    const app = await buildApp(testContainer(sessionsReturning(null)));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    const oneKey = [];
+    for (let i = 0; i < 40; i++) oneKey.push((await saveWithKey("key_one")).statusCode);
+    const otherKeys = [];
+    for (let i = 0; i < CREATE_ITEM_IP_LIMIT - 40; i++) {
+      otherKeys.push((await saveWithKey(`key_${i}`)).statusCode);
+    }
+    const sixtyFirst = await saveWithKey("key_fresh");
+
+    expect(oneKey.slice(30).every((status) => status === 429)).toBe(true);
+    expect(otherKeys.every((status) => status === 401)).toBe(true);
+    expect(sixtyFirst.statusCode).toBe(429);
+  });
+
+  describe("behind a proxy", () => {
+    const saveFrom = (app: Awaited<ReturnType<typeof buildApp>>, clientIp: string, key: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        remoteAddress: "10.0.0.1",
+        headers: { "x-forwarded-for": clientIp, "x-api-key": key },
+        payload: { url: "https://example.com/post" },
+      });
+    const appTrusting = async (trustProxy: Env["TRUST_PROXY"]) => {
+      const container = testContainer();
+      await container.unbind(TOKENS.Env);
+      container.bind(TOKENS.Env).toConstantValue({ ...env, TRUST_PROXY: trustProxy });
+      return buildApp(container);
+    };
+
+    it("counts each client's IP from X-Forwarded-For when TRUST_PROXY trusts the proxy", async () => {
+      const app = await appTrusting("10.0.0.1");
+
+      for (let i = 0; i < CREATE_ITEM_IP_LIMIT; i++) await saveFrom(app, "203.0.113.7", `k${i}`);
+      const limited = await saveFrom(app, "203.0.113.7", "another");
+      const otherClient = await saveFrom(app, "198.51.100.9", "another");
+
+      expect(limited.statusCode).toBe(429);
+      expect(otherClient.statusCode).toBe(401);
+    });
+
+    it("ignores X-Forwarded-For without TRUST_PROXY, so a client can't pick its own IP", async () => {
+      const app = await appTrusting(undefined);
+
+      for (let i = 0; i < CREATE_ITEM_IP_LIMIT; i++) await saveFrom(app, `203.0.113.${i}`, `k${i}`);
+      const limited = await saveFrom(app, "198.51.100.9", "another");
+
+      expect(limited.statusCode).toBe(429);
+    });
+  });
+
+  it("counts saves without an API key per client IP", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    for (let i = 0; i < 30; i++) await save(app, { url: "https://example.com/post" });
+    const limited = await save(app, { url: "https://example.com/post" });
+
+    expect(limited.statusCode).toBe(429);
+  });
+
   it("stores the Item for the signed-in User, never one named in the body", async () => {
     const { repository, saved } = itemsInMemory();
     const app = await buildApp(testContainer(signedIn(), { items: repository }));
@@ -359,6 +487,98 @@ describe("POST /items", () => {
 
     const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(call.html).toBeUndefined();
+  });
+
+  it("saves a captured page over 1 MiB (Fastify's default body limit)", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = `<html><body>${"a".repeat(2 * 1024 * 1024)}</body></html>`;
+
+    const res = await save(app, { url: "https://example.com/post", html });
+
+    expect(res.statusCode).toBe(201);
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith(expect.objectContaining({ html }));
+  });
+
+  it("saves a captured page at the cap even when every character takes two bytes", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, {
+      url: "https://example.com/post",
+      html: "é".repeat(MAX_HTML_LENGTH),
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("is 400 validation_failed for a captured page over the cap, not a 413", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(signedIn(), { items: repository }));
+
+    const res = await save(app, {
+      url: "https://example.com/post",
+      html: "a".repeat(MAX_HTML_LENGTH + 1),
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = ErrorResponseSchema.parse(res.json());
+    expect(body.error.code).toBe("validation_failed");
+    expect(body.error.details).toEqual([expect.objectContaining({ path: "/html" })]);
+    expect(saved).toHaveLength(0);
+  });
+
+  it("enqueues the job with the request's captions, unchanged", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+    const html = "<html><body>A video page</body></html>";
+    const captions = "Hello and welcome to the show.";
+
+    const res = await save(app, { url: "https://www.youtube.com/watch?v=abc", html, captions });
+
+    expect(queue.enqueueProcessItem).toHaveBeenCalledWith({
+      itemId: res.json().id,
+      userId: USER_ID,
+      html,
+      captions,
+    });
+  });
+
+  it("enqueues an html-only request without captions, same as today", async () => {
+    const queue = queueRecording();
+    const app = await buildApp(testContainer(signedIn(), { queue }));
+
+    await save(app, { url: "https://example.com/post", html: "<html></html>" });
+
+    const call = (queue.enqueueProcessItem as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(call.captions).toBeUndefined();
+  });
+
+  it("saves a captured page and captions both at their caps, every character two bytes", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, {
+      url: "https://www.youtube.com/watch?v=abc",
+      html: "é".repeat(MAX_HTML_LENGTH),
+      captions: "é".repeat(MAX_CAPTIONS_LENGTH),
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("is 400 validation_failed for captions over the cap, not a 413", async () => {
+    const { repository, saved } = itemsInMemory();
+    const app = await buildApp(testContainer(signedIn(), { items: repository }));
+
+    const res = await save(app, {
+      url: "https://www.youtube.com/watch?v=abc",
+      captions: "a".repeat(MAX_CAPTIONS_LENGTH + 1),
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = ErrorResponseSchema.parse(res.json());
+    expect(body.error.code).toBe("validation_failed");
+    expect(body.error.details).toEqual([expect.objectContaining({ path: "/captions" })]);
+    expect(saved).toHaveLength(0);
   });
 
   it("saves the same URL twice as two Items", async () => {

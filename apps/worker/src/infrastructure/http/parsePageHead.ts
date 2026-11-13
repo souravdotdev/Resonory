@@ -1,4 +1,5 @@
 import { Parser } from "htmlparser2";
+import { isJsonLdType } from "@resonory/shared/html";
 import type { MetaTag, OEmbedLink, PageHead } from "@/domain/entities/PageHead";
 import { parsedUrl } from "@/domain/rules/parsedUrl";
 
@@ -53,7 +54,7 @@ export function parsePageHead(html: string, pageUrl: string): PageHead {
       } else if (name === "title" && title === null) {
         reading = "title";
         text = "";
-      } else if (name === "script" && isJsonLd(attributes.type)) {
+      } else if (name === "script" && isJsonLdType(attributes.type)) {
         reading = "json-ld";
         text = "";
       }
@@ -75,10 +76,6 @@ export function parsePageHead(html: string, pageUrl: string): PageHead {
   parser.end(html);
 
   return { meta, title, jsonLd, oEmbedLinks };
-}
-
-function isJsonLd(type: string | undefined): boolean {
-  return type?.split(";")[0]?.trim().toLowerCase() === "application/ld+json";
 }
 
 function oEmbedLink(attributes: Record<string, string>, pageUrl: string): OEmbedLink | null {

@@ -37,6 +37,7 @@ export class BullMqQueueProvider implements IQueueProvider {
       itemId: request.itemId,
       userId: request.userId,
       html: request.html,
+      captions: request.captions,
     });
     await this.queue.add(PROCESS_ITEM_JOB, payload, PROCESS_ITEM_OPTIONS);
   }
