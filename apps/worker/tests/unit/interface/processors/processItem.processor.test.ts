@@ -42,6 +42,28 @@ describe("a Process Item job", () => {
     ]);
   });
 
+  it("logs how long Text extraction took, when it ran", async () => {
+    const { container, logger } = testContainer(async () => ({
+      outcome: "ready",
+      type: "article",
+      metadata: { title: "A title", description: null },
+      thumbnailKey: null,
+      text: "The page's words",
+      textMs: 42,
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { type: "article", titled: true, pictured: false, texted: true, textMs: 42 },
+        msg: "Item is Ready",
+      },
+    ]);
+  });
+
   it("logs an Item Ready without a title, a Thumbnail or Text", async () => {
     const { container, logger } = testContainer(async () => ({
       outcome: "ready",

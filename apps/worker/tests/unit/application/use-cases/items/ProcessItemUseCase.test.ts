@@ -1515,6 +1515,21 @@ describe("ProcessItemUseCase, Text", () => {
     expect(await result).not.toHaveProperty("textError");
   });
 
+  it("hands back how long the extractor ran, whether it answered or threw", async () => {
+    const throwing: ITextExtractor = {
+      extractText: () => {
+        throw new Error("linkedom choked on the page");
+      },
+    };
+
+    const answered = await processCaptured(articlePage()).result;
+    const threw = await processCaptured(articlePage(), ARTICLE_URL, { textExtractor: throwing })
+      .result;
+
+    expect(answered).toMatchObject({ textMs: expect.any(Number) });
+    expect(threw).toMatchObject({ textMs: expect.any(Number) });
+  });
+
   it("caps Text at 100,000 characters", async () => {
     const long: ITextExtractor = { extractText: () => "word ".repeat(30_000) };
 
@@ -1569,6 +1584,7 @@ describe("ProcessItemUseCase, Text", () => {
     });
     expect(item).toMatchObject({ status: "ready", text: null });
     expect(extractor.extractText).not.toHaveBeenCalled();
+    expect(await useCase.execute(REF)).not.toHaveProperty("textMs");
   });
 
   describe("a video's captions", () => {
@@ -1593,8 +1609,7 @@ describe("ProcessItemUseCase, Text", () => {
         textExtractor: extractor,
       });
 
-      await result;
-
+      expect(await result).not.toHaveProperty("textMs");
       expect(item.text).toBe(CAPTIONS);
       expect(extractor.extractText).not.toHaveBeenCalled();
     });
