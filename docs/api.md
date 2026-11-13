@@ -170,6 +170,7 @@ POST /items
 - No valid Session or API key → `401 unauthorized`. The User always comes from the authenticated identity, never from the body.
 - A missing URL, one that isn't `http`/`https`, or one over 2048 characters → `400 validation_failed` with the issue at `/url`.
 - Captured content over 5 Mi characters → `400 validation_failed` with the issue at `/html`. The route sets its own request-body limit (`CREATE_ITEM_BODY_LIMIT`, derived from the schema's caps: two bytes per character plus headroom), so an oversized capture reaches the schema instead of getting Fastify's 413 from its 1 MiB default. Captions over 1 Mi characters are the same `400`, at `/captions`.
+- More than 30 saves in a minute → `429 rate_limited`. `POST /items` replaces the app-wide 100 a minute with 30, counted per API key (`x-api-key`, hashed), or per client IP for a request without one (see [Security](./security.md#rate-limiting)).
 - If the job can't be enqueued (Redis is down), the request fails with `500 internal`. The Item is already stored and stays Processing; there is no retry endpoint yet.
 
 ## `GET /health`

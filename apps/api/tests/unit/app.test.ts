@@ -320,6 +320,44 @@ describe("POST /items", () => {
     expect(CreateItemResponseSchema.safeParse(res.json()).success).toBe(true);
   });
 
+  it("limits saves to 30 a minute, while other routes keep 100", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    const res = await save(app, { url: "https://example.com/post" });
+    const elsewhere = await app.inject({ method: "GET", url: "/health" });
+
+    expect(res.headers["x-ratelimit-limit"]).toBe("30");
+    expect(elsewhere.headers["x-ratelimit-limit"]).toBe("100");
+  });
+
+  it("counts saves per API key: the 31st from one key is 429 rate_limited, another key still saves", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    for (let i = 0; i < 30; i++) await saveWithKey("key_one");
+    const limited = await saveWithKey("key_one");
+    const otherKey = await saveWithKey("key_two");
+
+    expect(limited.statusCode).toBe(429);
+    expect(ErrorResponseSchema.parse(limited.json()).error.code).toBe("rate_limited");
+    expect(otherKey.statusCode).toBe(201);
+  });
+
+  it("counts saves without an API key per client IP", async () => {
+    const app = await buildApp(testContainer(signedIn()));
+
+    for (let i = 0; i < 30; i++) await save(app, { url: "https://example.com/post" });
+    const limited = await save(app, { url: "https://example.com/post" });
+
+    expect(limited.statusCode).toBe(429);
+  });
+
   it("stores the Item for the signed-in User, never one named in the body", async () => {
     const { repository, saved } = itemsInMemory();
     const app = await buildApp(testContainer(signedIn(), { items: repository }));
