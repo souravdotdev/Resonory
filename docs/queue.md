@@ -103,7 +103,7 @@ A discovery link pointing at a known provider's endpoint counts as that provider
 
 ### Page rules
 
-The fetcher parses an HTML head once, in infrastructure (`parsePageHead.ts`, htmlparser2), into a `PageHead` (`domain/entities/PageHead.ts`): its meta tags (keyed by `property`, else `name`, lower-case), its first `<title>`, each JSON-LD block that parses as JSON, and its oEmbed discovery links (absolute). Entities are decoded there. The domain rules read only these tags:
+The fetcher parses an HTML head once, in infrastructure (`parsePageHead.ts`, htmlparser2), into a `PageHead` (`domain/entities/PageHead.ts`): its meta tags (keyed by `property`, else `name`, lower-case), its first `<title>`, each JSON-LD block that parses as JSON (a `<script>` whose type `isJsonLdType` from `@resonory/shared/html` accepts: `application/ld+json` in any case, with or without parameters; the extension's capture keeps head scripts by the same rule), and its oEmbed discovery links (absolute). Entities are decoded there. The domain rules read only these tags:
 
 | Rule                                       | Declares                                                                                  | Item type |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------- | --------- |
