@@ -40,6 +40,7 @@ export async function processItem(container: Container, data: unknown): Promise<
         titled: result.metadata.title !== null,
         pictured: result.thumbnailKey !== null,
         texted: result.text !== null,
+        ...(result.textMs !== undefined && { textMs: result.textMs }),
       },
       "Item is Ready",
     );

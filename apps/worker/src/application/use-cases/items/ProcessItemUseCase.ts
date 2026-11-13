@@ -180,12 +180,16 @@ export class ProcessItemUseCase {
     outcome.text = itemText({
       captions,
       pageText: () => {
+        const start = performance.now();
         try {
           return this.textExtractor.extractText(html, sourceUrl);
         } catch (error) {
           // No page text, but the error is handed back so the processor logs it.
           outcome.textError = error;
           return null;
+        } finally {
+          // Extraction runs synchronously and holds the worker up, so how long it took is logged too.
+          outcome.textMs = Math.round(performance.now() - start);
         }
       },
     });
@@ -256,11 +260,11 @@ export class ProcessItemUseCase {
   private async ready(
     ref: ItemRef,
     preview: CachedPreview,
-    { text, ...textError }: TextOutcome,
+    { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
     await this.items.markReady(ref, ready);
-    return { outcome: "ready", ...ready, ...textError };
+    return { outcome: "ready", ...ready, ...extraction };
   }
 }
 
@@ -317,6 +321,7 @@ function metadataOf(head: PageHead | null, answer: OEmbedAnswer | null): ItemMet
 interface TextOutcome {
   text: string | null;
   textError?: unknown;
+  textMs?: number;
 }
 
 /** An oEmbed answer and the known provider it came from, if any. */
