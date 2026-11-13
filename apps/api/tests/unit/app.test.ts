@@ -372,6 +372,32 @@ describe("POST /items", () => {
     expect(saved).toHaveLength(0);
   });
 
+  it("counts every save toward the IP limit, even one the per-key limit refuses", async () => {
+    // The IP check runs first, so a key's refused saves still count from its IP.
+    // Run after the per-key check instead, the 10 refused ones below wouldn't, and
+    // the 61st save would get the 401 of a made-up key, not 429.
+    const app = await buildApp(testContainer(sessionsReturning(null)));
+    const saveWithKey = (apiKey: string) =>
+      app.inject({
+        method: "POST",
+        url: "/items",
+        headers: { "x-api-key": apiKey },
+        payload: { url: "https://example.com/post" },
+      });
+
+    const oneKey = [];
+    for (let i = 0; i < 40; i++) oneKey.push((await saveWithKey("key_one")).statusCode);
+    const otherKeys = [];
+    for (let i = 0; i < CREATE_ITEM_IP_LIMIT - 40; i++) {
+      otherKeys.push((await saveWithKey(`key_${i}`)).statusCode);
+    }
+    const sixtyFirst = await saveWithKey("key_fresh");
+
+    expect(oneKey.slice(30).every((status) => status === 429)).toBe(true);
+    expect(otherKeys.every((status) => status === 401)).toBe(true);
+    expect(sixtyFirst.statusCode).toBe(429);
+  });
+
   describe("behind a proxy", () => {
     const saveFrom = (app: Awaited<ReturnType<typeof buildApp>>, clientIp: string, key: string) =>
       app.inject({
