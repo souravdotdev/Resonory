@@ -5,6 +5,7 @@
 - Node.js ≥20
 - pnpm (`corepack enable` or install directly — root `package.json` pins `packageManager: pnpm@10.13.1`)
 - Docker (for local Postgres + Redis)
+- [gitleaks](https://github.com/gitleaks/gitleaks) (macOS: `brew install gitleaks`). The pre-commit hook scans staged changes for secrets and refuses to commit without it; see [Security](./security.md#secret-scanning)
 
 ## Install
 

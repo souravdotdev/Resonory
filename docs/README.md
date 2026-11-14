@@ -14,7 +14,7 @@ Reference docs for the `resonory` monorepo, covering what's been set up and why.
 - [Browser extension](./extension.md) — how `apps/extension` captures and saves a page, its permissions, and configuring the API address (`WXT_API_URL`)
 - [Logging](./logging.md) — the shared Pino logger, its redaction and verbosity rules, and each app's correlation convention
 - [Code Quality](./code-quality.md) — linting, formatting, and type-checking conventions
-- [Security](./security.md) — CORS, helmet, rate limiting, `apps/web`'s response headers, and Dependabot
+- [Security](./security.md) — CORS, helmet, rate limiting, `apps/web`'s response headers, secret scanning (gitleaks), and Dependabot
 - [Deploying the waitlist page](./deploy-waitlist.md) — the Vercel checklist for `apps/waitlist`: root directory, `DATABASE_URL`, the migration, domains and analytics
 - [Testing](./testing.md) — Vitest setup, what's tested and why, and the fakes-over-mocking-libraries convention
 
