@@ -14,11 +14,6 @@ headers {
   Cookie: better-auth.session_token={{sessionCookie}}
 }
 
-vars:pre-request {
-  tagId: 6b1b0622-c3c0-4a2f-a440-136a6c1bb7c2
-  itemId: d98c88b4-9ef7-4920-b748-fce84d67eeac
-}
-
 tests {
   test("returns the Item's remaining Tags", () => {
     expect(res.status).to.equal(200);
