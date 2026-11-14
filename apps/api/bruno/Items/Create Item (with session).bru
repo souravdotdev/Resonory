@@ -1,0 +1,41 @@
+meta {
+  name: Create Item (with session)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/items
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+body:json {
+  {
+    "url": "https://example.com"
+  }
+}
+
+script:post-response {
+  if (res.body && res.body.id) {
+    bru.setEnvVar("itemId", res.body.id);
+  }
+}
+
+tests {
+  test("saves the Item", () => expect(res.status).to.equal(201));
+}
+
+docs {
+  Requires `sessionCookie` (see "1. Sign In (Google)").
+
+  Saves an Item the web app's way, with the Session cookie, so the Tags
+  requests have one to tag. The post-response script stashes the new Item's
+  `id` into the `itemId` environment variable, which every request in Tags
+  reuses.
+}
