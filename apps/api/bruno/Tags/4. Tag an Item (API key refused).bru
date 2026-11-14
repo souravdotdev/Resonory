@@ -21,11 +21,6 @@ body:json {
   }
 }
 
-vars:pre-request {
-  itemId: 3bcc6407-fbf3-4957-811a-984fcb522a48
-  apiKey: REDACTED_REVOKED_API_KEY
-}
-
 tests {
   test("refuses the extension's API key", () => {
     expect(res.status).to.equal(403);
