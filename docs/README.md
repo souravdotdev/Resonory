@@ -8,6 +8,7 @@ Reference docs for the `resonory` monorepo, covering what's been set up and why.
 - [Environment Variables](./environment-variables.md) — every variable, which app/package needs it, and why
 - [Database](./database.md) — schema, data model, and the Drizzle migration workflow
 - [API](./api.md) — HTTP endpoint reference for `apps/api`
+- [Tags](./tags.md) — how Users tag their Items: the model, every rule and why, concurrency, what's not built yet, and open questions
 - [Queue & Background Jobs](./queue.md) — BullMQ-backed Item processing: type detection, oEmbed, Thumbnails
 - [Content capture](./content-capture.md) — server-fetched vs. browser-extension-captured content: the old path, the new path, and where they diverge/reconverge
 - [Browser extension](./extension.md) — how `apps/extension` captures and saves a page, its permissions, and configuring the API address (`WXT_API_URL`)
