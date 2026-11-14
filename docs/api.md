@@ -64,10 +64,12 @@ Every API error is sent in one envelope (`ErrorResponseSchema` in `@resonory/sha
 | `unauthorized`      | 401    | The request isn't authenticated.                                                                                                                                                                                                                            |
 | `forbidden`         | 403    | The request is authenticated, but not in a way the route accepts: an API key on a [web-Session-only route](#web-session-only-routes).                                                                                                                       |
 | `not_found`         | 404    | The route or resource doesn't exist.                                                                                                                                                                                                                        |
+| `item_tag_limit`    | 409    | Tagging an Item that already has its 20 Tags (the AI's count too) with a Tag that isn't on it yet. See [Tag limits](#tag-limits).                                                                                                                           |
+| `user_tag_limit`    | 409    | Tagging an Item with a new Tag when the User already has 1,000 Tags. See [Tag limits](#tag-limits).                                                                                                                                                         |
 | `rate_limited`      | 429    | The client went over the rate limit (100 requests a minute, see [Security](./security.md)).                                                                                                                                                                 |
 | `internal`          | 500    | Anything unexpected. The message is always generic: the real error is logged on the server and never sent to the client, so no stack traces, SQL or internal hostnames leak.                                                                                |
 
-Use cases throw domain errors from `apps/api/src/domain/errors` (`AppError` and its subclasses), never HTTP errors. The error middleware maps each error's code to a status: `VALIDATION_FAILED` → 400, `UNAUTHORIZED` and `USER_PERMANENTLY_DELETED` → 401, `FORBIDDEN` → 403, `NOT_FOUND` → 404, `REPOSITORY_ERROR` → 500. Each status is then sent with the fixed, safe message for its envelope code, so a domain error's own message never reaches the client.
+Use cases throw domain errors from `apps/api/src/domain/errors` (`AppError` and its subclasses), never HTTP errors. The error middleware maps each error's code to a status: `VALIDATION_FAILED` → 400, `UNAUTHORIZED` and `USER_PERMANENTLY_DELETED` → 401, `FORBIDDEN` → 403, `NOT_FOUND` → 404, `ITEM_TAG_LIMIT` and `USER_TAG_LIMIT` → 409, `REPOSITORY_ERROR` → 500. Each is then sent with a fixed, safe envelope code and message: the domain code's own when it has one (`clientErrorsByCode`: the two Tag limits share 409 but get `item_tag_limit` and `user_tag_limit`), otherwise its status's. A domain error's own message never reaches the client.
 
 Example validation failure:
 
@@ -194,9 +196,10 @@ Tags one of the signed-in User's Items by name. Served by `TagItemUseCase`, whic
 
 1. reduces `name` to its Tag name; one that's empty once reduced, or longer than 50 characters, is a `ValidationError`;
 2. finds the Item through `IItemRepository.findById(userId, itemId)`; no Item, or another User's, is a `NotFoundError`, checked before any Tag is created;
-3. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`). The insert relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag;
-4. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing;
-5. returns the Item's Tags after the change (`ItemTagsResponseSchema`: `ItemCardTagSchema[]`), oldest link first.
+3. refuses a Tag that isn't on the Item yet when the Item already has 20 (`ItemTagLimitError`), checked before any Tag is created (see [Tag limits](#tag-limits));
+4. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`); a new Tag when the User already has 1,000 is a `UserTagLimitError`. Creates for one User take turns behind a lock on their `users` row, and the insert still relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag;
+5. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing;
+6. returns the Item's Tags after the change (`ItemTagsResponseSchema`: `ItemCardTagSchema[]`), oldest link first.
 
 ```
 POST /items/3b241101-e2bb-4255-8caf-4136c566a962/tags
@@ -213,6 +216,17 @@ POST /items/3b241101-e2bb-4255-8caf-4136c566a962/tags
 - A valid API key → `403 forbidden`, and nothing changes.
 - An `itemId` that isn't a uuid, a `name` that isn't text, or a name that's empty or over 50 characters once slugified → `400 validation_failed`.
 - An Item that doesn't exist or belongs to another User → `404 not_found`, never 403, so the API doesn't reveal what exists.
+- A Tag that isn't on the Item yet, when the Item already has 20 Tags → `409 item_tag_limit` ("An Item can have at most 20 Tags"), and nothing changes.
+- A new Tag, when the User already has 1,000 Tags → `409 user_tag_limit` ("You can have at most 1,000 Tags"), and no Tag is created.
+
+#### Tag limits
+
+An Item can have at most 20 Tags (`MAX_TAGS_PER_ITEM`), and a User at most 1,000 (`MAX_TAGS_PER_USER`), both in `src/domain/rules/tagLimits.ts`. They're abuse guards that real use won't reach. Tags the AI put on an Item count towards its 20. Re-adding a Tag that's already on the Item counts against neither limit and still succeeds, and a User at 1,000 Tags can still put any of them on any Item.
+
+The adapter enforces each limit in the same transaction as the write it guards, behind a row lock (`SELECT ... FOR NO KEY UPDATE`, which still lets foreign keys to the row be checked): `findOrCreate` locks the User's `users` row, then counts and inserts; `applyAsUser` locks the Item's `items` row, then counts and links. Concurrent requests therefore take turns and can't race past either limit. Two gaps remain:
+
+- a future writer that links Tags without taking the Item's lock (the AI tagger) could push an Item past 20, so it must lock the same row;
+- `TagItemUseCase` checks the Item's count early so a full Item doesn't leave a new Tag behind, but two requests racing for an Item's last slot both pass that check: the loser gets `409 item_tag_limit`, and the new Tag it created stays on no Item, like any Tag taken off its last Item.
 
 ## `GET /health`
 
