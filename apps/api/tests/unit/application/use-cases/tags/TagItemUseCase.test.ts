@@ -2,7 +2,12 @@ import "reflect-metadata";
 import { describe, expect, it } from "vitest";
 import { ItemTagsResponseSchema } from "@resonory/shared/schemas/items";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
-import { NotFoundError, ValidationError } from "@/domain/errors";
+import {
+  ItemTagLimitError,
+  NotFoundError,
+  UserTagLimitError,
+  ValidationError,
+} from "@/domain/errors";
 import { anItem, taggingInMemory } from "../../../fakes/tagging";
 
 const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
@@ -187,5 +192,111 @@ describe("TagItemUseCase", () => {
     });
 
     expect(result.map((tag) => tag.name)).toEqual(["a".repeat(50)]);
+  });
+
+  describe("limits", () => {
+    // Puts `count` new Tags of the User on the Item, named tag-1, tag-2, ...
+    async function putTagsOn(
+      { tagRepository, links, tick }: ReturnType<typeof scene>,
+      count: number,
+      source: "ai" | "user" = "user",
+    ) {
+      for (let n = 1; n <= count; n++) {
+        const tag = await tagRepository.findOrCreate(USER_ID, `tag-${n}`);
+        links.push({ userId: USER_ID, itemId: ITEM_ID, tagId: tag.id, source, createdAt: tick() });
+      }
+    }
+
+    it("refuses a 21st Tag on an Item with an ItemTagLimitError, keeping its 20 and creating no Tag", async () => {
+      const store = scene();
+      await putTagsOn(store, 20);
+
+      await expect(
+        store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "one-too-many" }),
+      ).rejects.toThrow(ItemTagLimitError);
+      expect(store.links).toHaveLength(20);
+      expect(store.tags.map((tag) => tag.name)).not.toContain("one-too-many");
+    });
+
+    it("lets only one of two requests racing for an Item's 20th Tag through", async () => {
+      const store = scene();
+      await putTagsOn(store, 19);
+
+      const outcomes = await Promise.allSettled([
+        store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "first" }),
+        store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "second" }),
+      ]);
+
+      expect(outcomes.map((outcome) => outcome.status).sort()).toEqual(["fulfilled", "rejected"]);
+      expect(outcomes.find((outcome) => outcome.status === "rejected")?.reason).toBeInstanceOf(
+        ItemTagLimitError,
+      );
+      expect(store.links).toHaveLength(20);
+    });
+
+    it("counts the Tags the AI put on the Item towards its 20", async () => {
+      const store = scene();
+      await putTagsOn(store, 20, "ai");
+
+      await expect(
+        store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "one-too-many" }),
+      ).rejects.toThrow(ItemTagLimitError);
+      expect(store.links).toHaveLength(20);
+    });
+
+    it("still re-adds a Tag that's already on a full Item, upgrading the AI's to user", async () => {
+      const store = scene();
+      await putTagsOn(store, 20, "ai");
+
+      const result = await store.useCase.execute({
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        name: "Tag 7",
+      });
+
+      expect(result).toHaveLength(20);
+      expect(result.find((tag) => tag.name === "tag-7")?.source).toBe("user");
+    });
+
+    // Gives the User `count` Tags, named library-1, library-2, ..., on none of their Items.
+    async function giveUserTags({ tagRepository }: ReturnType<typeof scene>, count: number) {
+      for (let n = 1; n <= count; n++) await tagRepository.findOrCreate(USER_ID, `library-${n}`);
+    }
+
+    it("refuses a User's 1,001st Tag with a UserTagLimitError, creating no Tag and no link", async () => {
+      const store = scene();
+      await giveUserTags(store, 1000);
+
+      await expect(
+        store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "one-too-many" }),
+      ).rejects.toThrow(UserTagLimitError);
+      expect(store.tags).toHaveLength(1000);
+      expect(store.links).toHaveLength(0);
+    });
+
+    it("lets a User at 1,000 Tags put any of them on an Item", async () => {
+      const store = scene();
+      await giveUserTags(store, 1000);
+
+      const result = await store.useCase.execute({
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        name: "library-1000",
+      });
+
+      expect(result.map((tag) => tag.name)).toEqual(["library-1000"]);
+      expect(store.tags).toHaveLength(1000);
+    });
+
+    it("doesn't count another User's Tags towards this User's 1,000", async () => {
+      const store = scene();
+      for (let n = 1; n <= 1000; n++) {
+        await store.tagRepository.findOrCreate("11111111-1111-4111-8111-111111111111", `t-${n}`);
+      }
+
+      const result = await store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "new" });
+
+      expect(result.map((tag) => tag.name)).toEqual(["new"]);
+    });
   });
 });

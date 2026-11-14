@@ -731,6 +731,89 @@ describe("POST /items/:itemId/tags", () => {
     expect(first.json()).toEqual(second.json());
   });
 
+  describe("at the Tag limits", () => {
+    // Puts `count` of the User's Tags on the Item, named tag-1, tag-2, ...
+    async function putTagsOn(
+      { tagRepository, links, tick }: Awaited<ReturnType<typeof scene>>,
+      count: number,
+      source: "ai" | "user" = "user",
+    ) {
+      for (let n = 1; n <= count; n++) {
+        const onItem = await tagRepository.findOrCreate(USER_ID, `tag-${n}`);
+        links.push({
+          userId: USER_ID,
+          itemId: ITEM_ID,
+          tagId: onItem.id,
+          source,
+          createdAt: tick(),
+        });
+      }
+    }
+
+    it("is 409 item_tag_limit for a 21st Tag on an Item, which keeps its 20", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20);
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "item_tag_limit",
+        message: "An Item can have at most 20 Tags",
+      });
+      expect(store.links).toHaveLength(20);
+      expect(store.tags.map(({ name }) => name)).not.toContain("one-too-many");
+    });
+
+    it("counts the Tags the AI put on the Item towards its 20", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20, "ai");
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("item_tag_limit");
+    });
+
+    it("answers 200 re-adding a Tag that's already on a full Item", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20, "ai");
+
+      const res = await store.tag("tag-20");
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toHaveLength(20);
+      expect(res.json()).toContainEqual(
+        expect.objectContaining({ name: "tag-20", source: "user" }),
+      );
+    });
+
+    it("is 409 user_tag_limit for a User's 1,001st Tag, and creates no Tag", async () => {
+      const store = await scene();
+      for (let n = 1; n <= 1000; n++) await store.tagRepository.findOrCreate(USER_ID, `lib-${n}`);
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "user_tag_limit",
+        message: "You can have at most 1,000 Tags",
+      });
+      expect(store.tags).toHaveLength(1000);
+      expect(store.links).toHaveLength(0);
+    });
+
+    it("answers 200 for a User at 1,000 Tags putting one of them on an Item", async () => {
+      const store = await scene();
+      for (let n = 1; n <= 1000; n++) await store.tagRepository.findOrCreate(USER_ID, `lib-${n}`);
+
+      const res = await store.tag("lib-1");
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([expect.objectContaining({ name: "lib-1", source: "user" })]);
+    });
+  });
+
   it.each([
     ["empty", ""],
     ["empty once slugified", "!!! ???"],
