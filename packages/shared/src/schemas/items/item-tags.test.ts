@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ItemTagParamsSchema, ItemTagsResponseSchema, TagItemSchema } from "./index";
+import {
+  ItemTagParamsSchema,
+  ItemTagsResponseSchema,
+  TagItemSchema,
+  UntagItemParamsSchema,
+} from "./index";
 
 describe("TagItemSchema", () => {
   it("accepts a Tag name exactly as the User typed it; the API reduces it to its slug", () => {
@@ -43,5 +48,28 @@ describe("ItemTagsResponseSchema", () => {
 
   it("rejects a Tag without its Tag source", () => {
     expect(ItemTagsResponseSchema.safeParse([{ id: "tag-1", name: "memory" }]).success).toBe(false);
+  });
+});
+
+describe("UntagItemParamsSchema", () => {
+  const ITEM_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const TAG_ID = "0f1e2d3c-4b5a-4968-8776-655443322110";
+
+  it("accepts an Item id and a Tag id that are uuids", () => {
+    const params = { itemId: ITEM_ID, tagId: TAG_ID };
+
+    expect(UntagItemParamsSchema.parse(params)).toEqual(params);
+  });
+
+  it("rejects a Tag id that isn't a uuid", () => {
+    expect(UntagItemParamsSchema.safeParse({ itemId: ITEM_ID, tagId: "tag-1" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an Item id that isn't a uuid", () => {
+    expect(UntagItemParamsSchema.safeParse({ itemId: "item-1", tagId: TAG_ID }).success).toBe(
+      false,
+    );
   });
 });
