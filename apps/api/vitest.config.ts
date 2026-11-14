@@ -7,5 +7,8 @@ export default mergeConfig(
   defineConfig({
     // The `@/` alias from tsconfig.json.
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+    // `pnpm test` needs no database: the Postgres-backed tests in tests/integration/
+    // run only through `test:integration` (vitest.integration.config.ts).
+    test: { include: ["tests/unit/**/*.test.ts"] },
   }),
 );
