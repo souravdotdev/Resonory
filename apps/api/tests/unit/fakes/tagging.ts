@@ -76,6 +76,14 @@ export function taggingInMemory() {
         .filter((link) => link.itemId === itemId && link.userId === userId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .map((link) => ({ tag: tags.find((tag) => tag.id === link.tagId)!, source: link.source })),
+    findById: async (userId, tagId) =>
+      tags.find((tag) => tag.id === tagId && tag.userId === userId) ?? null,
+    removeFromItem: async ({ userId, itemId, tagId }) => {
+      const index = links.findIndex(
+        (link) => link.userId === userId && link.itemId === itemId && link.tagId === tagId,
+      );
+      if (index !== -1) links.splice(index, 1);
+    },
   };
 
   return { itemRepository, tagRepository, items, tags, links, tick };

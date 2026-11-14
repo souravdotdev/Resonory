@@ -4,6 +4,7 @@ import {
   ItemTagParamsSchema,
   ItemTagsResponseSchema,
   TagItemSchema,
+  UntagItemParamsSchema,
 } from "@resonory/shared/schemas/items";
 import { TOKENS } from "@/di/tokens";
 import type { TagsController } from "@/interface/controllers/TagsController";
@@ -18,6 +19,7 @@ export interface TagsRoutesOptions {
  * extension's) is refused with 403 (`sessionOnlyAuthMiddleware`).
  *
  * - `POST /items/:itemId/tags`: tag one of the User's Items by name.
+ * - `DELETE /items/:itemId/tags/:tagId`: take a Tag off one of the User's Items.
  */
 export const tagsRoutes: FastifyPluginAsyncZod<TagsRoutesOptions> = async (app, { container }) => {
   // The container builds the controller; the route file never does.
@@ -35,5 +37,17 @@ export const tagsRoutes: FastifyPluginAsyncZod<TagsRoutesOptions> = async (app, 
     },
     // The name arrives as typed; TagItemUseCase reduces it to its Tag name.
     (request) => tagsController().tagItem(request),
+  );
+
+  app.delete(
+    "/items/:itemId/tags/:tagId",
+    {
+      preHandler: sessionOnlyAuthMiddleware(container),
+      schema: {
+        params: UntagItemParamsSchema,
+        response: { 200: ItemTagsResponseSchema },
+      },
+    },
+    (request) => tagsController().untagItem(request),
   );
 };

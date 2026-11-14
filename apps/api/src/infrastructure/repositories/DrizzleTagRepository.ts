@@ -52,4 +52,22 @@ export class DrizzleTagRepository implements ITagRepository {
       .orderBy(asc(itemTags.createdAt), asc(tags.name));
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
   }
+
+  async findById(userId: string, tagId: string): Promise<Tag | null> {
+    const [row] = await this.db
+      .select()
+      .from(tags)
+      .where(and(eq(tags.id, tagId), eq(tags.userId, userId)))
+      .limit(1);
+    return row ? toTag(row) : null;
+  }
+
+  async removeFromItem({ userId, itemId, tagId }: ItemTagRef): Promise<void> {
+    // Only the link goes; the Tag stays the User's even when it's on no Items now.
+    await this.db
+      .delete(itemTags)
+      .where(
+        and(eq(itemTags.itemId, itemId), eq(itemTags.tagId, tagId), eq(itemTags.userId, userId)),
+      );
+  }
 }
