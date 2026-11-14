@@ -6,6 +6,9 @@ export const ErrorCodeSchema = z.enum([
   "unauthorized",
   // Authenticated, but not in a way this route accepts (an API key on a web-Session-only route).
   "forbidden",
+  // 409s at the Tag limits, each with its own code so a client can tell the User which.
+  "item_tag_limit",
+  "user_tag_limit",
   "rate_limited",
   "internal",
 ]);
