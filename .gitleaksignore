@@ -1,6 +1,3 @@
 # Findings already in history that are known to be harmless. Each line is a
 # gitleaks fingerprint (commit:file:rule:line); say why it's safe above it.
-
-# A local-only Resonory API key that Bruno saved into a request (PR #172),
-# revoked by deleting its api_keys row; it no longer authenticates.
-839465ee11705edd691d6a08d42853b36e0899d7:apps/api/bruno/Tags/4. Tag an Item (API key refused).bru:resonory-api-key:26
+# Empty today: see docs/security.md#secret-scanning.
