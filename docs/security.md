@@ -81,6 +81,18 @@ The waitlist app has one write endpoint, `POST /api/waitlist`, open to anyone, w
 - **No rate limit, for now.** The endpoint stores at most one row per email and leaks nothing, so the worst case of abuse is junk rows, which the honeypot already filters from naive bots; a rate limit would need a shared store (Redis or the host's edge) that a serverless marketing page doesn't otherwise need. If junk entries appear, add a per-IP limit at the edge (the host's firewall or rate-limit rules) or in the route with a shared store, and consider double opt-in (`confirmed_at` is reserved for it).
 - **Response headers.** `next.config.ts` sets the same headers as [`apps/web`](#appsweb-response-headers) on every route, and no CSP yet, for the same reason.
 
+## Secret scanning
+
+No secret may be committed: not our own API keys (`resk_…`), not an external one (`GOOGLE_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `BETTER_AUTH_SECRET`, the AutoSend key), not a private key. Secrets live only in the gitignored `.env` files, and in Bruno's Local environment, never in a request's Vars (see [Getting Started](./getting-started.md)). The repo is public, so a pushed secret is exposed the moment it lands. Three layers enforce this:
+
+- **Before a commit:** `.husky/pre-commit` runs [gitleaks](https://github.com/gitleaks/gitleaks) on the staged changes (`gitleaks git --pre-commit --staged`), and refuses the commit on any finding. The match is redacted in the output. gitleaks is a separate binary (macOS: `brew install gitleaks`; CI pins 8.30.1). The hook refuses to commit without it rather than skipping the scan.
+- **In CI:** the `secrets` job in `.github/workflows/ci.yml` installs the same version (checksum-verified) and scans the whole history on every PR and push to `main`. This is the backstop for `--no-verify`, or a machine without the hook.
+- **On push:** GitHub's own secret scanning and push protection are on for the repo. They block pushes containing known provider formats, but they don't know `resk_`.
+
+`.gitleaks.toml` extends gitleaks' built-in rules (around 200 providers, JWTs such as Supabase keys, private keys, generic high-entropy secrets) with a `resonory-api-key` rule for `resk_` keys. A finding already in history that's known to be harmless is listed by fingerprint in `.gitleaksignore`, with the reason above it. Today that's one entry: a local-only API key Bruno saved into a request in PR #172. It was revoked by deleting its `api_keys` row (matched by the key's SHA-256 hash, which is how the api-key plugin stores it). A one-time scan of the full history when this was set up found nothing else.
+
+**If a secret does get committed:** revoke or rotate it first, at its source (for a `resk_` key, delete its `api_keys` row; for a provider key, rotate it in that provider's console), because rewriting history doesn't un-expose a pushed secret. Then remove it from the files, and add its fingerprint to `.gitleaksignore` with why it's safe.
+
 ## Dependency updates (Dependabot)
 
 `.github/dependabot.yml` — GitHub's native bot, two independent jobs:
