@@ -23,3 +23,10 @@ export type TagItemInput = z.infer<typeof TagItemSchema>;
 export const ItemTagsResponseSchema = z.array(ItemCardTagSchema);
 
 export type ItemTagsResponse = z.infer<typeof ItemTagsResponseSchema>;
+
+/** The Tag to take off an Item (`DELETE /items/:itemId/tags/:tagId`). */
+export const UntagItemParamsSchema = ItemTagParamsSchema.extend({
+  tagId: z.uuid(),
+});
+
+export type UntagItemParams = z.infer<typeof UntagItemParamsSchema>;
