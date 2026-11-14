@@ -21,7 +21,9 @@ export interface ITagRepository {
    * Puts the Tag on the Item with Tag source `user`. A link the AI made becomes
    * the User's; a link the User already made is left as it is. Throws
    * `ItemTagLimitError`, linking nothing, when the Tag isn't on the Item yet and
-   * the Item already has `MAX_TAGS_PER_ITEM` (the AI's count too).
+   * the Item already has `MAX_TAGS_PER_ITEM` (the AI's count too). Throws
+   * `NotFoundError`, linking nothing, when the Item is no longer the User's
+   * (deleted since the caller found it).
    */
   applyAsUser(ref: ItemTagRef): Promise<void>;
 

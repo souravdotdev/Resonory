@@ -107,6 +107,22 @@ describe("TagItemUseCase", () => {
     expect(links).toHaveLength(0);
   });
 
+  it("refuses with a NotFoundError, linking nothing, when the Item is deleted after it was found", async () => {
+    const { useCase, itemRepository, items, links } = scene();
+    // The Item goes between the ownership check and the link, as a concurrent delete would.
+    const findById = itemRepository.findById.bind(itemRepository);
+    itemRepository.findById = async (userId, itemId) => {
+      const found = await findById(userId, itemId);
+      items.splice(0, items.length);
+      return found;
+    };
+
+    await expect(
+      useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(links).toHaveLength(0);
+  });
+
   it("never reuses another User's Tag with the same Tag name", async () => {
     const { useCase, tags, tagRepository } = scene();
     const theirs = await tagRepository.findOrCreate(
