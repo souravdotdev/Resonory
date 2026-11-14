@@ -246,7 +246,7 @@ An Item can have at most 20 Tags (`MAX_TAGS_PER_ITEM`), and a User at most 1,000
 
 The adapter enforces each limit in the same transaction as the write it guards, behind a row lock (`SELECT ... FOR NO KEY UPDATE`, which still lets foreign keys to the row be checked): `findOrCreate` locks the User's `users` row, then counts and inserts; `applyAsUser` locks the Item's `items` row, then counts and links. Concurrent requests therefore take turns and can't race past either limit. Two gaps remain:
 
-- a future writer that links Tags without taking the Item's lock (the AI tagger) could push an Item past 20, so it must lock the same row;
+- the database itself doesn't cap an Item's Tags: only the lock and count do. So any other writer that puts Tags on an Item (the AI tagger, once it exists) must, in the same transaction as its insert, take the same lock on the Item's `items` row (`SELECT ... FOR NO KEY UPDATE`) and count the Item's links before linking, or concurrent writes can push an Item past 20;
 - `TagItemUseCase` checks the Item's count early so a full Item doesn't leave a new Tag behind, but two requests racing for an Item's last slot both pass that check: the loser gets `409 item_tag_limit`, and the new Tag it created stays on no Item, like any Tag taken off its last Item.
 
 ### `DELETE /items/:itemId/tags/:tagId`
