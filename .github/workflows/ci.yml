@@ -35,9 +35,10 @@ jobs:
       # there's one source of truth for the pinned pnpm version.
       - uses: pnpm/action-setup@v6
 
+      # Node version read from .nvmrc, the same file local nvm/fnm use.
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
@@ -78,7 +79,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
