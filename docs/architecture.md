@@ -63,7 +63,7 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 
 ## Tech stack
 
-**Language & runtime**: TypeScript, Node.js ≥20
+**Language & runtime**: TypeScript, Node.js ≥24 (pinned to 24 in `.nvmrc`, which CI also reads)
 
 **Package management & orchestration**: pnpm (workspaces), Turborepo
 
