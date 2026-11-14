@@ -5,6 +5,7 @@
 - Node.js ≥20
 - pnpm (`corepack enable` or install directly — root `package.json` pins `packageManager: pnpm@10.13.1`)
 - Docker (for local Postgres + Redis)
+- [gitleaks](https://github.com/gitleaks/gitleaks) (macOS: `brew install gitleaks`). The pre-commit hook scans staged changes for secrets and refuses to commit without it; see [Security](./security.md#secret-scanning)
 
 ## Install
 
@@ -114,15 +115,18 @@ To run just one app: `pnpm --filter web dev` (or `api`, `worker`).
 ## Other common commands
 
 ```bash
-pnpm build         # production build for every app (tsup for api/worker, next build for web)
-pnpm lint          # eslint across every package
-pnpm check-types   # tsc --noEmit across every package
-pnpm test          # vitest run across every package — see docs/testing.md
-pnpm format        # prettier --write across the repo
-pnpm format:check  # prettier --check (CI-style, no writes)
+pnpm build             # production build for every app (tsup for api/worker, next build for web)
+pnpm lint              # eslint across every package
+pnpm check-types       # tsc --noEmit across every package
+pnpm test              # vitest run across every package, no database needed — see docs/testing.md
+pnpm test:integration  # the API's Postgres-backed tests (needs the Compose Postgres)
+pnpm format            # prettier --write across the repo
+pnpm format:check      # prettier --check (CI-style, no writes)
 ```
 
-All of these (except `format`/`format:check`, which run Prettier directly rather than through Turborepo — see [Code Quality](./code-quality.md)) are Turborepo tasks, so results are cached and only re-run for packages whose inputs actually changed.
+All of these (except `format`/`format:check`, which run Prettier directly rather than through Turborepo — see [Code Quality](./code-quality.md)) are Turborepo tasks, so results are cached and only re-run for packages whose inputs actually changed. `test:integration` is the exception: never cached, since its result depends on the database.
+
+**Running the integration tests.** With `docker compose up -d` running, `pnpm test:integration` (or `pnpm --filter api test:integration`) creates a throwaway database on the Compose Postgres for each test file (`resonory_test_<random>`), runs every migration in it, and drops it afterwards, even when a test fails. Your `resonory` database isn't touched, and nothing needs migrating first. To use another server, set `TEST_DATABASE_URL` to a connection string for it (any database the user can connect to; the throwaway ones are created next to it), e.g. `TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm test:integration`. See [Testing](./testing.md#integration-tests-apps-api).
 
 These same checks (plus commit-message linting) also run automatically in CI on every push and PR — see [Code Quality](./code-quality.md#continuous-integration).
 
@@ -177,4 +181,4 @@ Once you're signed in this way, any other authenticated request from that same `
 
 ### Doing the same thing in Bruno
 
-`apps/api/bruno/` has a [Bruno](https://www.usebruno.com/) collection covering the same flow, for testing outside a browser console: "1. Sign In (Google)" (still needs a real browser for the consent screen — Bruno copies the resulting Session cookie out of DevTools, same as above), "2. Get Session", "3. Create API Key" (its post-response script stashes the raw key into the `apiKey` environment variable automatically), and "Create Item (with API key)" to prove the key actually authenticates. Open the collection, select the "Local" environment, and set the `sessionCookie` secret variable per the first request's docs tab.
+`apps/api/bruno/` has a [Bruno](https://www.usebruno.com/) collection covering the same flow, for testing outside a browser console: "1. Sign In (Google)" (still needs a real browser for the consent screen — Bruno copies the resulting Session cookie out of DevTools, same as above), "2. Get Session", "3. Create API Key" (its post-response script stashes the raw key into the `apiKey` environment variable automatically), and "Create Item (with API key)" to prove the key actually authenticates. "Create Item (with session)" saves an Item with the Session cookie and stores its id in `itemId`, and the Tags folder runs the Tag routes against it in order: "1. Tag an Item" (stores the Tag's id in `tagId`), "2. List Tags", "3. Take a Tag off an Item", and "4. Tag an Item (API key refused)", which expects the web-Session-only 403. Each request's docs tab lists the edge cases to try by hand. Keep values like `itemId`, `tagId`, `apiKey` and `sessionCookie` in the Local environment, never in a request's Vars tab: Bruno saves request vars into the committed `.bru` file, where they override the environment (breaking the chain above) and can leak a secret. Open the collection, select the "Local" environment, and set the `sessionCookie` secret variable per the first request's docs tab.

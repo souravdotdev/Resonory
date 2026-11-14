@@ -13,4 +13,7 @@ export interface IItemRepository {
    * saving the same one twice creates two Items.
    */
   create(newItem: NewItem): Promise<Item>;
+
+  /** The User's Item with this id, or null when there's none or it's another User's. */
+  findById(userId: string, itemId: string): Promise<Item | null>;
 }

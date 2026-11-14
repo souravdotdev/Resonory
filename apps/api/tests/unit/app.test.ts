@@ -6,16 +6,24 @@ import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
+  ItemTagsResponseSchema,
+  ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
+  MAX_TAG_INPUT_LENGTH,
 } from "@resonory/shared/schemas/items";
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
+import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
+import { UntagItemUseCase } from "@/application/use-cases/tags/UntagItemUseCase";
 import type { Item } from "@/domain/entities/Item";
 import type { User } from "@/domain/entities/User";
 import {
+  ForbiddenError,
+  InvalidTagNameError,
   NotFoundError,
   RepositoryError,
   UnauthorizedError,
@@ -24,14 +32,17 @@ import {
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
 import type { IItemRepository, NewItem } from "@/domain/repositories/IItemRepository";
+import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { TOKENS } from "@/di/tokens";
 import type { Env } from "@/env";
 import { IN_MEMORY_RATE_LIMITS, type RateLimitRedis } from "@/rate-limit-store";
 import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
+import { TagsController } from "@/interface/controllers/TagsController";
 import { authMiddleware, signedInUser } from "@/interface/middleware/auth.middleware";
 import type { AuthRequestHandler } from "@/interface/routes/auth.routes";
 import { CREATE_ITEM_IP_LIMIT } from "@/interface/routes/items.routes";
+import { anItem, taggingInMemory } from "./fakes/tagging";
 
 const env: Env = {
   PORT: 4000,
@@ -82,6 +93,8 @@ function itemsInMemory() {
       saved.push(item);
       return item;
     },
+    findById: async (userId: string, itemId: string) =>
+      saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
   };
   return { repository, saved };
 }
@@ -91,14 +104,19 @@ const queueRecording = (): IQueueProvider => ({ enqueueProcessItem: vi.fn(async 
 interface TestDoubles {
   items?: IItemRepository;
   queue?: IQueueProvider;
+  tags?: ITagRepository;
 }
 
 // A test container: the real app, use cases and controllers, with fakes for
 // Better Auth, the Session lookup (by default no request has a valid Session),
-// the Item repository and the queue. The rate-limit store is explicitly in-memory (no Redis).
+// the Item and Tag repositories and the queue. The rate-limit store is explicitly in-memory (no Redis).
 function testContainer(
   sessions: ISessionProvider = sessionsReturning(null),
-  { items = itemsInMemory().repository, queue = queueRecording() }: TestDoubles = {},
+  {
+    items = itemsInMemory().repository,
+    queue = queueRecording(),
+    tags = taggingInMemory().tagRepository,
+  }: TestDoubles = {},
 ) {
   const container = new Container();
   container.bind(TOKENS.Env).toConstantValue(env);
@@ -114,6 +132,11 @@ function testContainer(
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
+  container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
+  container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
+  container.bind(TOKENS.UntagItemUseCase).to(UntagItemUseCase);
+  container.bind(TOKENS.TagsController).to(TagsController);
+  container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
   return container;
 }
 
@@ -629,6 +652,546 @@ describe("POST /items", () => {
   });
 });
 
+describe("POST /items/:itemId/tags", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const tag = (
+      name: unknown,
+      itemId = ITEM_ID,
+      headers: Record<string, string> = withSessionCookie,
+    ) => app.inject({ method: "POST", url: `/items/${itemId}/tags`, headers, payload: { name } });
+    return { ...store, app, tag };
+  }
+
+  it("answers 200 with the Item's Tags: a new name creates the User's Tag, Tag source user", async () => {
+    const { tag, tags, links } = await scene();
+
+    const res = await tag("Machine Learning");
+
+    expect(res.statusCode).toBe(200);
+    expect(tags).toEqual([expect.objectContaining({ userId: USER_ID, name: "machine-learning" })]);
+    expect(links).toEqual([expect.objectContaining({ itemId: ITEM_ID, source: "user" })]);
+    expect(res.json()).toEqual([{ id: tags[0]!.id, name: "machine-learning", source: "user" }]);
+    expect(ItemTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("reuses the existing Tag for a name differing only in case, spaces or punctuation", async () => {
+    const { tag, tags, items } = await scene();
+    const otherItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: otherItemId, userId: USER_ID }));
+    await tag("Machine Learning");
+
+    const res = await tag("machine_learning!", otherItemId);
+
+    expect(res.statusCode).toBe(200);
+    expect(tags).toHaveLength(1);
+    expect(res.json()).toEqual([{ id: tags[0]!.id, name: "machine-learning", source: "user" }]);
+  });
+
+  it("changes a Tag the AI already put on the Item to Tag source user", async () => {
+    const { tag, links, tagRepository, tick } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "ai",
+      createdAt: tick(),
+    });
+
+    const res = await tag("memory");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory", source: "user" }]);
+    expect(links).toEqual([expect.objectContaining({ tagId: memory.id, source: "user" })]);
+  });
+
+  it("changes nothing and returns the same Tags when repeated", async () => {
+    const { tag, tags, links } = await scene();
+    const first = await tag("memory");
+
+    const second = await tag("memory");
+
+    expect(second.statusCode).toBe(200);
+    expect(second.json()).toEqual(first.json());
+    expect(tags).toHaveLength(1);
+    expect(links).toHaveLength(1);
+  });
+
+  it("ends with exactly one Tag when two requests create the same new Tag at once", async () => {
+    const { tag, tags } = await scene();
+
+    const [first, second] = await Promise.all([tag("Memory"), tag("memory")]);
+
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
+    expect(tags).toHaveLength(1);
+    expect(first.json()).toEqual(second.json());
+  });
+
+  describe("at the Tag limits", () => {
+    // Puts `count` of the User's Tags on the Item, named tag-1, tag-2, ...
+    async function putTagsOn(
+      { tagRepository, links, tick }: Awaited<ReturnType<typeof scene>>,
+      count: number,
+      source: "ai" | "user" = "user",
+    ) {
+      for (let n = 1; n <= count; n++) {
+        const onItem = await tagRepository.findOrCreate(USER_ID, `tag-${n}`);
+        links.push({
+          userId: USER_ID,
+          itemId: ITEM_ID,
+          tagId: onItem.id,
+          source,
+          createdAt: tick(),
+        });
+      }
+    }
+
+    it("is 409 item_tag_limit for a 21st Tag on an Item, which keeps its 20", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20);
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "item_tag_limit",
+        message: "An Item can have at most 20 Tags",
+      });
+      expect(store.links).toHaveLength(20);
+      expect(store.tags.map(({ name }) => name)).not.toContain("one-too-many");
+    });
+
+    it("counts the Tags the AI put on the Item towards its 20", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20, "ai");
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("item_tag_limit");
+    });
+
+    it("answers 200 re-adding a Tag that's already on a full Item", async () => {
+      const store = await scene();
+      await putTagsOn(store, 20, "ai");
+
+      const res = await store.tag("tag-20");
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toHaveLength(20);
+      expect(res.json()).toContainEqual(
+        expect.objectContaining({ name: "tag-20", source: "user" }),
+      );
+    });
+
+    it("is 409 user_tag_limit for a User's 1,001st Tag, and creates no Tag", async () => {
+      const store = await scene();
+      for (let n = 1; n <= 1000; n++) await store.tagRepository.findOrCreate(USER_ID, `lib-${n}`);
+
+      const res = await store.tag("one-too-many");
+
+      expect(res.statusCode).toBe(409);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "user_tag_limit",
+        message: "You can have at most 1,000 Tags",
+      });
+      expect(store.tags).toHaveLength(1000);
+      expect(store.links).toHaveLength(0);
+    });
+
+    it("answers 200 for a User at 1,000 Tags putting one of them on an Item", async () => {
+      const store = await scene();
+      for (let n = 1; n <= 1000; n++) await store.tagRepository.findOrCreate(USER_ID, `lib-${n}`);
+
+      const res = await store.tag("lib-1");
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([expect.objectContaining({ name: "lib-1", source: "user" })]);
+    });
+  });
+
+  it.each([
+    ["empty", ""],
+    ["empty once slugified", "!!! ???"],
+    ["over 50 characters once slugified", "a".repeat(51)],
+  ])(
+    "is 400 validation_failed with the Tag name rule for a name that's %s, and creates no Tag",
+    async (_case, name) => {
+      const { tag, tags, links } = await scene();
+
+      const res = await tag(name);
+
+      expect(res.statusCode).toBe(400);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "validation_failed",
+        message:
+          "A Tag name must be 1 to 50 characters of letters, digits, +, #, . or - " +
+          "(spaces become hyphens, other characters are dropped)",
+      });
+      expect(tags).toHaveLength(0);
+      expect(links).toHaveLength(0);
+    },
+  );
+
+  it("is 400 validation_failed with the issues for a name that isn't text, and creates no Tag", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag(42);
+
+    expect(res.statusCode).toBe(400);
+    const { error } = ErrorResponseSchema.parse(res.json());
+    expect(error.code).toBe("validation_failed");
+    expect(error.details).toEqual([expect.objectContaining({ path: "/name" })]);
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 400 validation_failed with the issues for a name over MAX_TAG_INPUT_LENGTH, before it's slugified", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag("a".repeat(MAX_TAG_INPUT_LENGTH + 1));
+
+    expect(res.statusCode).toBe(400);
+    const { error } = ErrorResponseSchema.parse(res.json());
+    expect(error.code).toBe("validation_failed");
+    expect(error.details).toEqual([expect.objectContaining({ path: "/name" })]);
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 400 validation_failed for an Item id that isn't a uuid", async () => {
+    const { tag } = await scene();
+
+    const res = await tag("memory", "item-1");
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+  });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag("memory", "00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 404 not_found for another User's Item, never 403", async () => {
+    const { tag, tags, items } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: "11111111-1111-4111-8111-111111111111" }));
+
+    const res = await tag("memory", theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 401 unauthorized without a valid Session, and creates no Tag", async () => {
+    const { tag, tags } = await scene(sessionsReturning(null));
+
+    const res = await tag("memory", ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and creates no Tag", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { tag, tags } = await scene();
+
+    const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "forbidden",
+      message: "That isn't allowed with these credentials",
+    });
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 401 unauthorized for an invalid API key, same as any request without a Session", async () => {
+    const { tag } = await scene(sessionsReturning(null));
+
+    const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_made_up" });
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
+describe("DELETE /items/:itemId/tags/:tagId", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item with their Tag "memory" on it (Tag source user),
+  // and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const memory = await store.tagRepository.findOrCreate(USER_ID, "memory");
+    store.links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "user",
+      createdAt: store.tick(),
+    });
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const untag = (
+      tagId: string,
+      itemId = ITEM_ID,
+      headers: Record<string, string> = withSessionCookie,
+    ) => app.inject({ method: "DELETE", url: `/items/${itemId}/tags/${tagId}`, headers });
+    return { ...store, app, memory, untag };
+  }
+
+  it("answers 200 with the Item's remaining Tags, and keeps the Tag", async () => {
+    const { untag, memory, tags, links, tagRepository, tick } = await scene();
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: sleep.id,
+      source: "ai",
+      createdAt: tick(),
+    });
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: sleep.id, name: "sleep", source: "ai" }]);
+    expect(ItemTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+    expect(links).toEqual([expect.objectContaining({ tagId: sleep.id })]);
+    expect(tags.map((tag) => tag.name)).toEqual(["memory", "sleep"]);
+  });
+
+  it("takes off a Tag the AI put on, and keeps it though it's on no Items", async () => {
+    const { untag, memory, tags, links } = await scene();
+    links[0]!.source = "ai";
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+    expect(links).toHaveLength(0);
+    expect(tags).toEqual([memory]);
+  });
+
+  it("answers 200 with the Item's Tags, changing nothing, when the Tag isn't on the Item", async () => {
+    const { untag, memory, links, tagRepository } = await scene();
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+
+    const res = await untag(sleep.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory", source: "user" }]);
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 200 again when repeated, with the Tag already off", async () => {
+    const { untag, memory } = await scene();
+    await untag(memory.id);
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it.each([
+    ["the Item id", "item-1", undefined],
+    ["the Tag id", undefined, "tag-1"],
+  ])("is 400 validation_failed when %s isn't a uuid", async (_case, itemId, tagId) => {
+    const { untag, memory, links } = await scene();
+
+    const res = await untag(tagId ?? memory.id, itemId ?? ITEM_ID);
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { untag, memory } = await scene();
+
+    const res = await untag(memory.id, "00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Item, never 403, and leaves their Tags on it", async () => {
+    const { untag, items, links, tagRepository, tick } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: OTHER_USER_ID }));
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "memory");
+    links.push({
+      userId: OTHER_USER_ID,
+      itemId: theirItemId,
+      tagId: theirs.id,
+      source: "user",
+      createdAt: tick(),
+    });
+
+    const res = await untag(theirs.id, theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(links).toHaveLength(2);
+  });
+
+  it("is 404 not_found for a Tag that doesn't exist", async () => {
+    const { untag } = await scene();
+
+    const res = await untag("00000000-0000-4000-9000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Tag, never 403", async () => {
+    const { untag, tagRepository } = await scene();
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "sleep");
+
+    const res = await untag(theirs.id);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 401 unauthorized without a valid Session, and removes nothing", async () => {
+    const { untag, memory, links } = await scene(sessionsReturning(null));
+
+    const res = await untag(memory.id, ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and removes nothing", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { untag, memory, links } = await scene();
+
+    const res = await untag(memory.id, ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+    expect(links).toHaveLength(1);
+  });
+});
+
+describe("GET /tags", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const list = (headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "GET", url: "/tags", headers });
+    const link = (tagId: string, source: "ai" | "user" = "user") =>
+      store.links.push({
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        tagId,
+        source,
+        createdAt: store.tick(),
+      });
+    return { ...store, app, list, link };
+  }
+
+  it("answers 200 with an empty list for a User with no Tags", async () => {
+    const { list } = await scene();
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it("answers 200 with every one of the User's Tags and none of another User's", async () => {
+    const { list, tagRepository } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    await tagRepository.findOrCreate("11111111-1111-4111-8111-111111111111", "theirs");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory" }]);
+    expect(ListTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("puts the most recently used Tag first, AI or User, and a Tag on no Items by its creation", async () => {
+    const { list, tagRepository, link } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    const reading = await tagRepository.findOrCreate(USER_ID, "reading");
+    link(reading.id, "user");
+    link(memory.id, "ai");
+    // Created after both were used, and never put on an Item.
+    await tagRepository.findOrCreate(USER_ID, "unused");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().map((tag: { name: string }) => tag.name)).toEqual([
+      "unused",
+      "memory",
+      "reading",
+    ]);
+  });
+
+  it("is 401 unauthorized without a valid Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key", async () => {
+    const { list, tagRepository } = await scene();
+    await tagRepository.findOrCreate(USER_ID, "memory");
+
+    const res = await list({ "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+  });
+
+  it("is 401 unauthorized for an invalid API key, same as any request without a Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({ "x-api-key": "resk_made_up" });
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
 // The real app plus a test-only protected route that echoes who it sees.
 async function appWithProtectedRoute(sessions: ISessionProvider) {
   const container = testContainer(sessions);
@@ -782,6 +1345,32 @@ describe("the API's schemas and error envelope", () => {
     expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
       code: "unauthorized",
       message: "You need to sign in to do that",
+    });
+  });
+
+  it("sends a domain ForbiddenError as 403 forbidden with a safe message", async () => {
+    const app = await appWithTestRoutes(new ForbiddenError("POST /x takes only a web Session"));
+
+    const res = await app.inject({ method: "GET", url: "/throws" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "forbidden",
+      message: "That isn't allowed with these credentials",
+    });
+  });
+
+  it("sends an InvalidTagNameError as 400 validation_failed with the Tag name rule, not its message", async () => {
+    const app = await appWithTestRoutes(new InvalidTagNameError("too-long"));
+
+    const res = await app.inject({ method: "GET", url: "/throws" });
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "validation_failed",
+      message:
+        "A Tag name must be 1 to 50 characters of letters, digits, +, #, . or - " +
+        "(spaces become hyphens, other characters are dropped)",
     });
   });
 

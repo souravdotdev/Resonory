@@ -1,0 +1,53 @@
+meta {
+  name: 1. Tag an Item
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/items/{{itemId}}/tags
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+body:json {
+  {
+    "name": "Machine Learning"
+  }
+}
+
+script:post-response {
+  // Remember the Tag just applied, for "3. Take a Tag off an Item".
+  if (Array.isArray(res.body)) {
+    const tag = res.body.find((t) => t.name === "machine-learning");
+    if (tag) bru.setEnvVar("tagId", tag.id);
+  }
+}
+
+tests {
+  test("returns the Item's Tags", () => {
+    expect(res.status).to.equal(200);
+    expect(res.body.map((t) => t.name)).to.include("machine-learning");
+  });
+}
+
+docs {
+  Requires `sessionCookie` and `itemId` (run "Create Item (with session)").
+  
+  Puts a Tag on the Item by name: the User's existing Tag with that Tag name,
+  or a new one. The name is slugified, so "Machine Learning" becomes
+  `machine-learning`. Returns the Item's Tags after the change.
+  
+  Things to try by editing `name`:
+  - "machine learning" or "MACHINE-learning": same Tag, same `id`, no new one
+  - send it twice: nothing changes (idempotent)
+  - a new name: a new Tag, added to the list
+  - "!!!" or a 51-character name: 400 `validation_failed`, with the Tag name rule
+  - 21 different names: the 21st gets 409 `item_tag_limit`
+  - a random uuid as `itemId`: 404
+}

@@ -1,4 +1,4 @@
-import { getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -22,5 +22,15 @@ export class DrizzleItemRepository implements IItemRepository {
       .values({ userId: newItem.userId, sourceUrl: newItem.sourceUrl })
       .returning(itemColumns);
     return toItem(row!);
+  }
+
+  async findById(userId: string, itemId: string): Promise<Item | null> {
+    // Scoped by user_id, so another User's Item looks the same as no Item.
+    const [row] = await this.db
+      .select(itemColumns)
+      .from(items)
+      .where(and(eq(items.id, itemId), eq(items.userId, userId)))
+      .limit(1);
+    return row === undefined ? null : toItem(row);
   }
 }

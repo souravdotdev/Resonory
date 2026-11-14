@@ -1,0 +1,38 @@
+meta {
+  name: 4. Tag an Item (API key refused)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/items/{{itemId}}/tags
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  x-api-key: {{apiKey}}
+}
+
+body:json {
+  {
+    "name": "machine-learning"
+  }
+}
+
+tests {
+  test("refuses the extension's API key", () => {
+    expect(res.status).to.equal(403);
+    expect(res.body.error.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  Requires `apiKey` ("3. Create API Key") and `itemId`.
+  
+  The Tag routes are web-Session-only: a valid API key (the extension's) is
+  refused with 403 `forbidden`, even though it would authenticate on
+  `POST /items`. An invalid or blank key gets 401 instead, since that request
+  has no Session at all.
+}

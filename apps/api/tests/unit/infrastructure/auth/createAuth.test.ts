@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "@resonory/db/schema";
+import { API_KEY_HEADER } from "@/infrastructure/auth/apiKeyHeader";
 import { createAuth, type AuthConfig, type AuthDeps } from "@/infrastructure/auth/createAuth";
 import { BetterAuthSessionProvider } from "@/infrastructure/auth/BetterAuthSessionProvider";
 
@@ -79,6 +80,20 @@ describe("createAuth", () => {
 
     expect(context.authCookies.sessionToken.attributes.domain).toBe("resonory.com");
   });
+
+  // sessionOnlyAuthMiddleware refuses API keys by looking for API_KEY_HEADER, so the
+  // api-key plugin must read keys from exactly that header and nowhere else. A
+  // too-short key is refused by the plugin before any table is read.
+  it("reads API keys only from API_KEY_HEADER, the header the web-Session-only guard checks", async () => {
+    const auth = buildAuth();
+
+    await expect(
+      auth.api.getSession({ headers: new Headers({ [API_KEY_HEADER]: "too-short" }) }),
+    ).rejects.toMatchObject({ body: { code: "INVALID_API_KEY" } });
+    await expect(
+      auth.api.getSession({ headers: new Headers({ authorization: "Bearer too-short" }) }),
+    ).resolves.toBeNull();
+  });
 });
 
 // Everything above never reaches a table (drizzle.mock() answers before any
@@ -86,7 +101,8 @@ describe("createAuth", () => {
 // plugin reading and writing real rows, so they're tested against the real local
 // Postgres (the same one `docker-compose.yml` starts for local dev), the one
 // place in this suite that needs it. Skipped wherever that database isn't
-// reachable (e.g. CI, which runs no Postgres service) rather than failing — the
+// reachable (e.g. CI, whose Postgres service listens on 5432 for the
+// integration tests, not 5433) rather than failing — the
 // property this covers is also exercised at the unit level, with a fake Better
 // Auth, by BetterAuthSessionProvider.test.ts.
 const REAL_DATABASE_URL = "postgres://postgres:postgres@localhost:5433/resonory";

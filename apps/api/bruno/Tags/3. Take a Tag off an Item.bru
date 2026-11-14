@@ -1,0 +1,31 @@
+meta {
+  name: 3. Take a Tag off an Item
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/items/{{itemId}}/tags/{{tagId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+tests {
+  test("returns the Item's remaining Tags", () => {
+    expect(res.status).to.equal(200);
+    expect(res.body.map((t) => t.id)).to.not.include(bru.getEnvVar("tagId"));
+  });
+}
+
+docs {
+  Requires `sessionCookie`, `itemId` and `tagId` ("1. Tag an Item" sets
+  `tagId`).
+  
+  Takes the Tag off the Item and returns the Item's remaining Tags. The Tag
+  itself is kept: it still shows in "2. List Tags". Sending it again is
+  harmless (200, same list). A random uuid as `tagId` gets 404.
+}

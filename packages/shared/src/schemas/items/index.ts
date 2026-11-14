@@ -20,6 +20,17 @@ export {
   type TagSource,
 } from "./item-card";
 export {
+  ItemTagParamsSchema,
+  ItemTagsResponseSchema,
+  MAX_TAG_INPUT_LENGTH,
+  TagItemSchema,
+  UntagItemParamsSchema,
+  type ItemTagParams,
+  type ItemTagsResponse,
+  type TagItemInput,
+  type UntagItemParams,
+} from "./item-tags";
+export {
   DEFAULT_LIST_LIMIT,
   ListItemsQuerySchema,
   ListItemsResponseSchema,
@@ -27,3 +38,9 @@ export {
   type ListItemsQuery,
   type ListItemsResponse,
 } from "./list-items";
+export {
+  ListedTagSchema,
+  ListTagsResponseSchema,
+  type ListedTag,
+  type ListTagsResponse,
+} from "./list-tags";

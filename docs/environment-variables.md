@@ -54,6 +54,8 @@ Optional Thumbnail storage, read by the same rules as the worker. With either on
 | `SUPABASE_URL`              | The Supabase project URL, for Storage                                          | `https://<project-ref>.supabase.co` or unset |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role (or secret) key; bypasses Storage row-level security, server only | from Supabase dashboard → API keys, or unset |
 
+`TEST_DATABASE_URL` isn't read from `.env`: it's an optional shell variable for `pnpm test:integration`, the Postgres server the integration tests create their throwaway databases on. Unset, it's the Compose Postgres, `postgres://postgres:postgres@localhost:5433/postgres`. CI sets it to its Postgres service. See [Testing](./testing.md#integration-tests-apps-api).
+
 ## `apps/worker/.env`
 
 | Variable                    | Purpose                                                                                       | Local dev value                                                   |

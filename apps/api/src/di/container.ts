@@ -6,11 +6,15 @@ import { AdmitSignInUseCase } from "@/application/use-cases/auth/AdmitSignInUseC
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
+import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
+import { UntagItemUseCase } from "@/application/use-cases/tags/UntagItemUseCase";
 import { TOKENS } from "@/di/tokens";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
+import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import type { IUserRepository } from "@/domain/repositories/IUserRepository";
 import { env, type Env } from "@/env";
 import {
@@ -23,6 +27,7 @@ import { db } from "@/infrastructure/database/db";
 import { BullMqQueueProvider, type ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
 import { itemsQueue } from "@/infrastructure/queue/itemsQueue";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
+import { DrizzleTagRepository } from "@/infrastructure/repositories/DrizzleTagRepository";
 import { DrizzleUserRepository } from "@/infrastructure/repositories/DrizzleUserRepository";
 import {
   SupabaseThumbnailUrlProvider,
@@ -30,6 +35,7 @@ import {
 } from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
 import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
+import { TagsController } from "@/interface/controllers/TagsController";
 import { rateLimitRedis } from "@/rate-limit-redis";
 import type { RateLimitRedis } from "@/rate-limit-store";
 
@@ -55,6 +61,7 @@ export function createContainer(): Container {
     .bind<IItemRepository>(TOKENS.ItemRepository)
     .to(DrizzleItemRepository)
     .inSingletonScope();
+  container.bind<ITagRepository>(TOKENS.TagRepository).to(DrizzleTagRepository).inSingletonScope();
   container.bind<IQueueProvider>(TOKENS.QueueProvider).to(BullMqQueueProvider).inSingletonScope();
 
   // Without Supabase Storage there's no Thumbnail provider, and Item cards carry no Thumbnail.
@@ -116,9 +123,13 @@ export function createContainer(): Container {
     .inTransientScope();
   container.bind(TOKENS.GetMeUseCase).to(GetMeUseCase).inTransientScope();
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase).inTransientScope();
+  container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase).inTransientScope();
+  container.bind(TOKENS.UntagItemUseCase).to(UntagItemUseCase).inTransientScope();
+  container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase).inTransientScope();
 
   container.bind(TOKENS.MeController).to(MeController).inSingletonScope();
   container.bind(TOKENS.ItemsController).to(ItemsController).inSingletonScope();
+  container.bind(TOKENS.TagsController).to(TagsController).inSingletonScope();
 
   return container;
 }

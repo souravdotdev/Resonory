@@ -30,6 +30,10 @@ function itemsInMemory() {
       saved.push(item);
       return item;
     }),
+    findById: vi.fn(
+      async (userId: string, itemId: string) =>
+        saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
+    ),
   };
   return { repository, saved };
 }

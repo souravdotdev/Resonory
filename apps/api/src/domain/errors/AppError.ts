@@ -1,6 +1,13 @@
 /** Every code a domain error can carry. The interface layer decides what each means over HTTP. */
 export type AppErrorCode =
-  "NOT_FOUND" | "REPOSITORY_ERROR" | "UNAUTHORIZED" | "USER_PERMANENTLY_DELETED";
+  | "FORBIDDEN"
+  | "INVALID_TAG_NAME"
+  | "ITEM_TAG_LIMIT"
+  | "NOT_FOUND"
+  | "REPOSITORY_ERROR"
+  | "UNAUTHORIZED"
+  | "USER_PERMANENTLY_DELETED"
+  | "USER_TAG_LIMIT";
 
 /**
  * The base of every domain error: a message for logs and a code for callers.

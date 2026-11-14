@@ -1,1 +1,9 @@
+# Refuse to commit a secret: scans only what's staged, with .gitleaks.toml.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks isn't installed, so this commit can't be scanned for secrets." >&2
+  echo "Install it (macOS: brew install gitleaks; see docs/security.md) and commit again." >&2
+  exit 1
+fi
+gitleaks git --pre-commit --staged --redact --no-banner --verbose || exit 1
+
 pnpm exec lint-staged

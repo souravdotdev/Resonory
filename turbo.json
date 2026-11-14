@@ -13,6 +13,10 @@
     "lint": {},
     "check-types": {},
     "test": {},
+    "test:integration": {
+      "cache": false,
+      "env": ["TEST_DATABASE_URL"]
+    },
     "db:generate": {
       "cache": false,
       "interactive": false

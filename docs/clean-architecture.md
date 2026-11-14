@@ -18,40 +18,42 @@ apps/api/src/
     container.ts        createContainer(): the only place concrete classes are bound
   domain/
     entities/           User.ts (User, SignInProfile), Item.ts, Tag.ts
-    repositories/       IUserRepository.ts, IItemRepository.ts
+    repositories/       IUserRepository.ts, IItemRepository.ts, ITagRepository.ts
     providers/          ISessionProvider.ts, IThumbnailUrlProvider.ts, IQueueProvider.ts
     errors/             AppError and its subclasses (barrel: @/domain/errors)
     rules/              signInDecision.ts, tagName.ts (pure functions)
   application/
     use-cases/auth/     AdmitSignInUseCase, ResolveSignedInUserUseCase, GetMeUseCase
     use-cases/items/    SaveItemUseCase
+    use-cases/tags/     ListTagsUseCase, TagItemUseCase, UntagItemUseCase
     dto/auth/           MeOutput.ts
     dto/items/          ItemCardOutput.ts (toItemCardOutput)
+    dto/tags/           ItemTagsOutput.ts (toItemTagsOutput), ListTagsOutput.ts (toListTagsOutput)
   infrastructure/
     auth/               createAuth.ts, signInHook.ts, googleProfile.ts, BetterAuthSessionProvider.ts
     database/           Database.ts (the handle type), db.ts (the runtime Drizzle instance)
     queue/              BullMqQueueProvider.ts, itemsQueue.ts (the BullMQ Items queue)
-    repositories/       DrizzleUserRepository.ts, DrizzleItemRepository.ts
+    repositories/       DrizzleUserRepository.ts, DrizzleItemRepository.ts, DrizzleTagRepository.ts
     storage/            SupabaseThumbnailUrlProvider.ts (signs Thumbnail links)
     mappers/            userMapper.ts, itemMapper.ts, tagMapper.ts (row -> entity)
   interface/
-    routes/             auth.routes.ts, me.routes.ts, items.routes.ts (Fastify plugins)
-    controllers/        MeController.ts, ItemsController.ts
+    routes/             auth.routes.ts, me.routes.ts, items.routes.ts, tags.routes.ts (Fastify plugins)
+    controllers/        MeController.ts, ItemsController.ts, TagsController.ts
     middleware/         auth.middleware.ts, error.middleware.ts
     http/               toWebHeaders.ts
 ```
 
 What each layer holds:
 
-- **`domain/`** holds the business vocabulary and nothing else. It has entities (plain interfaces, dates as `Date`), ports (`I`-prefixed interfaces: repositories for storage, providers for every other outside service), errors and pure rules. Examples of rules: `decideSignIn(deletedAt, now)` returns `allow`, `restore` or `refuse`, with `GRACE_PERIOD_DAYS = 30`. `isDeleted(user)` says whether a User is deleted. `slugifyTagName` and `TAG_NAME_PATTERN` define Tag names. The domain imports nothing outside itself.
-- **`domain/errors/`** has `AppError(message, code)` with `NotFoundError`, `RepositoryError`, `UnauthorizedError` and `UserPermanentlyDeletedError`. A domain error carries a code (`AppErrorCode`), never an HTTP status.
+- **`domain/`** holds the business vocabulary and nothing else. It has entities (plain interfaces, dates as `Date`), ports (`I`-prefixed interfaces: repositories for storage, providers for every other outside service), errors and pure rules. Examples of rules: `decideSignIn(deletedAt, now)` returns `allow`, `restore` or `refuse`, with `GRACE_PERIOD_DAYS = 30`. `isDeleted(user)` says whether a User is deleted. `slugifyTagName` and `TAG_NAME_PATTERN` define Tag names. `MAX_TAGS_PER_ITEM = 20` and `MAX_TAGS_PER_USER = 1000` are the Tag limits. The domain imports nothing outside itself.
+- **`domain/errors/`** has `AppError(message, code)` with `ForbiddenError`, `NotFoundError`, `RepositoryError`, `UnauthorizedError` and `UserPermanentlyDeletedError`, and the Tag errors `InvalidTagNameError`, `ItemTagLimitError` and `UserTagLimitError`. A domain error carries a code (`AppErrorCode`), never an HTTP status.
 - **`application/`** holds the use cases and their DTOs. A use case is an `@injectable()` class named `XUseCase` with one `execute(input)` method. It gets its ports through `@inject(TOKENS.X)` constructor parameters. It returns an output DTO shaped for its view (for example `MeOutput`, `ItemCardOutput`), not an entity. Input types sit beside the use case (`AdmitSignInInput`). Output DTOs sit in `dto/<feature>/`. One exception, by design: `ResolveSignedInUserUseCase` returns the domain `User` entity, because the auth middleware attaches that User to the request for the use cases behind protected routes. Those use cases take the User as input (`GetMeUseCase.execute(user)`). The entity never reaches the wire: each route's use case still returns an output DTO.
 - **`infrastructure/`** holds the adapters: classes and functions that implement a domain port with a real tool. Examples: `DrizzleUserRepository implements IUserRepository`, `BetterAuthSessionProvider implements ISessionProvider`, and `createAuth`, which builds the Better Auth instance with every auth option ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). The row mappers (`toUser`, `toItem`, `toTag`, `toTagLink`) turn `@resonory/db` rows into entities. Tables, the Postgres client and the Redis connection come from `packages/db` (see [Database](./database.md)).
 - **`interface/`** holds the delivery mechanism (Fastify). Route plugins declare the shared request and response schemas, controllers do the HTTP work and call one use case, and middleware handles who is calling and how errors become responses. `error.middleware.ts` is the one place that maps an `AppError` code to an HTTP status and the shared error envelope. Zod validation failures become 400, and any other error becomes a generic 500 with the details only in the logs.
 
 `di/` sits outside the four layers. It is the composition root: the only code that knows every concrete class.
 
-Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and one use case and route: `SaveItemUseCase` behind `POST /items`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider.
+Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider.
 
 ## The dependency rule
 
@@ -83,13 +85,13 @@ To fix it, define a port in the domain and put the tool code in an infrastructur
 
 ## Tokens, the container and scopes
 
-Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemsQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ItemsController` and `RateLimitRedis`.
+Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemsQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
 
 `di/container.ts` exports `createContainer()`, an InversifyJS `Container`. It is the only place in application code that creates an application class. It binds:
 
 - **Constants** (`toConstantValue`): the validated `Env`, the `Database` (`db` from `infrastructure/database/db.ts`), the rate-limit Redis and the BullMQ Items queue (`itemsQueue`).
 - **The Better Auth instance** (`toDynamicValue(...).inSingletonScope()`): built once, by `createAuth(database, config, { admitSignIn })` from the bound `Env` and `Database`. Its session-create hook gets `admitSignIn` as `{ execute }`, which asks the container for a fresh `AdmitSignInUseCase` on every sign-in. The binding ends `satisfies { api: SessionApi }`, so tsc checks that the instance still fits what `BetterAuthSessionProvider` needs.
-- **Adapters and controllers as singletons** (`.to(Class).inSingletonScope()`): `DrizzleUserRepository`, `DrizzleItemRepository`, `BetterAuthSessionProvider`, `BullMqQueueProvider`, `MeController`, `ItemsController`. One instance lives for the life of the process.
+- **Adapters and controllers as singletons** (`.to(Class).inSingletonScope()`): `DrizzleUserRepository`, `DrizzleItemRepository`, `DrizzleTagRepository`, `BetterAuthSessionProvider`, `BullMqQueueProvider`, `MeController`, `ItemsController`, `TagsController`. One instance lives for the life of the process.
 - **Thumbnail signing, only when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set**: `ThumbnailStorage` (a Supabase `StorageClient`, `toDynamicValue(...).inSingletonScope()`, ending `satisfies ThumbnailStorage`) and `SupabaseThumbnailUrlProvider` as a singleton. Unset, neither token is bound.
 - **Use cases as transient** (`.to(Class).inTransientScope()`): each `container.get` builds a new one, so a use case never carries state from one request to the next.
 
@@ -119,19 +121,21 @@ Sign-in itself runs the same layers from a different front door. Better Auth's h
 
 ## Testing at two seams
 
-Tests live in `apps/api/tests/unit/`, mirroring `src/`, and import through the `@/` alias. Fakes are small hand-written objects or `vi.fn()`, written inline in each test file. More detail is in [Testing](./testing.md).
+Tests live in `apps/api/tests/unit/`, mirroring `src/`, and import through the `@/` alias. Fakes are small hand-written objects or `vi.fn()`, written inline in each test file. One exception: when one fake serves both the use-case tests and the route tests of a slice, it lives once in `tests/unit/fakes/` (today `fakes/tagging.ts`, the in-memory Items, Tags and Tag links behind the Tag use cases and routes), so the two seams can't drift apart. More detail is in [Testing](./testing.md).
 
-- **The HTTP seam** covers everything a client can observe. `tests/unit/app.test.ts` builds the real app with `buildApp(testContainer())` and drives it with Fastify `inject`. `testContainer()` binds the real use cases and controller, a fake `ISessionProvider`, a fake `Auth` handler and a literal `Env`. It binds `RateLimitRedis` to `IN_MEMORY_RATE_LIMITS`. Tests check statuses, bodies and headers: 401 envelopes, `GET /me` output, CORS, security headers, 404 and generic 500 envelopes. A test that needs an extra route (for example one that throws a domain error) adds it to the built app before calling `inject`. `tests/unit/interface/routes/auth.routes.test.ts` uses the same seam for the `/api/auth/*` mount.
+- **The HTTP seam** covers everything a client can observe. `tests/unit/app.test.ts` builds the real app with `buildApp(testContainer())` and drives it with Fastify `inject`. `testContainer()` binds the real use cases and controller, a fake `ISessionProvider`, a fake `Auth` handler and a literal `Env`. It binds `RateLimitRedis` to `IN_MEMORY_RATE_LIMITS`. Tests check statuses, bodies and headers: 401 envelopes, `GET /me` output, CORS, security headers, 404 and generic 500 envelopes, and the Tag routes over the shared tagging fake (their 200 bodies, 400 for an invalid Tag name or id, 403 `forbidden` for an API key, 404 for another User's Item or Tag, 409 at the Tag limits). A test that needs an extra route (for example one that throws a domain error) adds it to the built app before calling `inject`. `tests/unit/interface/routes/auth.routes.test.ts` uses the same seam for the `/api/auth/*` mount.
 - **The use-case seam** covers business behaviour without the container: `new XUseCase(fake).execute(input)`. For example, `new ResolveSignedInUserUseCase(sessionsReturning(null))` rejects with `UnauthorizedError`. `AdmitSignInUseCase` is tested against a fake `IUserRepository`, checking the changes it records and the error it throws.
 
-Pure domain rules (`signInDecision`, `tagName`), mappers, output DTOs, infrastructure adapters (`createAuth` over a mocked database, `BetterAuthSessionProvider`, `googleProfile`, `signInHook`) and env validation are tested directly against their own inputs and outputs. `tests/unit/di/container.test.ts` resolves every token through the real `createContainer()`, with a stubbed environment, a stand-in rate-limit Redis and a stand-in BullMQ Items queue (ioredis connects on construction; the Postgres client only on its first query, which the test never makes). No test needs a database or Redis.
+Pure domain rules (`signInDecision`, `tagName`), mappers, output DTOs, infrastructure adapters (`createAuth` over a mocked database, `BetterAuthSessionProvider`, `googleProfile`, `signInHook`) and env validation are tested directly against their own inputs and outputs. `tests/unit/di/container.test.ts` resolves every token through the real `createContainer()`, with a stubbed environment, a stand-in rate-limit Redis and a stand-in BullMQ Items queue (ioredis connects on construction; the Postgres client only on its first query, which the test never makes). No unit test needs a database or Redis.
+
+Below both seams, a fake can't stand in for what Postgres guarantees (unique constraints, the composite foreign keys, row locks under concurrency), so that is tested against a real, throwaway database in `tests/integration/`, through the real repository (today `DrizzleTagRepository`). These run only with `pnpm test:integration`, never with `pnpm test`. See [Testing](./testing.md#integration-tests-apps-api).
 
 ## Where new code goes
 
 1. **A new business rule** is a pure function in `domain/rules/`, tested on its own.
 2. **A new workflow** is a use case in `application/use-cases/<feature>/XUseCase.ts`, with an output DTO in `application/dto/<feature>/` if it returns something. Add its token and a transient binding.
 3. **A new need from the outside world** (storage, email, a queue, a model API) is a port in `domain/repositories/` or `domain/providers/`, an adapter in `infrastructure/`, a token, and a singleton binding. The port changes first, then the adapter.
-4. **A new endpoint** is a route plugin in `interface/routes/` that declares shared schemas from `@resonory/shared`. Add a controller class in `interface/controllers/` that calls one use case, bind it as a singleton, and register the plugin in `buildApp`. Protected routes use `authMiddleware(container)` and read the User with `signedInUser(request)`. They never read identity from the body.
+4. **A new endpoint** is a route plugin in `interface/routes/` that declares shared schemas from `@resonory/shared`. Add a controller class in `interface/controllers/` that calls one use case, bind it as a singleton, and register the plugin in `buildApp`. Protected routes use `authMiddleware(container)`, or `sessionOnlyAuthMiddleware(container)` when only the web app's Session may call them (it refuses an API key with `403 forbidden`, as the Tag routes do), and read the User with `signedInUser(request)`. They never read identity from the body.
 5. **A new error case** is an `AppError` subclass with a new `AppErrorCode`. Add the code to `statusOfCode` in `error.middleware.ts` (it is a `Record`, so tsc forces this).
 
 Don't create empty layer folders ahead of time. A folder appears with its first file.
