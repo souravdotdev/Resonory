@@ -23,4 +23,10 @@ export interface ITagRepository {
 
   /** The Tags on one of the User's Items, each with its Tag source, oldest link first. */
   listOnItem(userId: string, itemId: string): Promise<AppliedTag[]>;
+
+  /** One of the User's Tags, or `null` when it doesn't exist or is another User's. */
+  findById(userId: string, tagId: string): Promise<Tag | null>;
+
+  /** Takes the Tag off the Item, whatever its Tag source. The Tag itself is kept. No link is a no-op. */
+  removeFromItem(ref: ItemTagRef): Promise<void>;
 }
