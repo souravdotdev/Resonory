@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js ≥20
+- Node.js 24 (`.nvmrc`; the root `package.json` requires ≥24, and CI reads the same `.nvmrc`). With nvm or fnm, `nvm use` / `fnm use` picks it up
 - pnpm (`corepack enable` or install directly — root `package.json` pins `packageManager: pnpm@10.13.1`)
 - Docker (for local Postgres + Redis)
 - [gitleaks](https://github.com/gitleaks/gitleaks) (macOS: `brew install gitleaks`). The pre-commit hook scans staged changes for secrets and refuses to commit without it; see [Security](./security.md#secret-scanning)
