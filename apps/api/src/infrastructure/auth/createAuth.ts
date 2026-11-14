@@ -4,6 +4,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { apiKey } from "@better-auth/api-key";
 import { accounts, apiKeys, sessions, users, verifications } from "@resonory/db/schema";
 import type { Database } from "@/infrastructure/database/Database";
+import { API_KEY_HEADER } from "./apiKeyHeader";
 import { createSignInHook, type AdmitSignIn } from "./signInHook";
 
 // The endpoints that start a Google authorization, where a caller could otherwise
@@ -119,6 +120,10 @@ export function createAuth(db: Database, config: AuthConfig, deps: AuthDeps) {
         // recognizable at a glance (`resk_...`) the way GitHub's `ghp_` or
         // Stripe's `sk_` are. Never applied retroactively to existing keys.
         defaultPrefix: "resk_",
+        // Explicit, not the plugin's default, and shared with the web-Session-only
+        // guard, which refuses requests carrying it. No customAPIKeyGetter: keys
+        // come from this header only, or the guard would stop seeing them.
+        apiKeyHeaders: API_KEY_HEADER,
       }),
     ],
   });

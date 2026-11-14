@@ -128,7 +128,7 @@ Better Auth turns a valid `x-api-key` header (the extension's) into a Session ju
 { "error": { "code": "forbidden", "message": "That isn't allowed with these credentials" } }
 ```
 
-It looks at the header because Better Auth's api-key plugin reads only that header and uses the key over any Session cookie sent alongside it.
+It looks at the header because Better Auth's api-key plugin uses the key over any Session cookie sent alongside it, and reads keys from that one header only. The header name is one constant, `API_KEY_HEADER` (`src/infrastructure/auth/apiKeyHeader.ts`): `createAuth` passes it to the plugin as `apiKeyHeaders` (explicitly, not relying on the default) and sets no `customAPIKeyGetter`, and the guard reads the same constant. `tests/unit/infrastructure/auth/createAuth.test.ts` fails if the plugin ever reads keys from anywhere else, since the Tag routes would then quietly start accepting keys.
 
 ### `GET /me`
 
