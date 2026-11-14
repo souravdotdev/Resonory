@@ -22,11 +22,11 @@ import type { Item } from "@/domain/entities/Item";
 import type { User } from "@/domain/entities/User";
 import {
   ForbiddenError,
+  InvalidTagNameError,
   NotFoundError,
   RepositoryError,
   UnauthorizedError,
   UserPermanentlyDeletedError,
-  ValidationError,
 } from "@/domain/errors";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
@@ -823,16 +823,35 @@ describe("POST /items/:itemId/tags", () => {
     ["empty", ""],
     ["empty once slugified", "!!! ???"],
     ["over 50 characters once slugified", "a".repeat(51)],
-    ["not text", 42],
-  ])("is 400 validation_failed for a name that's %s, and creates no Tag", async (_case, name) => {
-    const { tag, tags, links } = await scene();
+  ])(
+    "is 400 validation_failed with the Tag name rule for a name that's %s, and creates no Tag",
+    async (_case, name) => {
+      const { tag, tags, links } = await scene();
 
-    const res = await tag(name);
+      const res = await tag(name);
+
+      expect(res.statusCode).toBe(400);
+      expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+        code: "validation_failed",
+        message:
+          "A Tag name must be 1 to 50 characters of letters, digits, +, #, . or - " +
+          "(spaces become hyphens, other characters are dropped)",
+      });
+      expect(tags).toHaveLength(0);
+      expect(links).toHaveLength(0);
+    },
+  );
+
+  it("is 400 validation_failed with the issues for a name that isn't text, and creates no Tag", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag(42);
 
     expect(res.statusCode).toBe(400);
-    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    const { error } = ErrorResponseSchema.parse(res.json());
+    expect(error.code).toBe("validation_failed");
+    expect(error.details).toEqual([expect.objectContaining({ path: "/name" })]);
     expect(tags).toHaveLength(0);
-    expect(links).toHaveLength(0);
   });
 
   it("is 400 validation_failed for an Item id that isn't a uuid", async () => {
@@ -1328,15 +1347,17 @@ describe("the API's schemas and error envelope", () => {
     });
   });
 
-  it("sends a domain ValidationError as 400 validation_failed without its message", async () => {
-    const app = await appWithTestRoutes(new ValidationError("A Tag name can't be empty"));
+  it("sends an InvalidTagNameError as 400 validation_failed with the Tag name rule, not its message", async () => {
+    const app = await appWithTestRoutes(new InvalidTagNameError("too-long"));
 
     const res = await app.inject({ method: "GET", url: "/throws" });
 
     expect(res.statusCode).toBe(400);
     expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
       code: "validation_failed",
-      message: "The request could not be processed",
+      message:
+        "A Tag name must be 1 to 50 characters of letters, digits, +, #, . or - " +
+        "(spaces become hyphens, other characters are dropped)",
     });
   });
 

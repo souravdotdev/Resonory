@@ -3,6 +3,7 @@ import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import type { ErrorCode, ErrorResponse } from "@resonory/shared/schemas/common";
 import { AppError, type AppErrorCode } from "@/domain/errors";
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
+import { MAX_TAG_NAME_LENGTH } from "@/domain/rules/tagName";
 
 type SafeError = { code: ErrorCode; message: string };
 
@@ -15,8 +16,15 @@ const clientErrors: Partial<Record<number, SafeError>> = {
   429: { code: "rate_limited", message: "Too many requests, please try again later" },
 };
 // Domain codes that share a status but mean different things to a client get
-// their own code and message, chosen ahead of the status's.
+// their own code and message, chosen ahead of the status's. A code can also keep
+// the status's client code and only say what the client can fix (the Tag name rule).
 const clientErrorsByCode: Partial<Record<AppErrorCode, SafeError>> = {
+  INVALID_TAG_NAME: {
+    code: "validation_failed",
+    message:
+      `A Tag name must be 1 to ${MAX_TAG_NAME_LENGTH} characters of letters, digits, +, #, . or - ` +
+      "(spaces become hyphens, other characters are dropped)",
+  },
   ITEM_TAG_LIMIT: {
     code: "item_tag_limit",
     message: `An Item can have at most ${MAX_TAGS_PER_ITEM} Tags`,
@@ -37,7 +45,7 @@ const serverError: SafeError = {
 
 // The HTTP meaning of each domain error code; 5xx codes are logged and sent as `internal`.
 const statusOfCode: Record<AppErrorCode, number> = {
-  VALIDATION_FAILED: 400,
+  INVALID_TAG_NAME: 400,
   NOT_FOUND: 404,
   UNAUTHORIZED: 401,
   USER_PERMANENTLY_DELETED: 401,
@@ -63,7 +71,8 @@ function sendError(
  * `{ error: { code, message, details? } }` envelope:
  * - request validation failures → 400 `validation_failed` with the issues;
  * - domain errors (`AppError`) → the status their code maps to, with that code's
- *   own client code when it has one (the Tag limits), else the status's;
+ *   own client code and message when it has one (the Tag limits, the Tag name
+ *   rule), else the status's;
  * - Fastify's own 4xx (rate limit, bad content type, ...) → their status;
  * - anything else → a generic 500 `internal`, with the error only in the logs;
  * - unknown routes → 404 `not_found`.
