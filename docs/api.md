@@ -4,7 +4,7 @@ Fastify server in `apps/api`, organised by layer (see [Clean Architecture](./cle
 
 Base URL locally: `http://localhost:4000` (from `PORT` in `apps/api/.env`).
 
-Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me` and `POST /items` (save a URL). The other Item endpoints (list, search, retry, delete) come in later specs, built on the same schema wiring described below.
+Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL) and `POST /items/:itemId/tags` (tag an Item by name). The other Item endpoints (list, search, retry, delete) come in later specs, built on the same schema wiring described below.
 
 ## Shared schemas: one definition of every request and response
 
@@ -12,7 +12,7 @@ Every request and response between `apps/web` and `apps/api` is defined once, as
 
 - `@resonory/shared/schemas/common`: shared shapes, such as the error envelope (`ErrorResponseSchema`).
 - `@resonory/shared/schemas/auth`: the signed-in User (`MeResponseSchema`).
-- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`) and the Item card (`ItemCardSchema`).
+- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`) and the Tag requests and response (`ItemTagParamsSchema`, `TagItemSchema`, `ItemTagsResponseSchema`).
 - `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Items queue name, the Process Item job name and its payload (see [Queue](./queue.md)).
 
 Naming: zod schemas end in `Schema` and their inferred TypeScript types drop the suffix (for example `CreateItemSchema` / `CreateItemInput`, `ItemCardSchema` / `ItemCard`). A plain `Item` is always the domain entity in `apps/api/src/domain/entities`, never a wire shape.
@@ -62,11 +62,12 @@ Every API error is sent in one envelope (`ErrorResponseSchema` in `@resonory/sha
 | ------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `validation_failed` | 400    | The request doesn't match its schema. `details` lists each issue as `{ "path": "/url", "message": "Enter a valid http(s) link" }`. Other client errors (malformed JSON, an unsupported content type, ...) also use this code, with a fixed generic message. |
 | `unauthorized`      | 401    | The request isn't authenticated.                                                                                                                                                                                                                            |
+| `forbidden`         | 403    | The request is authenticated, but not in a way the route accepts: an API key on a [web-Session-only route](#web-session-only-routes).                                                                                                                       |
 | `not_found`         | 404    | The route or resource doesn't exist.                                                                                                                                                                                                                        |
 | `rate_limited`      | 429    | The client went over the rate limit (100 requests a minute, see [Security](./security.md)).                                                                                                                                                                 |
 | `internal`          | 500    | Anything unexpected. The message is always generic: the real error is logged on the server and never sent to the client, so no stack traces, SQL or internal hostnames leak.                                                                                |
 
-Use cases throw domain errors from `apps/api/src/domain/errors` (`AppError` and its subclasses), never HTTP errors. The error middleware maps each error's code to a status: `NOT_FOUND` → 404, `UNAUTHORIZED` and `USER_PERMANENTLY_DELETED` → 401, `REPOSITORY_ERROR` → 500. Each status is then sent with the fixed, safe message for its envelope code, so a domain error's own message never reaches the client.
+Use cases throw domain errors from `apps/api/src/domain/errors` (`AppError` and its subclasses), never HTTP errors. The error middleware maps each error's code to a status: `VALIDATION_FAILED` → 400, `UNAUTHORIZED` and `USER_PERMANENTLY_DELETED` → 401, `FORBIDDEN` → 403, `NOT_FOUND` → 404, `REPOSITORY_ERROR` → 500. Each status is then sent with the fixed, safe message for its envelope code, so a domain error's own message never reaches the client.
 
 Example validation failure:
 
@@ -116,6 +117,16 @@ The use case throws `UnauthorizedError`, which the error middleware sends as 401
 ```
 
 The web app's requests (`apps/web/src/lib/api.ts`) send the Session cookie with `credentials: "include"`; no identity header is sent or read.
+
+### Web-Session-only routes
+
+Better Auth turns a valid `x-api-key` header (the extension's) into a Session just as it does a cookie, so the auth middleware accepts both. Routes only the web app may call (today the [Tag routes](#tags)) declare `preHandler: sessionOnlyAuthMiddleware(container)` instead. It runs the same guard first, so a request with no Session, or an invalid key, still gets `401 unauthorized`; then a request carrying an `x-api-key` header is refused with `ForbiddenError`, sent as:
+
+```json
+{ "error": { "code": "forbidden", "message": "That isn't allowed with these credentials" } }
+```
+
+It looks at the header because Better Auth's api-key plugin reads only that header and uses the key over any Session cookie sent alongside it.
 
 ### `GET /me`
 
@@ -172,6 +183,36 @@ POST /items
 - Captured content over 5 Mi characters → `400 validation_failed` with the issue at `/html`. The route sets its own request-body limit (`CREATE_ITEM_BODY_LIMIT`, derived from the schema's caps: two bytes per character plus headroom), so an oversized capture reaches the schema instead of getting Fastify's 413 from its 1 MiB default. Captions over 1 Mi characters are the same `400`, at `/captions`.
 - More than 30 saves in a minute → `429 rate_limited`. `POST /items` replaces the app-wide 100 a minute with 30, counted per API key (`x-api-key`, hashed), or per client IP for a request without one, and every IP gets at most 60 a minute whatever keys it sends (see [Security](./security.md#rate-limiting)).
 - If the job can't be enqueued (Redis is down), the request fails with `500 internal`. The Item is already stored and stays Processing; there is no retry endpoint yet.
+
+## Tags
+
+Tag routes are served by `tagsRoutes` (`src/interface/routes/tags.routes.ts`) → `TagsController`. Only the web app's Session may call them: each declares `preHandler: sessionOnlyAuthMiddleware(container)`, which runs the auth middleware and then refuses a request authenticated by an API key (see [Web-Session-only routes](#web-session-only-routes)). Tag names are slugs: a name is reduced by `slugifyTagName` (`src/domain/rules/tagName.ts`), and that slug is both stored and shown, so "Machine Learning", "machine learning" and "machine-learning" are the same Tag. Tags and their links live in the `tags` and `item_tags` tables, behind the `ITagRepository` port (`DrizzleTagRepository`).
+
+### `POST /items/:itemId/tags`
+
+Tags one of the signed-in User's Items by name. Served by `TagItemUseCase`, which:
+
+1. reduces `name` to its Tag name; one that's empty once reduced, or longer than 50 characters, is a `ValidationError`;
+2. finds the Item through `IItemRepository.findById(userId, itemId)`; no Item, or another User's, is a `NotFoundError`, checked before any Tag is created;
+3. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`). The insert relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag;
+4. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing;
+5. returns the Item's Tags after the change (`ItemTagsResponseSchema`: `ItemCardTagSchema[]`), oldest link first.
+
+```
+POST /items/3b241101-e2bb-4255-8caf-4136c566a962/tags
+{ "name": "Machine Learning" }
+
+200 OK
+[
+  { "id": "9d7c3f0e-5b1a-4e2f-8c6d-1a2b3c4d5e6f", "name": "spaced-repetition", "source": "ai" },
+  { "id": "0f1e2d3c-4b5a-4968-8776-655443322110", "name": "machine-learning", "source": "user" }
+]
+```
+
+- No valid Session (or an invalid API key) → `401 unauthorized`.
+- A valid API key → `403 forbidden`, and nothing changes.
+- An `itemId` that isn't a uuid, a `name` that isn't text, or a name that's empty or over 50 characters once slugified → `400 validation_failed`.
+- An Item that doesn't exist or belongs to another User → `404 not_found`, never 403, so the API doesn't reveal what exists.
 
 ## `GET /health`
 
