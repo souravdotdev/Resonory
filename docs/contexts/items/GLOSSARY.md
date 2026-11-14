@@ -21,8 +21,12 @@ _Avoid_: Cover, preview image, OG image
 ### Tags
 
 **Tag**:
-A short topic name a User organises their Items by. Every User has their own Tags, and one Tag can be on many Items.
+A short topic name a User organises their Items by. Every User has their own Tags, and a Tag can go on any of their Items, never on a Cue. A User makes one by naming it while tagging an Item, and it stays theirs even when it's on no Items.
 _Avoid_: Label, category, folder, collection
+
+**Tag name**:
+The one written form of a Tag's name: lowercase words joined by hyphens, so "Machine Learning" and "machine learning" name the same Tag, `machine-learning`.
+_Avoid_: Display name, label
 
 **Tag source**:
 Who put a Tag on a particular Item: Resonory's AI or the User. The same Tag can come from the AI on one Item and from the User on another.
