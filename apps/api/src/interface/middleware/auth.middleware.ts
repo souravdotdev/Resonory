@@ -3,6 +3,7 @@ import type { Container } from "inversify";
 import type { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { TOKENS } from "@/di/tokens";
 import type { User } from "@/domain/entities/User";
+import { ForbiddenError } from "@/domain/errors";
 import { toWebHeaders } from "@/interface/http/toWebHeaders";
 
 declare module "fastify" {
@@ -25,6 +26,28 @@ export function authMiddleware(container: Container): preHandlerAsyncHookHandler
       TOKENS.ResolveSignedInUserUseCase,
     );
     request.user = await resolveSignedInUser.execute({ headers: toWebHeaders(request.headers) });
+  };
+}
+
+/**
+ * `authMiddleware` for the routes only the web app may call (the Tag routes):
+ * it runs the same guard, then refuses a request authenticated by an API key
+ * (the extension's `x-api-key`, which Better Auth turns into a Session just like
+ * a cookie) with `ForbiddenError`, sent as 403 `forbidden`. A missing or invalid
+ * key still gets the guard's 401 first, since that request has no Session at all.
+ */
+export function sessionOnlyAuthMiddleware(container: Container): preHandlerAsyncHookHandler {
+  const auth = authMiddleware(container);
+  return async function (request, reply) {
+    await auth.call(this, request, reply);
+    // Better Auth's api-key plugin reads only this header (its default), and uses
+    // the key over any Session cookie sent alongside it.
+    const apiKey = request.headers["x-api-key"];
+    if (typeof apiKey === "string" && apiKey !== "") {
+      throw new ForbiddenError(
+        `${request.method} ${request.routeOptions.url} takes only a web Session`,
+      );
+    }
   };
 }
 

@@ -6,6 +6,7 @@ import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
+  ItemTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
 } from "@resonory/shared/schemas/items";
@@ -13,25 +14,31 @@ import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
+import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
 import type { Item } from "@/domain/entities/Item";
 import type { User } from "@/domain/entities/User";
 import {
+  ForbiddenError,
   NotFoundError,
   RepositoryError,
   UnauthorizedError,
   UserPermanentlyDeletedError,
+  ValidationError,
 } from "@/domain/errors";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
 import type { IItemRepository, NewItem } from "@/domain/repositories/IItemRepository";
+import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { TOKENS } from "@/di/tokens";
 import type { Env } from "@/env";
 import { IN_MEMORY_RATE_LIMITS, type RateLimitRedis } from "@/rate-limit-store";
 import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
+import { TagsController } from "@/interface/controllers/TagsController";
 import { authMiddleware, signedInUser } from "@/interface/middleware/auth.middleware";
 import type { AuthRequestHandler } from "@/interface/routes/auth.routes";
 import { CREATE_ITEM_IP_LIMIT } from "@/interface/routes/items.routes";
+import { anItem, taggingInMemory } from "./fakes/tagging";
 
 const env: Env = {
   PORT: 4000,
@@ -82,6 +89,8 @@ function itemsInMemory() {
       saved.push(item);
       return item;
     },
+    findById: async (userId: string, itemId: string) =>
+      saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
   };
   return { repository, saved };
 }
@@ -91,14 +100,19 @@ const queueRecording = (): IQueueProvider => ({ enqueueProcessItem: vi.fn(async 
 interface TestDoubles {
   items?: IItemRepository;
   queue?: IQueueProvider;
+  tags?: ITagRepository;
 }
 
 // A test container: the real app, use cases and controllers, with fakes for
 // Better Auth, the Session lookup (by default no request has a valid Session),
-// the Item repository and the queue. The rate-limit store is explicitly in-memory (no Redis).
+// the Item and Tag repositories and the queue. The rate-limit store is explicitly in-memory (no Redis).
 function testContainer(
   sessions: ISessionProvider = sessionsReturning(null),
-  { items = itemsInMemory().repository, queue = queueRecording() }: TestDoubles = {},
+  {
+    items = itemsInMemory().repository,
+    queue = queueRecording(),
+    tags = taggingInMemory().tagRepository,
+  }: TestDoubles = {},
 ) {
   const container = new Container();
   container.bind(TOKENS.Env).toConstantValue(env);
@@ -114,6 +128,9 @@ function testContainer(
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
+  container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
+  container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
+  container.bind(TOKENS.TagsController).to(TagsController);
   return container;
 }
 
@@ -629,6 +646,172 @@ describe("POST /items", () => {
   });
 });
 
+describe("POST /items/:itemId/tags", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const tag = (
+      name: unknown,
+      itemId = ITEM_ID,
+      headers: Record<string, string> = withSessionCookie,
+    ) => app.inject({ method: "POST", url: `/items/${itemId}/tags`, headers, payload: { name } });
+    return { ...store, app, tag };
+  }
+
+  it("answers 200 with the Item's Tags: a new name creates the User's Tag, Tag source user", async () => {
+    const { tag, tags, links } = await scene();
+
+    const res = await tag("Machine Learning");
+
+    expect(res.statusCode).toBe(200);
+    expect(tags).toEqual([expect.objectContaining({ userId: USER_ID, name: "machine-learning" })]);
+    expect(links).toEqual([expect.objectContaining({ itemId: ITEM_ID, source: "user" })]);
+    expect(res.json()).toEqual([{ id: tags[0]!.id, name: "machine-learning", source: "user" }]);
+    expect(ItemTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("reuses the existing Tag for a name differing only in case, spaces or punctuation", async () => {
+    const { tag, tags, items } = await scene();
+    const otherItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: otherItemId, userId: USER_ID }));
+    await tag("Machine Learning");
+
+    const res = await tag("machine_learning!", otherItemId);
+
+    expect(res.statusCode).toBe(200);
+    expect(tags).toHaveLength(1);
+    expect(res.json()).toEqual([{ id: tags[0]!.id, name: "machine-learning", source: "user" }]);
+  });
+
+  it("changes a Tag the AI already put on the Item to Tag source user", async () => {
+    const { tag, links, tagRepository, tick } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "ai",
+      createdAt: tick(),
+    });
+
+    const res = await tag("memory");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory", source: "user" }]);
+    expect(links).toEqual([expect.objectContaining({ tagId: memory.id, source: "user" })]);
+  });
+
+  it("changes nothing and returns the same Tags when repeated", async () => {
+    const { tag, tags, links } = await scene();
+    const first = await tag("memory");
+
+    const second = await tag("memory");
+
+    expect(second.statusCode).toBe(200);
+    expect(second.json()).toEqual(first.json());
+    expect(tags).toHaveLength(1);
+    expect(links).toHaveLength(1);
+  });
+
+  it("ends with exactly one Tag when two requests create the same new Tag at once", async () => {
+    const { tag, tags } = await scene();
+
+    const [first, second] = await Promise.all([tag("Memory"), tag("memory")]);
+
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
+    expect(tags).toHaveLength(1);
+    expect(first.json()).toEqual(second.json());
+  });
+
+  it.each([
+    ["empty", ""],
+    ["empty once slugified", "!!! ???"],
+    ["over 50 characters once slugified", "a".repeat(51)],
+    ["not text", 42],
+  ])("is 400 validation_failed for a name that's %s, and creates no Tag", async (_case, name) => {
+    const { tag, tags, links } = await scene();
+
+    const res = await tag(name);
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    expect(tags).toHaveLength(0);
+    expect(links).toHaveLength(0);
+  });
+
+  it("is 400 validation_failed for an Item id that isn't a uuid", async () => {
+    const { tag } = await scene();
+
+    const res = await tag("memory", "item-1");
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+  });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag("memory", "00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 404 not_found for another User's Item, never 403", async () => {
+    const { tag, tags, items } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: "11111111-1111-4111-8111-111111111111" }));
+
+    const res = await tag("memory", theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 401 unauthorized without a valid Session, and creates no Tag", async () => {
+    const { tag, tags } = await scene(sessionsReturning(null));
+
+    const res = await tag("memory", ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and creates no Tag", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { tag, tags } = await scene();
+
+    const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "forbidden",
+      message: "That isn't allowed with these credentials",
+    });
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 401 unauthorized for an invalid API key, same as any request without a Session", async () => {
+    const { tag } = await scene(sessionsReturning(null));
+
+    const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_made_up" });
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
 // The real app plus a test-only protected route that echoes who it sees.
 async function appWithProtectedRoute(sessions: ISessionProvider) {
   const container = testContainer(sessions);
@@ -782,6 +965,30 @@ describe("the API's schemas and error envelope", () => {
     expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
       code: "unauthorized",
       message: "You need to sign in to do that",
+    });
+  });
+
+  it("sends a domain ForbiddenError as 403 forbidden with a safe message", async () => {
+    const app = await appWithTestRoutes(new ForbiddenError("POST /x takes only a web Session"));
+
+    const res = await app.inject({ method: "GET", url: "/throws" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "forbidden",
+      message: "That isn't allowed with these credentials",
+    });
+  });
+
+  it("sends a domain ValidationError as 400 validation_failed without its message", async () => {
+    const app = await appWithTestRoutes(new ValidationError("A Tag name can't be empty"));
+
+    const res = await app.inject({ method: "GET", url: "/throws" });
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error).toEqual({
+      code: "validation_failed",
+      message: "The request could not be processed",
     });
   });
 

@@ -9,6 +9,7 @@ type SafeError = { code: ErrorCode; message: string };
 // error messages and anything thrown with a statusCode never reach the client.
 const clientErrors: Partial<Record<number, SafeError>> = {
   401: { code: "unauthorized", message: "You need to sign in to do that" },
+  403: { code: "forbidden", message: "That isn't allowed with these credentials" },
   404: { code: "not_found", message: "That resource doesn't exist" },
   429: { code: "rate_limited", message: "Too many requests, please try again later" },
 };
@@ -23,9 +24,11 @@ const serverError: SafeError = {
 
 // The HTTP meaning of each domain error code; 5xx codes are logged and sent as `internal`.
 const statusOfCode: Record<AppErrorCode, number> = {
+  VALIDATION_FAILED: 400,
   NOT_FOUND: 404,
   UNAUTHORIZED: 401,
   USER_PERMANENTLY_DELETED: 401,
+  FORBIDDEN: 403,
   REPOSITORY_ERROR: 500,
 };
 
