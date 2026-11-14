@@ -7,7 +7,7 @@ import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { MAX_TAGS_PER_ITEM } from "@/domain/rules/tagLimits";
 import { slugifyTagName } from "@/domain/rules/tagName";
 
-export interface TagItemInput {
+export interface TagItemByNameInput {
   userId: string;
   itemId: string;
   /** The Tag name as the User typed it, not yet slugified. */
@@ -32,7 +32,7 @@ export class TagItemUseCase {
     @inject(TOKENS.TagRepository) private readonly tags: ITagRepository,
   ) {}
 
-  async execute(input: TagItemInput): Promise<ItemTagsOutput> {
+  async execute(input: TagItemByNameInput): Promise<ItemTagsOutput> {
     const tagName = slugifyTagName(input.name);
     if (!tagName.ok) throw new InvalidTagNameError(tagName.reason);
 
