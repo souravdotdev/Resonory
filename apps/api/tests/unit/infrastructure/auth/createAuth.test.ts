@@ -101,7 +101,8 @@ describe("createAuth", () => {
 // plugin reading and writing real rows, so they're tested against the real local
 // Postgres (the same one `docker-compose.yml` starts for local dev), the one
 // place in this suite that needs it. Skipped wherever that database isn't
-// reachable (e.g. CI, which runs no Postgres service) rather than failing — the
+// reachable (e.g. CI, whose Postgres service listens on 5432 for the
+// integration tests, not 5433) rather than failing — the
 // property this covers is also exercised at the unit level, with a fake Better
 // Auth, by BetterAuthSessionProvider.test.ts.
 const REAL_DATABASE_URL = "postgres://postgres:postgres@localhost:5433/resonory";
