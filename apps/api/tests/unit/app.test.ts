@@ -7,6 +7,7 @@ import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
   ItemTagsResponseSchema,
+  ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
 } from "@resonory/shared/schemas/items";
@@ -15,6 +16,7 @@ import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
 import type { Item } from "@/domain/entities/Item";
 import type { User } from "@/domain/entities/User";
 import {
@@ -131,6 +133,7 @@ function testContainer(
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
   container.bind(TOKENS.TagsController).to(TagsController);
+  container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
   return container;
 }
 
@@ -806,6 +809,100 @@ describe("POST /items/:itemId/tags", () => {
     const { tag } = await scene(sessionsReturning(null));
 
     const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_made_up" });
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
+describe("GET /tags", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const list = (headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "GET", url: "/tags", headers });
+    const link = (tagId: string, source: "ai" | "user" = "user") =>
+      store.links.push({
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        tagId,
+        source,
+        createdAt: store.tick(),
+      });
+    return { ...store, app, list, link };
+  }
+
+  it("answers 200 with an empty list for a User with no Tags", async () => {
+    const { list } = await scene();
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it("answers 200 with every one of the User's Tags and none of another User's", async () => {
+    const { list, tagRepository } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    await tagRepository.findOrCreate("11111111-1111-4111-8111-111111111111", "theirs");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory" }]);
+    expect(ListTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("puts the most recently used Tag first, AI or User, and a Tag on no Items by its creation", async () => {
+    const { list, tagRepository, link } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    const reading = await tagRepository.findOrCreate(USER_ID, "reading");
+    link(reading.id, "user");
+    link(memory.id, "ai");
+    // Created after both were used, and never put on an Item.
+    await tagRepository.findOrCreate(USER_ID, "unused");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().map((tag: { name: string }) => tag.name)).toEqual([
+      "unused",
+      "memory",
+      "reading",
+    ]);
+  });
+
+  it("is 401 unauthorized without a valid Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key", async () => {
+    const { list, tagRepository } = await scene();
+    await tagRepository.findOrCreate(USER_ID, "memory");
+
+    const res = await list({ "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+  });
+
+  it("is 401 unauthorized for an invalid API key, same as any request without a Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({ "x-api-key": "resk_made_up" });
 
     expect(res.statusCode).toBe(401);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");

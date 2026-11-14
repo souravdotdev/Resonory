@@ -76,6 +76,18 @@ export function taggingInMemory() {
         .filter((link) => link.itemId === itemId && link.userId === userId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .map((link) => ({ tag: tags.find((tag) => tag.id === link.tagId)!, source: link.source })),
+    listForUser: async (userId) => {
+      // When the Tag last went on any Item, or when it was created if it's on none.
+      const lastUsed = (tag: Tag) => {
+        const used = links.filter((link) => link.tagId === tag.id).map((link) => link.createdAt);
+        return used.length > 0
+          ? Math.max(...used.map((at) => at.getTime()))
+          : tag.createdAt.getTime();
+      };
+      return tags
+        .filter((tag) => tag.userId === userId)
+        .sort((a, b) => lastUsed(b) - lastUsed(a) || a.name.localeCompare(b.name));
+    },
   };
 
   return { itemRepository, tagRepository, items, tags, links, tick };
