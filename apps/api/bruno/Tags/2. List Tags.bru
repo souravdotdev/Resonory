@@ -1,0 +1,31 @@
+meta {
+  name: 2. List Tags
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/tags
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+tests {
+  test("lists the User's Tags", () => {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.be.an("array");
+  });
+}
+
+docs {
+  Requires `sessionCookie`.
+
+  Every one of the User's Tags as `{ id, name }`, most recently used first:
+  ordered by when each was last put on any Item, falling back to when it was
+  created for a Tag on no Items. Tag a second Item with an older Tag and it
+  moves to the top.
+}
