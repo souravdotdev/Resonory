@@ -2,6 +2,8 @@ import type { Item } from "@/domain/entities/Item";
 import type { Tag, TagSource } from "@/domain/entities/Tag";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
+import { ItemTagLimitError, UserTagLimitError } from "@/domain/errors";
+import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 
 /** A stored Tag link, with the owner and the order it was made in, like an `item_tags` row. */
 export interface StoredTagLink {
@@ -29,8 +31,10 @@ export const anItem = (overrides: Partial<Item> & Pick<Item, "id" | "userId">): 
 /**
  * In-memory Items, Tags and Tag links, behaving like the tables do: one Tag per
  * name per User (find-or-create is atomic, like the insert on
- * `tags_user_id_name_unique`), one link per Item and Tag, and Items and Tags
- * scoped to their User. Seed `items`, `tags` and `links` directly to set a scene.
+ * `tags_user_id_name_unique`), one link per Item and Tag, Items and Tags
+ * scoped to their User, and the Tag limits checked atomically with each write,
+ * like the Drizzle adapter's locked transactions. Seed `items`, `tags` and
+ * `links` directly to set a scene (pushing skips the limits).
  */
 export function taggingInMemory() {
   const items: Item[] = [];
@@ -52,6 +56,9 @@ export function taggingInMemory() {
     findOrCreate: async (userId, name) => {
       const existing = tags.find((tag) => tag.userId === userId && tag.name === name);
       if (existing) return existing;
+      if (tags.filter((tag) => tag.userId === userId).length >= MAX_TAGS_PER_USER) {
+        throw new UserTagLimitError(userId);
+      }
       const createdAt = tick();
       const tag: Tag = {
         id: `00000000-0000-4000-9000-${String(tags.length + 1).padStart(12, "0")}`,
@@ -68,6 +75,9 @@ export function taggingInMemory() {
       if (existing) {
         existing.source = "user";
         return;
+      }
+      if (links.filter((link) => link.itemId === itemId).length >= MAX_TAGS_PER_ITEM) {
+        throw new ItemTagLimitError(itemId);
       }
       links.push({ userId, itemId, tagId, source: "user", createdAt: tick() });
     },
