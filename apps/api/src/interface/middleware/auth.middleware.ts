@@ -4,6 +4,7 @@ import type { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/Re
 import { TOKENS } from "@/di/tokens";
 import type { User } from "@/domain/entities/User";
 import { ForbiddenError } from "@/domain/errors";
+import { API_KEY_HEADER } from "@/infrastructure/auth/apiKeyHeader";
 import { toWebHeaders } from "@/interface/http/toWebHeaders";
 
 declare module "fastify" {
@@ -40,9 +41,10 @@ export function sessionOnlyAuthMiddleware(container: Container): preHandlerAsync
   const auth = authMiddleware(container);
   return async function (request, reply) {
     await auth.call(this, request, reply);
-    // Better Auth's api-key plugin reads only this header (its default), and uses
-    // the key over any Session cookie sent alongside it.
-    const apiKey = request.headers["x-api-key"];
+    // Better Auth's api-key plugin reads keys only from API_KEY_HEADER (createAuth
+    // sets it, and createAuth.test.ts fails if that changes), and uses the key
+    // over any Session cookie sent alongside it.
+    const apiKey = request.headers[API_KEY_HEADER];
     if (typeof apiKey === "string" && apiKey !== "") {
       throw new ForbiddenError(
         `${request.method} ${request.routeOptions.url} takes only a web Session`,
