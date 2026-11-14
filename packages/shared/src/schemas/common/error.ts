@@ -4,6 +4,8 @@ export const ErrorCodeSchema = z.enum([
   "validation_failed",
   "not_found",
   "unauthorized",
+  // Authenticated, but not in a way this route accepts (an API key on a web-Session-only route).
+  "forbidden",
   "rate_limited",
   "internal",
 ]);
