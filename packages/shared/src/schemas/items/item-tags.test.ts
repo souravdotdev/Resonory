@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ItemTagParamsSchema,
   ItemTagsResponseSchema,
+  MAX_TAG_INPUT_LENGTH,
   TagItemSchema,
   UntagItemParamsSchema,
 } from "./index";
@@ -17,6 +18,13 @@ describe("TagItemSchema", () => {
 
   it("rejects a name that isn't text", () => {
     expect(TagItemSchema.safeParse({ name: 42 }).success).toBe(false);
+  });
+
+  it("accepts a typed name up to MAX_TAG_INPUT_LENGTH characters, and rejects a longer one", () => {
+    const longest = "a".repeat(MAX_TAG_INPUT_LENGTH);
+
+    expect(TagItemSchema.safeParse({ name: longest }).success).toBe(true);
+    expect(TagItemSchema.safeParse({ name: `${longest}a` }).success).toBe(false);
   });
 });
 

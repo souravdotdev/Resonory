@@ -236,7 +236,7 @@ POST /items/3b241101-e2bb-4255-8caf-4136c566a962/tags
 
 - No valid Session (or an invalid API key) → `401 unauthorized`.
 - A valid API key → `403 forbidden`, and nothing changes.
-- An `itemId` that isn't a uuid, or a `name` that isn't text → `400 validation_failed` with the issues in `details`.
+- An `itemId` that isn't a uuid, or a `name` that isn't text or is over 200 characters as sent (`MAX_TAG_INPUT_LENGTH`, checked before slugifying, so a huge string is never processed) → `400 validation_failed` with the issues in `details`.
 - A name that's empty or over 50 characters once slugified → `400 validation_failed` with the message "A Tag name must be 1 to 50 characters of letters, digits, +, #, . or - (spaces become hyphens, other characters are dropped)" and no `details`, and no Tag is created.
 - An Item that doesn't exist or belongs to another User → `404 not_found`, never 403, so the API doesn't reveal what exists.
 - A Tag that isn't on the Item yet, when the Item already has 20 Tags → `409 item_tag_limit` ("An Item can have at most 20 Tags"), and nothing changes.

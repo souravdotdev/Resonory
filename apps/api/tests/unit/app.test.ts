@@ -10,6 +10,7 @@ import {
   ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
+  MAX_TAG_INPUT_LENGTH,
 } from "@resonory/shared/schemas/items";
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
@@ -846,6 +847,18 @@ describe("POST /items/:itemId/tags", () => {
     const { tag, tags } = await scene();
 
     const res = await tag(42);
+
+    expect(res.statusCode).toBe(400);
+    const { error } = ErrorResponseSchema.parse(res.json());
+    expect(error.code).toBe("validation_failed");
+    expect(error.details).toEqual([expect.objectContaining({ path: "/name" })]);
+    expect(tags).toHaveLength(0);
+  });
+
+  it("is 400 validation_failed with the issues for a name over MAX_TAG_INPUT_LENGTH, before it's slugified", async () => {
+    const { tag, tags } = await scene();
+
+    const res = await tag("a".repeat(MAX_TAG_INPUT_LENGTH + 1));
 
     expect(res.statusCode).toBe(400);
     const { error } = ErrorResponseSchema.parse(res.json());
