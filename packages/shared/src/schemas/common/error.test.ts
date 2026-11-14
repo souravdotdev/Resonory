@@ -7,6 +7,8 @@ describe("ErrorResponseSchema", () => {
     "unauthorized",
     "forbidden",
     "not_found",
+    "item_tag_limit",
+    "user_tag_limit",
     "rate_limited",
     "internal",
   ])("accepts the %s code", (code) => {
