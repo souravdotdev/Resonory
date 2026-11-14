@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { ItemTagsResponseSchema } from "@resonory/shared/schemas/items";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
 import {
+  InvalidTagNameError,
   ItemTagLimitError,
   NotFoundError,
   UserTagLimitError,
-  ValidationError,
 } from "@/domain/errors";
 import { anItem, taggingInMemory } from "../../../fakes/tagging";
 
@@ -68,15 +68,18 @@ describe("TagItemUseCase", () => {
     ["only spaces", "   "],
     ["only punctuation", "!!! ???"],
     ["51 characters once slugified", "a".repeat(51)],
-  ])("refuses a name that's %s with a ValidationError, changing nothing", async (_case, name) => {
-    const { useCase, tags, links } = scene();
+  ])(
+    "refuses a name that's %s with an InvalidTagNameError, changing nothing",
+    async (_case, name) => {
+      const { useCase, tags, links } = scene();
 
-    await expect(useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name })).rejects.toThrow(
-      ValidationError,
-    );
-    expect(tags).toHaveLength(0);
-    expect(links).toHaveLength(0);
-  });
+      await expect(useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name })).rejects.toThrow(
+        InvalidTagNameError,
+      );
+      expect(tags).toHaveLength(0);
+      expect(links).toHaveLength(0);
+    },
+  );
 
   it("refuses an Item that doesn't exist with a NotFoundError, creating no Tag", async () => {
     const { useCase, tags, links } = scene();

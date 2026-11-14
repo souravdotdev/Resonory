@@ -1,11 +1,11 @@
 import { inject, injectable } from "inversify";
 import { toItemTagsOutput, type ItemTagsOutput } from "@/application/dto/tags/ItemTagsOutput";
 import { TOKENS } from "@/di/tokens";
-import { ItemTagLimitError, NotFoundError, ValidationError } from "@/domain/errors";
+import { InvalidTagNameError, ItemTagLimitError, NotFoundError } from "@/domain/errors";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { MAX_TAGS_PER_ITEM } from "@/domain/rules/tagLimits";
-import { MAX_TAG_NAME_LENGTH, slugifyTagName } from "@/domain/rules/tagName";
+import { slugifyTagName } from "@/domain/rules/tagName";
 
 export interface TagItemInput {
   userId: string;
@@ -17,8 +17,9 @@ export interface TagItemInput {
 /**
  * Tags one of the User's Items by name. The name is reduced to its Tag name (the
  * slug); the User's Tag with that name is used, or created when they have none,
- * and put on the Item with Tag source `user`. A Tag the AI had put there becomes
- * the User's, and repeating the call changes nothing. Returns the Item's Tags.
+ * and put on the Item with Tag source `user`; a name with no valid Tag name is an
+ * `InvalidTagNameError`. A Tag the AI had put there becomes the User's, and
+ * repeating the call changes nothing. Returns the Item's Tags.
  * An Item that isn't the User's is a `NotFoundError`, so nothing reveals it exists.
  * A Tag new to the Item past `MAX_TAGS_PER_ITEM` is an `ItemTagLimitError`, and a
  * new Tag past `MAX_TAGS_PER_USER` a `UserTagLimitError`; re-applying a Tag that's
@@ -33,13 +34,7 @@ export class TagItemUseCase {
 
   async execute(input: TagItemInput): Promise<ItemTagsOutput> {
     const tagName = slugifyTagName(input.name);
-    if (!tagName.ok) {
-      throw new ValidationError(
-        tagName.reason === "empty"
-          ? "A Tag name can't be empty"
-          : `A Tag name can be at most ${MAX_TAG_NAME_LENGTH} characters`,
-      );
-    }
+    if (!tagName.ok) throw new InvalidTagNameError(tagName.reason);
 
     // Before the Tag exists, so tagging an Item that isn't the User's never creates one.
     const item = await this.items.findById(input.userId, input.itemId);
