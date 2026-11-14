@@ -20,6 +20,14 @@ export {
   type TagSource,
 } from "./item-card";
 export {
+  ItemTagParamsSchema,
+  ItemTagsResponseSchema,
+  TagItemSchema,
+  type ItemTagParams,
+  type ItemTagsResponse,
+  type TagItemInput,
+} from "./item-tags";
+export {
   DEFAULT_LIST_LIMIT,
   ListItemsQuerySchema,
   ListItemsResponseSchema,
