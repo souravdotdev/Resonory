@@ -39,6 +39,8 @@ export const TOKENS = {
   TagRepository: Symbol("ITagRepository"),
   /** Puts a Tag on an Item by name, creating the Tag if it's new (`TagItemUseCase`). */
   TagItemUseCase: Symbol("TagItemUseCase"),
+  /** Takes a Tag off an Item, keeping the Tag (`UntagItemUseCase`). */
+  UntagItemUseCase: Symbol("UntagItemUseCase"),
   /** Serves the Tag routes, such as `POST /items/:itemId/tags` (`TagsController`). */
   TagsController: Symbol("TagsController"),
   /** The User's Tags, most recently used first (`ListTagsUseCase`). */

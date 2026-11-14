@@ -1,10 +1,11 @@
 import type { FastifyRequest } from "fastify";
 import { inject, injectable } from "inversify";
-import type { ItemTagParams, TagItemInput } from "@resonory/shared/schemas/items";
+import type { ItemTagParams, TagItemInput, UntagItemParams } from "@resonory/shared/schemas/items";
 import type { ItemTagsOutput } from "@/application/dto/tags/ItemTagsOutput";
 import type { ListTagsOutput } from "@/application/dto/tags/ListTagsOutput";
 import type { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
 import type { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import type { UntagItemUseCase } from "@/application/use-cases/tags/UntagItemUseCase";
 import { TOKENS } from "@/di/tokens";
 import { signedInUser } from "@/interface/middleware/auth.middleware";
 
@@ -16,6 +17,7 @@ import { signedInUser } from "@/interface/middleware/auth.middleware";
 export class TagsController {
   constructor(
     @inject(TOKENS.TagItemUseCase) private readonly tagItemUseCase: TagItemUseCase,
+    @inject(TOKENS.UntagItemUseCase) private readonly untagItemUseCase: UntagItemUseCase,
     @inject(TOKENS.ListTagsUseCase) private readonly listTagsUseCase: ListTagsUseCase,
   ) {}
 
@@ -26,6 +28,15 @@ export class TagsController {
       userId: signedInUser(request).id,
       itemId: request.params.itemId,
       name: request.body.name,
+    });
+
+  untagItem = async (
+    request: FastifyRequest<{ Params: UntagItemParams }>,
+  ): Promise<ItemTagsOutput> =>
+    this.untagItemUseCase.execute({
+      userId: signedInUser(request).id,
+      itemId: request.params.itemId,
+      tagId: request.params.tagId,
     });
 
   list = async (request: FastifyRequest): Promise<ListTagsOutput> =>

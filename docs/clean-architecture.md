@@ -25,7 +25,7 @@ apps/api/src/
   application/
     use-cases/auth/     AdmitSignInUseCase, ResolveSignedInUserUseCase, GetMeUseCase
     use-cases/items/    SaveItemUseCase
-    use-cases/tags/     TagItemUseCase, ListTagsUseCase
+    use-cases/tags/     ListTagsUseCase, TagItemUseCase, UntagItemUseCase
     dto/auth/           MeOutput.ts
     dto/items/          ItemCardOutput.ts (toItemCardOutput)
     dto/tags/           ItemTagsOutput.ts (toItemTagsOutput), ListTagsOutput.ts (toListTagsOutput)
@@ -53,7 +53,7 @@ What each layer holds:
 
 `di/` sits outside the four layers. It is the composition root: the only code that knows every concrete class.
 
-Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`, and `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `ListTagsUseCase` (over `ITagRepository`) serves `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider.
+Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider.
 
 ## The dependency rule
 
