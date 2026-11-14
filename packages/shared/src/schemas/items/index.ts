@@ -22,6 +22,7 @@ export {
 export {
   ItemTagParamsSchema,
   ItemTagsResponseSchema,
+  MAX_TAG_INPUT_LENGTH,
   TagItemSchema,
   UntagItemParamsSchema,
   type ItemTagParams,
