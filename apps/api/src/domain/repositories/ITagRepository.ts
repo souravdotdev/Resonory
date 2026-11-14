@@ -23,4 +23,10 @@ export interface ITagRepository {
 
   /** The Tags on one of the User's Items, each with its Tag source, oldest link first. */
   listOnItem(userId: string, itemId: string): Promise<AppliedTag[]>;
+
+  /**
+   * Every one of the User's Tags, most recently used first: by the latest time it
+   * was put on any Item, by the AI or the User, or, on no Items, when it was created.
+   */
+  listForUser(userId: string): Promise<Tag[]>;
 }

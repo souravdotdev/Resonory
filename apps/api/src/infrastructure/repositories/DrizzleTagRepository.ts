@@ -1,4 +1,4 @@
-import { and, asc, eq, getTableColumns } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { itemTags, tags } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -52,4 +52,22 @@ export class DrizzleTagRepository implements ITagRepository {
       .orderBy(asc(itemTags.createdAt), asc(tags.name));
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
   }
+
+  async listForUser(userId: string): Promise<Tag[]> {
+    // A link's created_at is when the Tag went on the Item; upgrading an AI link to
+    // the User's keeps it. A Tag on no Items has no links, so it falls back to its own.
+    const lastUsedAt = sql`coalesce(max(${itemTags.createdAt}), ${tags.createdAt})`;
+    const rows = await this.db
+      .select(getTableColumns(tags))
+      .from(tags)
+      .leftJoin(itemTags, eq(itemTags.tagId, tags.id))
+      .where(eq(tags.userId, userId))
+      .groupBy(tags.id)
+      .orderBy(desc(lastUsedAt), asc(tags.name))
+      // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
+      .limit(MAX_LISTED_TAGS);
+    return rows.map(toTag);
+  }
 }
+
+const MAX_LISTED_TAGS = 1000;

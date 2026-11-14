@@ -7,6 +7,7 @@ import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
 import { TOKENS } from "@/di/tokens";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
@@ -122,6 +123,7 @@ export function createContainer(): Container {
   container.bind(TOKENS.GetMeUseCase).to(GetMeUseCase).inTransientScope();
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase).inTransientScope();
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase).inTransientScope();
+  container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase).inTransientScope();
 
   container.bind(TOKENS.MeController).to(MeController).inSingletonScope();
   container.bind(TOKENS.ItemsController).to(ItemsController).inSingletonScope();
