@@ -35,3 +35,9 @@ export {
   type ListItemsQuery,
   type ListItemsResponse,
 } from "./list-items";
+export {
+  ListedTagSchema,
+  ListTagsResponseSchema,
+  type ListedTag,
+  type ListTagsResponse,
+} from "./list-tags";
