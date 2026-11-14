@@ -25,11 +25,16 @@ export class DrizzleTagRepository implements ITagRepository {
         .where(eq(users.id, userId))
         .for("no key update");
 
-      const [existing] = await tx
-        .select()
-        .from(tags)
-        .where(and(eq(tags.userId, userId), eq(tags.name, name)))
-        .limit(1);
+      const findByName = async () => {
+        const [row] = await tx
+          .select()
+          .from(tags)
+          .where(and(eq(tags.userId, userId), eq(tags.name, name)))
+          .limit(1);
+        return row;
+      };
+
+      const existing = await findByName();
       if (existing !== undefined) return toTag(existing);
 
       const [{ owned } = { owned: 0 }] = await tx
@@ -47,12 +52,7 @@ export class DrizzleTagRepository implements ITagRepository {
         .returning();
       if (created !== undefined) return toTag(created);
 
-      const [raced] = await tx
-        .select()
-        .from(tags)
-        .where(and(eq(tags.userId, userId), eq(tags.name, name)))
-        .limit(1);
-      return toTag(raced!);
+      return toTag((await findByName())!);
     });
   }
 
@@ -113,7 +113,7 @@ export class DrizzleTagRepository implements ITagRepository {
       .groupBy(tags.id)
       .orderBy(desc(lastUsedAt), asc(tags.name))
       // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
-      .limit(MAX_LISTED_TAGS);
+      .limit(MAX_TAGS_PER_USER);
     return rows.map(toTag);
   }
 
@@ -135,5 +135,3 @@ export class DrizzleTagRepository implements ITagRepository {
       );
   }
 }
-
-const MAX_LISTED_TAGS = 1000;
