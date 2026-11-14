@@ -23,9 +23,11 @@ export {
   ItemTagParamsSchema,
   ItemTagsResponseSchema,
   TagItemSchema,
+  UntagItemParamsSchema,
   type ItemTagParams,
   type ItemTagsResponse,
   type TagItemInput,
+  type UntagItemParams,
 } from "./item-tags";
 export {
   DEFAULT_LIST_LIMIT,

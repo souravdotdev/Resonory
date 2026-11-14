@@ -4,7 +4,7 @@ Fastify server in `apps/api`, organised by layer (see [Clean Architecture](./cle
 
 Base URL locally: `http://localhost:4000` (from `PORT` in `apps/api/.env`).
 
-Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL) `POST /items/:itemId/tags` (tag an Item by name) and `GET /tags` (list the User's Tags). The other Item endpoints (list, search, retry, delete) come in later specs, built on the same schema wiring described below.
+Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL), `GET /tags` (list the User's Tags), `POST /items/:itemId/tags` (tag an Item by name) and `DELETE /items/:itemId/tags/:tagId` (take a Tag off an Item). The other Item endpoints (list, search, retry, delete) come in later specs, built on the same schema wiring described below.
 
 ## Shared schemas: one definition of every request and response
 
@@ -12,7 +12,7 @@ Every request and response between `apps/web` and `apps/api` is defined once, as
 
 - `@resonory/shared/schemas/common`: shared shapes, such as the error envelope (`ErrorResponseSchema`).
 - `@resonory/shared/schemas/auth`: the signed-in User (`MeResponseSchema`).
-- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
+- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
 - `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Items queue name, the Process Item job name and its payload (see [Queue](./queue.md)).
 
 Naming: zod schemas end in `Schema` and their inferred TypeScript types drop the suffix (for example `CreateItemSchema` / `CreateItemInput`, `ItemCardSchema` / `ItemCard`). A plain `Item` is always the domain entity in `apps/api/src/domain/entities`, never a wire shape.
@@ -188,6 +188,26 @@ POST /items
 
 Tag routes are served by `tagsRoutes` (`src/interface/routes/tags.routes.ts`) → `TagsController`. Only the web app's Session may call them: each declares `preHandler: sessionOnlyAuthMiddleware(container)`, which runs the auth middleware and then refuses a request authenticated by an API key (see [Web-Session-only routes](#web-session-only-routes)). Tag names are slugs: a name is reduced by `slugifyTagName` (`src/domain/rules/tagName.ts`), and that slug is both stored and shown, so "Machine Learning", "machine learning" and "machine-learning" are the same Tag. Tags and their links live in the `tags` and `item_tags` tables, behind the `ITagRepository` port (`DrizzleTagRepository`).
 
+### `GET /tags`
+
+Lists every one of the signed-in User's Tags, for a Tag picker. Served by `ListTagsUseCase` over `ITagRepository.listForUser`. Tags come most recently used first: by the latest time each was put on any Item, by the AI or the User (the latest `item_tags.created_at`). A Tag on no Items falls back to its own `created_at`, and ties go by Tag name. Upgrading an AI link to `user` keeps the link's `created_at`, so it doesn't count as a new use. The query returns at most 1,000 Tags, a User's Tag limit. There's no search parameter: matching what the User types (contains, on the slugified input) is the client's job.
+
+The response is `ListTagsResponseSchema` (`ListedTagSchema[]`): each Tag's id and Tag name, nothing else.
+
+```
+GET /tags
+
+200 OK
+[
+  { "id": "0f1e2d3c-4b5a-4968-8776-655443322110", "name": "machine-learning" },
+  { "id": "9d7c3f0e-5b1a-4e2f-8c6d-1a2b3c4d5e6f", "name": "spaced-repetition" }
+]
+```
+
+- A User with no Tags → `200 OK` with `[]`.
+- No valid Session (or an invalid API key) → `401 unauthorized`.
+- A valid API key → `403 forbidden`.
+
 ### `POST /items/:itemId/tags`
 
 Tags one of the signed-in User's Items by name. Served by `TagItemUseCase`, which:
@@ -214,25 +234,29 @@ POST /items/3b241101-e2bb-4255-8caf-4136c566a962/tags
 - An `itemId` that isn't a uuid, a `name` that isn't text, or a name that's empty or over 50 characters once slugified → `400 validation_failed`.
 - An Item that doesn't exist or belongs to another User → `404 not_found`, never 403, so the API doesn't reveal what exists.
 
-### `GET /tags`
+### `DELETE /items/:itemId/tags/:tagId`
 
-Lists every one of the signed-in User's Tags, for a Tag picker. Served by `ListTagsUseCase` over `ITagRepository.listForUser`. Tags come most recently used first: by the latest time each was put on any Item, by the AI or the User (the latest `item_tags.created_at`). A Tag on no Items falls back to its own `created_at`, and ties go by Tag name. Upgrading an AI link to `user` keeps the link's `created_at`, so it doesn't count as a new use. The query returns at most 1,000 Tags, a User's Tag limit. There's no search parameter: matching what the User types (contains, on the slugified input) is the client's job.
+Takes one of the signed-in User's Tags off one of their Items, whoever put it there (the AI or the User). Served by `UntagItemUseCase`, which:
 
-The response is `ListTagsResponseSchema` (`ListedTagSchema[]`): each Tag's id and Tag name, nothing else.
+1. finds the Item through `IItemRepository.findById(userId, itemId)` and the Tag through `ITagRepository.findById(userId, tagId)`; either missing, or another User's, is a `NotFoundError`;
+2. deletes the link (`ITagRepository.removeFromItem`), whatever its Tag source. The Tag itself is kept, even when it's then on no Items, so it can be reused. A Tag that isn't on the Item is left alone, so removing it again is harmless;
+3. returns the Item's remaining Tags (`ItemTagsResponseSchema`), oldest link first.
+
+Whether the AI may later put back a Tag the User removed is undecided; for now removal only deletes the link.
 
 ```
-GET /tags
+DELETE /items/3b241101-e2bb-4255-8caf-4136c566a962/tags/0f1e2d3c-4b5a-4968-8776-655443322110
 
 200 OK
 [
-  { "id": "0f1e2d3c-4b5a-4968-8776-655443322110", "name": "machine-learning" },
-  { "id": "9d7c3f0e-5b1a-4e2f-8c6d-1a2b3c4d5e6f", "name": "spaced-repetition" }
+  { "id": "9d7c3f0e-5b1a-4e2f-8c6d-1a2b3c4d5e6f", "name": "spaced-repetition", "source": "ai" }
 ]
 ```
 
-- A User with no Tags → `200 OK` with `[]`.
 - No valid Session (or an invalid API key) → `401 unauthorized`.
-- A valid API key → `403 forbidden`.
+- A valid API key → `403 forbidden`, and nothing changes.
+- An `itemId` or `tagId` that isn't a uuid → `400 validation_failed`.
+- An Item or Tag that doesn't exist or belongs to another User → `404 not_found`, never 403.
 
 ## `GET /health`
 
