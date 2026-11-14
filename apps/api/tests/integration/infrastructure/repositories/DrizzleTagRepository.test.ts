@@ -166,7 +166,9 @@ describe("DrizzleTagRepository against Postgres", () => {
       expect(await linksOn(othersItemId)).toEqual([]);
     });
 
-    it("throws a NotFoundError for an Item deleted since it was found, linking nothing", async () => {
+    // The locked select finding no row. The Item is gone before the call, the same
+    // path as another User's Item: this isn't a concurrent delete racing the lock.
+    it("throws a NotFoundError, linking nothing, for an Item that no longer exists", async () => {
       const userId = await aUser();
       const itemId = await anItem(userId);
       const tagId = await aTag(userId, "memory");

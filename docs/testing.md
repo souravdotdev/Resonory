@@ -99,7 +99,7 @@ Each test file calls `createTestDatabase()` (`tests/integration/support/testData
 - 8 concurrent `findOrCreate` calls for one new name → exactly 1 Tag, every call returning its id;
 - 20 concurrent creates for a User's last 10 Tag slots → exactly 10, the rest `UserTagLimitError`;
 - `applyAsUser` on an `ai` link → `user`, its `created_at` kept; on a `user` link → unchanged;
-- `applyAsUser` with another User's Tag → refused by `item_tags_tag_id_user_id_tags_fk`; with another User's Item, or an Item deleted since it was found → `NotFoundError`; nothing linked in any of them;
+- `applyAsUser` with another User's Tag → refused by `item_tags_tag_id_user_id_tags_fk`; with another User's Item, or an Item that no longer exists → `NotFoundError`; nothing linked in any of them (the missing Item is deleted before the call, so this covers the locked select's no-row branch, not a delete racing the lock; the race is reproduced in `TagItemUseCase.test.ts`);
 - 10 concurrent links for an Item's last free slot → exactly 1, the rest `ItemTagLimitError`; a Tag already on a full Item is still re-applied;
 - the composite foreign keys, at the SQL level the repository never reaches: an `item_tags` row joining one User's Item to another's Tag, or one User's Tag to another's Item, fails with `23503` on `item_tags_tag_id_user_id_tags_fk` / `item_tags_item_id_user_id_items_fk`;
 - `removeFromItem` scoped to another User → nothing removed; scoped to the owner → only that link, the Tag and its other links kept;
