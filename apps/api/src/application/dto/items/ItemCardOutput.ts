@@ -4,6 +4,7 @@ import type {
   ItemType as SharedItemType,
   TagSource as SharedTagSource,
 } from "@resonory/shared/schemas/items";
+import { toItemTagsOutput } from "@/application/dto/tags/ItemTagsOutput";
 import type { Item, ItemStatus, ItemType } from "@/domain/entities/Item";
 import type { AppliedTag, TagSource } from "@/domain/entities/Tag";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
@@ -44,6 +45,6 @@ export async function toItemCardOutput(
       item.thumbnailKey && thumbnails ? await thumbnails.resolve(item.thumbnailKey) : null,
     failureMessage: item.status === "failed" ? FAILURE_MESSAGE : null,
     createdAt: item.createdAt.toISOString(),
-    tags: tags.map(({ tag, source }) => ({ id: tag.id, name: tag.name, source })),
+    tags: toItemTagsOutput(tags),
   };
 }
