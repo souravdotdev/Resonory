@@ -1,4 +1,4 @@
-import { and, asc, count, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -100,4 +100,40 @@ export class DrizzleTagRepository implements ITagRepository {
       .orderBy(asc(itemTags.createdAt), asc(tags.name));
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
   }
+
+  async listForUser(userId: string): Promise<Tag[]> {
+    // A link's created_at is when the Tag went on the Item; upgrading an AI link to
+    // the User's keeps it. A Tag on no Items has no links, so it falls back to its own.
+    const lastUsedAt = sql`coalesce(max(${itemTags.createdAt}), ${tags.createdAt})`;
+    const rows = await this.db
+      .select(getTableColumns(tags))
+      .from(tags)
+      .leftJoin(itemTags, eq(itemTags.tagId, tags.id))
+      .where(eq(tags.userId, userId))
+      .groupBy(tags.id)
+      .orderBy(desc(lastUsedAt), asc(tags.name))
+      // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
+      .limit(MAX_LISTED_TAGS);
+    return rows.map(toTag);
+  }
+
+  async findById(userId: string, tagId: string): Promise<Tag | null> {
+    const [row] = await this.db
+      .select()
+      .from(tags)
+      .where(and(eq(tags.id, tagId), eq(tags.userId, userId)))
+      .limit(1);
+    return row ? toTag(row) : null;
+  }
+
+  async removeFromItem({ userId, itemId, tagId }: ItemTagRef): Promise<void> {
+    // Only the link goes; the Tag stays the User's even when it's on no Items now.
+    await this.db
+      .delete(itemTags)
+      .where(
+        and(eq(itemTags.itemId, itemId), eq(itemTags.tagId, tagId), eq(itemTags.userId, userId)),
+      );
+  }
 }
+
+const MAX_LISTED_TAGS = 1000;

@@ -7,6 +7,7 @@ import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
   ItemTagsResponseSchema,
+  ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
 } from "@resonory/shared/schemas/items";
@@ -15,6 +16,8 @@ import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
+import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
+import { UntagItemUseCase } from "@/application/use-cases/tags/UntagItemUseCase";
 import type { Item } from "@/domain/entities/Item";
 import type { User } from "@/domain/entities/User";
 import {
@@ -130,7 +133,9 @@ function testContainer(
   container.bind(TOKENS.ItemsController).to(ItemsController);
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
+  container.bind(TOKENS.UntagItemUseCase).to(UntagItemUseCase);
   container.bind(TOKENS.TagsController).to(TagsController);
+  container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
   return container;
 }
 
@@ -889,6 +894,266 @@ describe("POST /items/:itemId/tags", () => {
     const { tag } = await scene(sessionsReturning(null));
 
     const res = await tag("memory", ITEM_ID, { "x-api-key": "resk_made_up" });
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
+describe("DELETE /items/:itemId/tags/:tagId", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item with their Tag "memory" on it (Tag source user),
+  // and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const memory = await store.tagRepository.findOrCreate(USER_ID, "memory");
+    store.links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "user",
+      createdAt: store.tick(),
+    });
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const untag = (
+      tagId: string,
+      itemId = ITEM_ID,
+      headers: Record<string, string> = withSessionCookie,
+    ) => app.inject({ method: "DELETE", url: `/items/${itemId}/tags/${tagId}`, headers });
+    return { ...store, app, memory, untag };
+  }
+
+  it("answers 200 with the Item's remaining Tags, and keeps the Tag", async () => {
+    const { untag, memory, tags, links, tagRepository, tick } = await scene();
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: sleep.id,
+      source: "ai",
+      createdAt: tick(),
+    });
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: sleep.id, name: "sleep", source: "ai" }]);
+    expect(ItemTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+    expect(links).toEqual([expect.objectContaining({ tagId: sleep.id })]);
+    expect(tags.map((tag) => tag.name)).toEqual(["memory", "sleep"]);
+  });
+
+  it("takes off a Tag the AI put on, and keeps it though it's on no Items", async () => {
+    const { untag, memory, tags, links } = await scene();
+    links[0]!.source = "ai";
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+    expect(links).toHaveLength(0);
+    expect(tags).toEqual([memory]);
+  });
+
+  it("answers 200 with the Item's Tags, changing nothing, when the Tag isn't on the Item", async () => {
+    const { untag, memory, links, tagRepository } = await scene();
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+
+    const res = await untag(sleep.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory", source: "user" }]);
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 200 again when repeated, with the Tag already off", async () => {
+    const { untag, memory } = await scene();
+    await untag(memory.id);
+
+    const res = await untag(memory.id);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it.each([
+    ["the Item id", "item-1", undefined],
+    ["the Tag id", undefined, "tag-1"],
+  ])("is 400 validation_failed when %s isn't a uuid", async (_case, itemId, tagId) => {
+    const { untag, memory, links } = await scene();
+
+    const res = await untag(tagId ?? memory.id, itemId ?? ITEM_ID);
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { untag, memory } = await scene();
+
+    const res = await untag(memory.id, "00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Item, never 403, and leaves their Tags on it", async () => {
+    const { untag, items, links, tagRepository, tick } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: OTHER_USER_ID }));
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "memory");
+    links.push({
+      userId: OTHER_USER_ID,
+      itemId: theirItemId,
+      tagId: theirs.id,
+      source: "user",
+      createdAt: tick(),
+    });
+
+    const res = await untag(theirs.id, theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(links).toHaveLength(2);
+  });
+
+  it("is 404 not_found for a Tag that doesn't exist", async () => {
+    const { untag } = await scene();
+
+    const res = await untag("00000000-0000-4000-9000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Tag, never 403", async () => {
+    const { untag, tagRepository } = await scene();
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "sleep");
+
+    const res = await untag(theirs.id);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 401 unauthorized without a valid Session, and removes nothing", async () => {
+    const { untag, memory, links } = await scene(sessionsReturning(null));
+
+    const res = await untag(memory.id, ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(links).toHaveLength(1);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and removes nothing", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { untag, memory, links } = await scene();
+
+    const res = await untag(memory.id, ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+    expect(links).toHaveLength(1);
+  });
+});
+
+describe("GET /tags", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items, Tags and links.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const list = (headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "GET", url: "/tags", headers });
+    const link = (tagId: string, source: "ai" | "user" = "user") =>
+      store.links.push({
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        tagId,
+        source,
+        createdAt: store.tick(),
+      });
+    return { ...store, app, list, link };
+  }
+
+  it("answers 200 with an empty list for a User with no Tags", async () => {
+    const { list } = await scene();
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it("answers 200 with every one of the User's Tags and none of another User's", async () => {
+    const { list, tagRepository } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    await tagRepository.findOrCreate("11111111-1111-4111-8111-111111111111", "theirs");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ id: memory.id, name: "memory" }]);
+    expect(ListTagsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("puts the most recently used Tag first, AI or User, and a Tag on no Items by its creation", async () => {
+    const { list, tagRepository, link } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    const reading = await tagRepository.findOrCreate(USER_ID, "reading");
+    link(reading.id, "user");
+    link(memory.id, "ai");
+    // Created after both were used, and never put on an Item.
+    await tagRepository.findOrCreate(USER_ID, "unused");
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().map((tag: { name: string }) => tag.name)).toEqual([
+      "unused",
+      "memory",
+      "reading",
+    ]);
+  });
+
+  it("is 401 unauthorized without a valid Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key", async () => {
+    const { list, tagRepository } = await scene();
+    await tagRepository.findOrCreate(USER_ID, "memory");
+
+    const res = await list({ "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+  });
+
+  it("is 401 unauthorized for an invalid API key, same as any request without a Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list({ "x-api-key": "resk_made_up" });
 
     expect(res.statusCode).toBe(401);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
