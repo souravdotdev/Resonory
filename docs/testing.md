@@ -83,6 +83,8 @@ What jsdom can't show is checked in a real browser against `next build` + `next 
 
 Every fake used across these tests is either a small hand-written object literal or a `vi.fn()` — no separate mocking framework, and no shared "fakes" package. Given how small each port interface is (1-3 methods), writing the fake inline in the test file that needs it is less overhead than maintaining a shared fixture module, and keeps each test file readable on its own.
 
+The one exception: when a single fake serves both the use-case tests and the route tests (`app.test.ts`) of a slice, it's written once in `apps/api/tests/unit/fakes/` and imported by both, rather than copied, so the two seams test against the same behaviour. Today that's `fakes/tagging.ts` (`taggingInMemory()`), the in-memory Items, Tags and Tag links behind `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase` and the Tag routes. A fake used by only one test file stays inline in it.
+
 ## Pre-push gate
 
 `.husky/pre-push` runs `pnpm lint && pnpm check-types && pnpm test` — tests are part of the last gate before code leaves the machine, alongside lint and type-checking (see [Code Quality](./code-quality.md)). They're not part of `pre-commit` (`lint-staged`), since running a full test suite on every commit — including ones that don't touch tested code — would slow down the fast, scoped pre-commit check down considerably.
