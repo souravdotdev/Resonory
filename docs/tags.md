@@ -88,7 +88,7 @@ Ownership doesn't depend on the use cases alone: `item_tags` has composite forei
 ## Testing
 
 - **Use cases and routes** are tested over one shared in-memory fake of the Items, Tags and links (`tests/unit/fakes/tagging.ts`), which behaves like the tables, limits included. See [Testing](./testing.md).
-- **The real SQL has no committed tests**: the API has no database-backed tests yet. The same-name race, the `ai` → `user` upsert, the foreign keys, the scoped delete, the ordering and the limit locks were checked by hand against throwaway local databases; [Testing](./testing.md) lists each check and its result. Re-run them after changing `DrizzleTagRepository`.
+- **The real SQL** is tested against Postgres by `apps/api/tests/integration/infrastructure/repositories/DrizzleTagRepository.test.ts`, on a throwaway database with every migration applied: the same-name race, the `ai` → `user` upsert, the composite foreign keys, the scoped delete, the ordering, the limit locks under concurrency and a deleted Item. Run it with `pnpm test:integration` (needs the Compose Postgres; CI runs it too). [Testing](./testing.md#integration-tests-apps-api) lists each check. Any new writer that links Tags (the AI tagger) should get the same concurrency tests.
 - **By hand**, `apps/api/bruno/` has a request for every Tag route, including the API-key refusal (see [Getting Started](./getting-started.md)).
 
 ## What's not built
