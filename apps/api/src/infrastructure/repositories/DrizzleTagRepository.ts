@@ -3,7 +3,7 @@ import { inject, injectable } from "inversify";
 import { items, itemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
 import type { AppliedTag, Tag } from "@/domain/entities/Tag";
-import { ItemTagLimitError, UserTagLimitError } from "@/domain/errors";
+import { ItemTagLimitError, NotFoundError, UserTagLimitError } from "@/domain/errors";
 import type { ITagRepository, ItemTagRef } from "@/domain/repositories/ITagRepository";
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
@@ -62,11 +62,14 @@ export class DrizzleTagRepository implements ITagRepository {
       // is the one the link lands on. Residual race: a writer that links Tags
       // without taking this lock (the AI tagger, once it exists) can still push
       // an Item past the limit, so it has to lock the same row.
-      await tx
+      const [item] = await tx
         .select({ id: items.id })
         .from(items)
         .where(and(eq(items.id, itemId), eq(items.userId, userId)))
         .for("no key update");
+      // Deleted since the use case found it. Once locked it can't be deleted until
+      // commit, so the insert below can't then fail its foreign key as a 500.
+      if (item === undefined) throw new NotFoundError(`Item ${itemId} not found`);
 
       const [{ onItem, linked } = { onItem: 0, linked: 0 }] = await tx
         .select({

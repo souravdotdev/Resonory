@@ -220,7 +220,7 @@ Tags one of the signed-in User's Items by name. Served by `TagItemUseCase`, whic
 2. finds the Item through `IItemRepository.findById(userId, itemId)`; no Item, or another User's, is a `NotFoundError`, checked before any Tag is created;
 3. refuses a Tag that isn't on the Item yet when the Item already has 20 (`ItemTagLimitError`), checked before any Tag is created (see [Tag limits](#tag-limits));
 4. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`); a new Tag when the User already has 1,000 is a `UserTagLimitError`. Creates for one User take turns behind a lock on their `users` row, and the insert still relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag;
-5. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing;
+5. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing. An Item deleted since step 2 is a `NotFoundError` here too: the adapter's lock on the Item's row finds no row, so the link is never attempted (and can't then fail its foreign key as a 500);
 6. returns the Item's Tags after the change (`ItemTagsResponseSchema`: `ItemCardTagSchema[]`), oldest link first.
 
 ```

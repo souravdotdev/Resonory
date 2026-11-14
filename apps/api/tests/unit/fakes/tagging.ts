@@ -2,7 +2,7 @@ import type { Item } from "@/domain/entities/Item";
 import type { Tag, TagSource } from "@/domain/entities/Tag";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
-import { ItemTagLimitError, UserTagLimitError } from "@/domain/errors";
+import { ItemTagLimitError, NotFoundError, UserTagLimitError } from "@/domain/errors";
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 
 /** A stored Tag link, with the owner and the order it was made in, like an `item_tags` row. */
@@ -71,6 +71,10 @@ export function taggingInMemory() {
       return tag;
     },
     applyAsUser: async ({ userId, itemId, tagId }) => {
+      // Like the adapter's locked select on the Item's row.
+      if (!items.some((item) => item.id === itemId && item.userId === userId)) {
+        throw new NotFoundError(`Item ${itemId} not found`);
+      }
       const existing = links.find((link) => link.itemId === itemId && link.tagId === tagId);
       if (existing) {
         existing.source = "user";
