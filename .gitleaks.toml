@@ -1,0 +1,12 @@
+# Secret scanning for the whole repo: gitleaks' built-in rules (Google OAuth,
+# Supabase and other JWTs, AWS, Stripe, private keys, generic high-entropy
+# secrets, …) plus Resonory's own API keys. Runs on staged changes in the
+# pre-commit hook and on every PR's commits in CI; see docs/security.md.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "resonory-api-key"
+description = "Resonory API key (resk_…), minted by apps/api's Better Auth api-key plugin"
+regex = '''resk_[A-Za-z0-9]{20,}'''
+keywords = ["resk_"]
