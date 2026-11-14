@@ -188,6 +188,8 @@ POST /items
 
 ## Tags
 
+This section is the endpoint reference. For the feature as a whole (the rules and why, concurrency, what's not built yet), see [Tags](./tags.md).
+
 Tag routes are served by `tagsRoutes` (`src/interface/routes/tags.routes.ts`) → `TagsController`. Only the web app's Session may call them: each declares `preHandler: sessionOnlyAuthMiddleware(container)`, which runs the auth middleware and then refuses a request authenticated by an API key (see [Web-Session-only routes](#web-session-only-routes)). Tag names are slugs: a name is reduced by `slugifyTagName` (`src/domain/rules/tagName.ts`), and that slug is both stored and shown, so "Machine Learning", "machine learning" and "machine-learning" are the same Tag. Tags and their links live in the `tags` and `item_tags` tables, behind the `ITagRepository` port (`DrizzleTagRepository`).
 
 ### `GET /tags`
