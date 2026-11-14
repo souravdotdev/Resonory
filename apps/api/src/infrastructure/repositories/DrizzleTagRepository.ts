@@ -68,7 +68,9 @@ export class DrizzleTagRepository implements ITagRepository {
         .where(and(eq(items.id, itemId), eq(items.userId, userId)))
         .for("no key update");
       // Deleted since the use case found it. Once locked it can't be deleted until
-      // commit, so the insert below can't then fail its foreign key as a 500.
+      // commit, so the insert below can't then fail its foreign key as a 500. A Tag
+      // findOrCreate just made for this call stays on no Item, which is harmless:
+      // Tags outlive their links anyway.
       if (item === undefined) throw new NotFoundError(`Item ${itemId} not found`);
 
       const [{ onItem, linked } = { onItem: 0, linked: 0 }] = await tx
