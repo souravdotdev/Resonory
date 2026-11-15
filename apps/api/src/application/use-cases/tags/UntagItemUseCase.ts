@@ -9,9 +9,11 @@ export type UntagItemInput = ItemTagRef;
 
 /**
  * Takes a Tag off one of the User's Items, whoever put it there (the AI or the
- * User). The Tag stays the User's, even when it's then on no Items, so it can be
- * reused. Taking off a Tag that isn't on the Item changes nothing. Returns the
- * Item's remaining Tags. An Item or Tag that isn't the User's is a `NotFoundError`,
+ * User), and records its Tag name as a Rejected tag for that Item, so AI tagging
+ * never puts it back. A Tag the User ever applied stays theirs, even when it's
+ * then on no Items, so it can be reused; one only the AI used is deleted once
+ * it's on no Items. Taking off a Tag that isn't on the Item changes nothing.
+ * Returns the Item's remaining Tags. An Item or Tag that isn't the User's is a `NotFoundError`,
  * so nothing reveals it exists.
  */
 @injectable()

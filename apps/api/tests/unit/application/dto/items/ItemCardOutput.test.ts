@@ -40,6 +40,7 @@ const tag = (overrides: Partial<Tag> = {}): Tag => ({
   id: "tag-1",
   userId: "user-1",
   name: "memory",
+  origin: "user",
   createdAt: new Date("2026-04-01T00:00:00.000Z"),
   updatedAt: new Date("2026-04-02T00:00:00.000Z"),
   ...overrides,

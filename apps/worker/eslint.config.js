@@ -18,6 +18,7 @@ const toolImports = [
   },
   { group: ["sharp", "sharp/*"], message: "Image decoding belongs in infrastructure." },
   { group: ["@supabase/*"], message: "Supabase Storage belongs in infrastructure." },
+  { group: ["openai", "openai/*"], message: "The AI tagging model belongs in infrastructure." },
   {
     group: ["@resonory/db", "@resonory/db/*"],
     message: "The database package belongs in infrastructure.",

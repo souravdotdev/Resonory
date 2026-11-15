@@ -71,6 +71,20 @@
       "when": 1793729348699,
       "tag": "0009_create_api_keys_table",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794751313917,
+      "tag": "0010_create_rejected_item_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794752892335,
+      "tag": "0011_add_tag_origin_with_existing_tags_as_users",
+      "breakpoints": true
     }
   ]
 }

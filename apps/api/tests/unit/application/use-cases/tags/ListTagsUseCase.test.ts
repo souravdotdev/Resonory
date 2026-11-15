@@ -39,6 +39,22 @@ describe("ListTagsUseCase", () => {
     expect(result).toEqual([{ id: memory.id, name: "memory" }]);
   });
 
+  it("leaves out a Tag only the AI used once it's on no Items", async () => {
+    const { useCase, tagRepository, aiMadeTag, link } = scene();
+    const onAnItem = aiMadeTag(USER_ID, "on-an-item");
+    link(onAnItem.id, ITEM_ID, "ai");
+    // Its Item was deleted, so it's on no Items without having been taken off.
+    aiMadeTag(USER_ID, "orphaned");
+    const theirs = await tagRepository.findOrCreate(USER_ID, "the-users");
+
+    const result = await useCase.execute({ userId: USER_ID });
+
+    expect(result).toEqual([
+      { id: theirs.id, name: "the-users" },
+      { id: onAnItem.id, name: "on-an-item" },
+    ]);
+  });
+
   it("puts the most recently used Tag first, by the latest time it went on any Item", async () => {
     const { useCase, tagRepository, link } = scene();
     const memory = await tagRepository.findOrCreate(USER_ID, "memory");

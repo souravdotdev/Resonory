@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { UnrecoverableError } from "bullmq";
 import { Container } from "inversify";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
+import { PROCESS_ITEM_JOB, TAG_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { type FailedItemsJob, onItemsJobFailed } from "@/interface/itemsJobFailed";
@@ -172,6 +172,24 @@ describe("a failed job on the Items queue", () => {
     ]);
   });
 
+  it("never marks the Item Failed when its AI tagging fails for good, logging it with the Item's id", async () => {
+    const { container, useCase, logger } = testContainer();
+
+    await onItemsJobFailed(
+      container,
+      { ...processItemJob(3), name: TAG_ITEM_JOB },
+      new Error("429 Rate limit reached"),
+    );
+
+    expect(useCase.execute).not.toHaveBeenCalled();
+    expect(logger.logs).toContainEqual({
+      level: "warn",
+      bindings: { itemId: ITEM_ID },
+      fields: {},
+      msg: "AI tagging gave up; the Item stays Ready without AI Tags",
+    });
+  });
+
   it("changes no Item for a job with an unknown name", async () => {
     const { container, useCase } = testContainer();
 
@@ -199,6 +217,32 @@ describe("a failed job on the Items queue", () => {
       msg: "couldn't mark the Item Failed",
     });
     expect(JSON.stringify(logger.logs)).not.toContain("Postgres is still down");
+  });
+
+  it("never says it couldn't mark the Item Failed when a Tag Item job's final-failure step throws", async () => {
+    const { container, logger } = testContainer();
+    const child = logger.child.bind(logger);
+    // The only thing tagItemFailed can trip on: its Item-scoped logger.
+    vi.spyOn(logger, "child").mockImplementation(((bindings: Record<string, unknown>) => {
+      if ("itemId" in bindings) throw new Error("logger is gone");
+      return child(bindings);
+    }) as typeof logger.child);
+
+    await expect(
+      onItemsJobFailed(
+        container,
+        { ...processItemJob(3), name: TAG_ITEM_JOB },
+        new Error("429 Rate limit reached"),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(logger.logs).toContainEqual({
+      level: "error",
+      bindings: { jobId: "42", jobName: TAG_ITEM_JOB },
+      fields: { err: "Error" },
+      msg: "couldn't log that AI tagging gave up",
+    });
+    expect(logger.logs.map((log) => log.msg)).not.toContain("couldn't mark the Item Failed");
   });
 
   it("logs a failure BullMQ reports without its job, with no raw error message", async () => {

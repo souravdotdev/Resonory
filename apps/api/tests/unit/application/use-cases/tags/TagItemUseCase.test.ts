@@ -154,6 +154,23 @@ describe("TagItemUseCase", () => {
     expect(result).toEqual([{ id: tag.id, name: "memory", source: "user" }]);
   });
 
+  it("makes an AI Tag the User's when they tag an Item with its name", async () => {
+    const { useCase, tags, aiMadeTag } = scene();
+    const tag = aiMadeTag(USER_ID, "memory");
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });
+
+    expect(tags).toEqual([expect.objectContaining({ id: tag.id, origin: "user" })]);
+  });
+
+  it("creates a new Tag as the User's", async () => {
+    const { useCase, tags } = scene();
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });
+
+    expect(tags).toEqual([expect.objectContaining({ name: "memory", origin: "user" })]);
+  });
+
   it("changes nothing and returns the same Tags when repeated", async () => {
     const { useCase, tags, links } = scene();
     const first = await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });
@@ -305,6 +322,19 @@ describe("TagItemUseCase", () => {
 
       expect(result.map((tag) => tag.name)).toEqual(["library-1000"]);
       expect(store.tags).toHaveLength(1000);
+    });
+
+    it("doesn't count a Tag only the AI used that's on no Items towards the 1,000, deleting it", async () => {
+      const store = scene();
+      await giveUserTags(store, 999);
+      // Left on no Items without being taken off, as deleting its Item leaves it.
+      store.aiMadeTag(USER_ID, "orphaned");
+
+      const result = await store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "new" });
+
+      expect(result.map((tag) => tag.name)).toEqual(["new"]);
+      expect(store.tags).toHaveLength(1000);
+      expect(store.tags.map((tag) => tag.name)).not.toContain("orphaned");
     });
 
     it("doesn't count another User's Tags towards this User's 1,000", async () => {

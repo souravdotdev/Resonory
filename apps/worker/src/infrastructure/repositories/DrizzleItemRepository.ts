@@ -1,10 +1,19 @@
-import { and, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
-import type { Item, ItemRef, ItemStatus, ItemType, ReadyItem } from "@/domain/entities/Item";
+import {
+  type Item,
+  type ItemRef,
+  type ItemStatus,
+  type ItemType,
+  type ReadyItem,
+  TAGGING_TEXT_LENGTH,
+  type TaggableItem,
+} from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { Database } from "@/infrastructure/database/Database";
+import { ownedBy } from "@/infrastructure/repositories/ownedBy";
 
 /** The `items` columns ending Processing sets: a Failed Item keeps no title, description, Thumbnail key or Text. */
 type FinishedFields = Pick<
@@ -35,6 +44,22 @@ export class DrizzleItemRepository implements IItemRepository {
     return row ?? null;
   }
 
+  async findTaggable(ref: ItemRef): Promise<TaggableItem | null> {
+    const [row] = await this.db
+      .select({
+        title: items.title,
+        description: items.description,
+        sourceUrl: items.sourceUrl,
+        type: items.type,
+        // Cut in Postgres (in characters), so a long Text never leaves the database whole.
+        text: sql<string | null>`left(${items.extractedText}, ${TAGGING_TEXT_LENGTH})`,
+      })
+      .from(items)
+      .where(ownedBy(ref))
+      .limit(1);
+    return row ?? null;
+  }
+
   async markReady(ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem): Promise<void> {
     await this.finish(ref, {
       status: "ready",
@@ -56,9 +81,4 @@ export class DrizzleItemRepository implements IItemRepository {
       .set({ ...fields, updatedAt: new Date() })
       .where(ownedBy(ref));
   }
-}
-
-/** The one Item with this id, and only if it's this User's. */
-function ownedBy({ itemId, userId }: ItemRef) {
-  return and(eq(items.id, itemId), eq(items.userId, userId));
 }

@@ -9,6 +9,7 @@ const tagRow = (overrides: Partial<TagRow> = {}): TagRow => ({
   id: "tag-1",
   userId: "user-1",
   name: "machine-learning",
+  origin: "user",
   createdAt: new Date("2026-04-01T00:00:00.000Z"),
   updatedAt: new Date("2026-04-02T00:00:00.000Z"),
   ...overrides,
@@ -25,11 +26,12 @@ const tagLinkRow = (overrides: Partial<TagLinkRow> = {}): TagLinkRow => ({
 });
 
 describe("toTag", () => {
-  it("maps a Tag with its canonical name and date timestamps", () => {
-    expect(toTag(tagRow())).toEqual({
+  it("maps a Tag with its canonical name, origin and date timestamps", () => {
+    expect(toTag(tagRow({ origin: "ai" }))).toEqual({
       id: "tag-1",
       userId: "user-1",
       name: "machine-learning",
+      origin: "ai",
       createdAt: new Date("2026-04-01T00:00:00.000Z"),
       updatedAt: new Date("2026-04-02T00:00:00.000Z"),
     });

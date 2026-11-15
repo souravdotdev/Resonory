@@ -13,6 +13,7 @@ import type { PageHead } from "@/domain/entities/PageHead";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IOEmbedProvider, OEmbed } from "@/domain/providers/IOEmbedProvider";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
@@ -77,6 +78,13 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * on, has none; a job without captured content (the fetch path, failed or
  * not) has none either, even one that carries captions. Missing Text never
  * fails Processing.
+ *
+ * Once the Item is Ready, its AI tagging is queued as a job of its own
+ * (`tag-item`), on every path that reaches Ready, so a slow or failing model
+ * never holds Ready up. A Failed Item retried to Ready is queued again. If the
+ * job can't be queued, the Item stays Ready, without AI Tags, and the error is
+ * handed back for the processor to log: Processing never fails, nor is retried,
+ * over it.
  */
 @injectable()
 export class ProcessItemUseCase {
@@ -89,6 +97,7 @@ export class ProcessItemUseCase {
     @inject(WORKER_TOKENS.ThumbnailResizer) private readonly resizer: IThumbnailResizer,
     @inject(WORKER_TOKENS.PageHeadParser) private readonly pageParser: IPageHeadParser,
     @inject(WORKER_TOKENS.TextExtractor) private readonly textExtractor: ITextExtractor,
+    @inject(WORKER_TOKENS.QueueProvider) private readonly queue: IQueueProvider,
     // Unbound without Supabase Storage configured: then no image is fetched.
     @inject(WORKER_TOKENS.ThumbnailStore)
     @optional()
@@ -256,7 +265,10 @@ export class ProcessItemUseCase {
     }
   }
 
-  /** Marks the Item Ready with the URL's preview plus its own Text, in one update. */
+  /**
+   * Marks the Item Ready with the URL's preview plus its own Text, in one
+   * update, then queues its AI tagging.
+   */
   private async ready(
     ref: ItemRef,
     preview: CachedPreview,
@@ -264,7 +276,18 @@ export class ProcessItemUseCase {
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
     await this.items.markReady(ref, ready);
-    return { outcome: "ready", ...ready, ...extraction };
+    const tagging = await this.queueTagging(ref);
+    return { outcome: "ready", ...ready, ...extraction, ...tagging };
+  }
+
+  /** Queues the Item's AI tagging, with only its ids; a failure is handed back, never thrown. */
+  private async queueTagging({ itemId, userId }: ItemRef): Promise<{ tagQueueError?: unknown }> {
+    try {
+      await this.queue.enqueueTagItem({ itemId, userId });
+      return {};
+    } catch (error) {
+      return { tagQueueError: error };
+    }
   }
 }
 

@@ -113,6 +113,34 @@ describe("a Process Item job", () => {
     ]);
   });
 
+  it("warns when the Item's AI tagging couldn't be queued, the Item Ready all the same", async () => {
+    const { container, logger } = testContainer(async () => ({
+      outcome: "ready",
+      type: "link",
+      metadata: { title: null, description: null },
+      thumbnailKey: null,
+      text: null,
+      tagQueueError: new Error("Redis answered ECONNREFUSED"),
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "warn",
+        bindings: { itemId: ITEM_ID },
+        fields: { event: "tag_item_enqueue_failed", err: "Error" },
+        msg: "couldn't queue AI tagging; the Item is Ready without AI Tags",
+      },
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { type: "link", titled: false, pictured: false, texted: false },
+        msg: "Item is Ready",
+      },
+    ]);
+  });
+
   it("logs that a missing Item has nothing to process, carrying that Item's id", async () => {
     const { container, logger } = testContainer(async () => ({ outcome: "missing" }));
 

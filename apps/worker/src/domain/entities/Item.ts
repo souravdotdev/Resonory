@@ -46,6 +46,29 @@ export interface Item {
   status: ItemStatus;
 }
 
+/** How much of an Item's Text the model sees: its start, never the whole (Items ADR 0004). */
+export const TAGGING_TEXT_LENGTH = 4000;
+
+/**
+ * How many of the User's Tag names the model is told, most recently used first,
+ * so a call stays small for a User with many Tags (Items ADR 0004). The model can
+ * still be answered with a Tag it wasn't told about; that reuses the Tag.
+ */
+export const TAGGING_TAG_NAMES_LIMIT = 200;
+
+/**
+ * The excerpt of an Item AI tagging sends to the model (Items ADR 0004): its
+ * title, description, Source URL and Item type, and only the start of its Text
+ * (`TAGGING_TEXT_LENGTH` characters), never the whole. Without Text, `text` is null.
+ */
+export interface TaggableItem {
+  title: string | null;
+  description: string | null;
+  sourceUrl: string;
+  type: ItemType | null;
+  text: string | null;
+}
+
 /** What the page says it is called and is about; written to the Item when it becomes Ready. */
 export interface ItemMetadata {
   title: string | null;

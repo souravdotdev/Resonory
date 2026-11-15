@@ -18,7 +18,8 @@ export interface TagItemByNameInput {
  * Tags one of the User's Items by name. The name is reduced to its Tag name (the
  * slug); the User's Tag with that name is used, or created when they have none,
  * and put on the Item with Tag source `user`; a name with no valid Tag name is an
- * `InvalidTagNameError`. A Tag the AI had put there becomes the User's, and
+ * `InvalidTagNameError`. A Tag the AI had put there becomes the User's, and so
+ * does a Tag only the AI had used, which then stays theirs on no Items;
  * repeating the call changes nothing. Returns the Item's Tags.
  * An Item that isn't the User's is a `NotFoundError`, so nothing reveals it exists.
  * A Tag new to the Item past `MAX_TAGS_PER_ITEM` is an `ItemTagLimitError`, and a

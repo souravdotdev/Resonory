@@ -10,7 +10,8 @@ export interface ListTagsInput {
 /**
  * Lists every one of the User's Tags for a Tag picker, most recently used first:
  * by the latest time each was put on any Item, by the AI or the User, and a Tag
- * on no Items by when it was created. Filtering as the User types is the client's job.
+ * on no Items by when it was created. A Tag only the AI used is left out once it's
+ * on no Items. Filtering as the User types is the client's job.
  */
 @injectable()
 export class ListTagsUseCase {

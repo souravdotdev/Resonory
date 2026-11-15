@@ -22,8 +22,10 @@ export interface FailedItemsJob extends ItemsJob {
  * The Items worker's `failed` handler. Every failed attempt is logged with its
  * reason. Once no attempt is left, however the job failed (its last retry, an
  * unrecoverable error, or a stall), its name's final-failure step runs: a
- * Process Item job's Item becomes Failed, and then the job keeps only the
- * data worth keeping (`slimFinishedJob`). A payload that names no Item, or an
+ * Process Item job's Item becomes Failed (a Tag Item job's stays Ready; that
+ * failure is only logged), and then the job keeps only the
+ * data worth keeping (`slimFinishedJob`). A final-failure step that throws is
+ * logged with its handler's own message. A payload that names no Item, or an
  * unknown job name, changes no Item. It never throws: it runs from an event listener.
  */
 export async function onItemsJobFailed(
@@ -50,10 +52,11 @@ export async function onItemsJobFailed(
   );
   if (!final) return;
 
+  const handler = itemsJobHandler(job.name);
   try {
-    await itemsJobHandler(job.name)?.onFinalFailure(container, job.data);
-  } catch (markError) {
-    jobLogger.error({ err: describeError(markError) }, "couldn't mark the Item Failed");
+    await handler?.onFinalFailure(container, job.data);
+  } catch (finalFailureError) {
+    jobLogger.error({ err: describeError(finalFailureError) }, handler!.finalFailureError);
   }
   await slimFinishedJob(container, job);
 }

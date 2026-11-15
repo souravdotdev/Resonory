@@ -34,6 +34,13 @@ export async function processItem(container: Container, data: unknown): Promise<
         "Text extraction failed; the Item is Ready without Text",
       );
     }
+    if ("tagQueueError" in result) {
+      // `event` is a stable key to count how often an Item is left untagged this way.
+      logger.warn(
+        { event: "tag_item_enqueue_failed", err: describeError(result.tagQueueError) },
+        "couldn't queue AI tagging; the Item is Ready without AI Tags",
+      );
+    }
     logger.info(
       {
         type: result.type,

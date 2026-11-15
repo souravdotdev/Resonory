@@ -7,7 +7,7 @@ Versions match the [product plan](../product-plan.md). Resonory is a mymind-styl
 1. **Accounts** — Google sign-in
 2. **Link capture** — paste any URL (article, X post, Instagram post, YouTube video, PDF link, any page); every Item starts from a URL
 3. **Async processing** — Item type, title, description, Thumbnail, readable text
-4. **AI tags + manual tags** — no folders, no Collections
+4. **AI tags + manual tags** — no folders, no Collections. Manual tags are built ([Tags](./tags.md)), and so is AI tagging of newly Ready Items ([Tags → AI tagging](./tags.md#ai-tagging), issue #176, including deleting Tags only the AI used)
 5. **Embeddings** for every Item
 6. **Semantic search** — find by meaning, including related-but-not-matching Items
 7. **Related Items** — similar saves shown on every Item and right after saving
