@@ -2,16 +2,16 @@ import { and, eq, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
-import type {
-  Item,
-  ItemRef,
-  ItemStatus,
-  ItemType,
-  ReadyItem,
-  TaggableItem,
+import {
+  type Item,
+  type ItemRef,
+  type ItemStatus,
+  type ItemType,
+  type ReadyItem,
+  TAGGING_TEXT_LENGTH,
+  type TaggableItem,
 } from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
-import { TAGGING_TEXT_LENGTH } from "@/domain/rules/aiTagNames";
 import type { Database } from "@/infrastructure/database/Database";
 
 /** The `items` columns ending Processing sets: a Failed Item keeps no title, description, Thumbnail key or Text. */

@@ -46,6 +46,9 @@ export interface Item {
   status: ItemStatus;
 }
 
+/** How much of an Item's Text the model sees: its start, never the whole (Items ADR 0004). */
+export const TAGGING_TEXT_LENGTH = 4000;
+
 /**
  * The excerpt of an Item AI tagging sends to the model (Items ADR 0004): its
  * title, description, Source URL and Item type, and only the start of its Text

@@ -74,9 +74,10 @@ AI tagging is `apps/worker`'s, layered the same way:
 
 ```text
 domain/
+  entities/Item.ts             TaggableItem (the excerpt the model sees), TAGGING_TEXT_LENGTH
   rules/tagName.ts             the worker's copy of slugifyTagName and the Tag name rule
   rules/tagLimits.ts           the worker's copy of MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER
-  rules/aiTagNames.ts          aiTagNames (cleans the model's answer), MAX_AI_TAGS, TAGGING_TEXT_LENGTH
+  rules/aiTagNames.ts          aiTagNames (cleans the model's answer), MAX_AI_TAGS
   providers/ITagSuggester.ts   the model port
   providers/IQueueProvider.ts  queues the tag-item job
   repositories/ITagRepository.ts

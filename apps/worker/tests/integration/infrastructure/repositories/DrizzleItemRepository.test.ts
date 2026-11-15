@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { items, users } from "@resonory/db/schema";
-import { TAGGING_TEXT_LENGTH } from "@/domain/rules/aiTagNames";
+import { TAGGING_TEXT_LENGTH } from "@/domain/entities/Item";
 import type { Database } from "@/infrastructure/database/Database";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
 import { createTestDatabase, type TestDatabase } from "../../support/testDatabase";

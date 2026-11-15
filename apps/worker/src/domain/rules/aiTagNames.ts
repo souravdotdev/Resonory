@@ -4,9 +4,6 @@ import { slugifyTagName } from "@/domain/rules/tagName";
 /** The most Tags AI tagging puts on one Item. Fewer, or none, is fine. */
 export const MAX_AI_TAGS = 3;
 
-/** How much of an Item's Text the model sees: its start, never the whole (Items ADR 0004). */
-export const TAGGING_TEXT_LENGTH = 4000;
-
 export interface AiTagNamesContext {
   /** Every one of the User's Tag names: exactly those counting towards `MAX_TAGS_PER_USER`. */
   tagNames: readonly string[];
