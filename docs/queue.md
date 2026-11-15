@@ -164,4 +164,4 @@ Once an Item is Ready, the worker puts 0–3 Tags on it with Tag source `ai` (is
 
 ## Not yet built
 
-The worker follows the same layering as the API (see [Clean Architecture](./clean-architecture.md#the-worker)). PDF Text is not implemented; see product plan section 6 for the intended scope. Deleting a Tag only the AI ever used once it's on no Items is issue #179 ([Tags → AI tagging](./tags.md#ai-tagging)). Why an Item failed is logged by the worker with the Item id, not stored (see [Database](./database.md#schema)).
+The worker follows the same layering as the API (see [Clean Architecture](./clean-architecture.md#the-worker)). PDF Text is not implemented; see product plan section 6 for the intended scope. Why an Item failed is logged by the worker with the Item id, not stored (see [Database](./database.md#schema)).

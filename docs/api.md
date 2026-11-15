@@ -194,7 +194,7 @@ Tag routes are served by `tagsRoutes` (`src/interface/routes/tags.routes.ts`) �
 
 ### `GET /tags`
 
-Lists every one of the signed-in User's Tags, for a Tag picker. Served by `ListTagsUseCase` over `ITagRepository.listForUser`. Tags come most recently used first: by the latest time each was put on any Item, by the AI or the User (the latest `item_tags.created_at`). A Tag on no Items falls back to its own `created_at`, and ties go by Tag name. Upgrading an AI link to `user` keeps the link's `created_at`, so it doesn't count as a new use. The query returns at most 1,000 Tags, a User's Tag limit. There's no search parameter: matching what the User types (contains, on the slugified input) is the client's job.
+Lists every one of the signed-in User's Tags, for a Tag picker. Served by `ListTagsUseCase` over `ITagRepository.listForUser`. Tags come most recently used first: by the latest time each was put on any Item, by the AI or the User (the latest `item_tags.created_at`). A Tag on no Items falls back to its own `created_at`, and ties go by Tag name. Upgrading an AI link to `user` keeps the link's `created_at`, so it doesn't count as a new use. A Tag only the AI ever used is left out once it's on no Items (untagging deletes one, but one whose Items were deleted is still stored). The query returns at most 1,000 Tags, a User's Tag limit. There's no search parameter: matching what the User types (contains, on the slugified input) is the client's job.
 
 The response is `ListTagsResponseSchema` (`ListedTagSchema[]`): each Tag's id and Tag name, nothing else.
 
@@ -219,8 +219,8 @@ Tags one of the signed-in User's Items by name. Served by `TagItemUseCase`, whic
 1. reduces `name` to its Tag name; one that's empty once reduced, or longer than 50 characters, is an `InvalidTagNameError`;
 2. finds the Item through `IItemRepository.findById(userId, itemId)`; no Item, or another User's, is a `NotFoundError`, checked before any Tag is created;
 3. refuses a Tag that isn't on the Item yet when the Item already has 20 (`ItemTagLimitError`), checked before any Tag is created (see [Tag limits](#tag-limits));
-4. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`); a new Tag when the User already has 1,000 is a `UserTagLimitError`. Creates for one User take turns behind a lock on their `users` row, and the insert still relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag;
-5. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user`, and a link the User already made is left as it is, so repeating the call changes nothing. An Item deleted since step 2 is a `NotFoundError` here too: the adapter's lock on the Item's row finds no row, so the link is never attempted (and can't then fail its foreign key as a 500);
+4. finds the User's Tag with that name, or creates it (`ITagRepository.findOrCreate`); a new Tag when the User already has 1,000 is a `UserTagLimitError`. Creates for one User take turns behind a lock on their `users` row, and the insert still relies on `tags_user_id_name_unique` (`ON CONFLICT DO NOTHING`, then a select), so two requests creating the same new Tag at once end with one Tag. Found or created, the Tag is the User's from then on (`tags.origin` `user`): naming a Tag only the AI had used makes it theirs, so it's kept on no Items;
+5. puts it on the Item with Tag source `user` (`ITagRepository.applyAsUser`): a link the AI made becomes `user` (confirming the AI's Tag, which also makes the Tag the User's for good), and a link the User already made is left as it is, so repeating the call changes nothing. An Item deleted since step 2 is a `NotFoundError` here too: the adapter's lock on the Item's row finds no row, so the link is never attempted (and can't then fail its foreign key as a 500);
 6. returns the Item's Tags after the change (`ItemTagsResponseSchema`: `ItemCardTagSchema[]`), oldest link first.
 
 ```
@@ -249,17 +249,17 @@ An Item can have at most 20 Tags (`MAX_TAGS_PER_ITEM`), and a User at most 1,000
 The adapter enforces each limit in the same transaction as the write it guards, behind a row lock (`SELECT ... FOR NO KEY UPDATE`, which still lets foreign keys to the row be checked): `findOrCreate` locks the User's `users` row, then counts and inserts; `applyAsUser` locks the Item's `items` row, then counts and links. Concurrent requests therefore take turns and can't race past either limit. Two gaps remain:
 
 - the database itself doesn't cap an Item's Tags: only the lock and count do. So any other writer that puts Tags on an Item (the worker's AI tagger does, see [Tags → Concurrency](./tags.md#concurrency)) must, in the same transaction as its insert, take the same lock on the Item's `items` row (`SELECT ... FOR NO KEY UPDATE`) and count the Item's links before linking, or concurrent writes can push an Item past 20;
-- `TagItemUseCase` checks the Item's count early so a full Item doesn't leave a new Tag behind, but two requests racing for an Item's last slot both pass that check: the loser gets `409 item_tag_limit`, and the new Tag it created stays on no Item, like any Tag taken off its last Item. Issue #173 removes this by doing the find-or-create and the link in one transaction ([Tags → Concurrency](./tags.md#concurrency)).
+- `TagItemUseCase` checks the Item's count early so a full Item doesn't leave a new Tag behind, but two requests racing for an Item's last slot both pass that check: the loser gets `409 item_tag_limit`, and the new Tag it created (the User's) stays on no Item, like any Tag the User applied that's taken off its last Item. Issue #173 removes this by doing the find-or-create and the link in one transaction ([Tags → Concurrency](./tags.md#concurrency)).
 
 ### `DELETE /items/:itemId/tags/:tagId`
 
 Takes one of the signed-in User's Tags off one of their Items, whoever put it there (the AI or the User). Served by `UntagItemUseCase`, which:
 
 1. finds the Item through `IItemRepository.findById(userId, itemId)` and the Tag through `ITagRepository.findById(userId, tagId)`; either missing, or another User's, is a `NotFoundError`;
-2. deletes the link and records the Tag's name as a Rejected tag for that Item (`ITagRepository.removeFromItem`), in one transaction, whatever its Tag source. AI tagging will never put a rejected name back on that Item; the User still can. The Tag itself is kept, even when it's then on no Items, so it can be reused. A Tag that isn't on the Item is left alone and nothing is recorded, so removing it again is harmless; a name rejected twice stays one Rejected tag (`rejected_item_tags` in [Database](./database.md));
+2. deletes the link and records the Tag's name as a Rejected tag for that Item (`ITagRepository.removeFromItem`), in one transaction, whatever its Tag source. AI tagging will never put a rejected name back on that Item; the User still can. A Tag the User ever applied is kept, even when it's then on no Items, so it can be reused; a Tag only the AI ever used is deleted, in the same transaction, once it's on no Items (its Rejected tag stays). A Tag that isn't on the Item is left alone and nothing is recorded, so removing it again is harmless; a name rejected twice stays one Rejected tag (`rejected_item_tags` in [Database](./database.md));
 3. returns the Item's remaining Tags (`ItemTagsResponseSchema`), oldest link first. The response doesn't mention the Rejected tag.
 
-Planned (issue #179): the same call will also delete the Tag if only the AI ever used it and it's now on no Items. See [Tags → AI tagging](./tags.md#ai-tagging).
+It locks the Item's row, then the User's, the order the worker's AI tagger takes them in, so the two can't deadlock and an untag racing the AI putting the same Tag on another Item leaves the Tag either deleted or on that Item. See [Tags → Concurrency](./tags.md#concurrency).
 
 ```
 DELETE /items/3b241101-e2bb-4255-8caf-4136c566a962/tags/0f1e2d3c-4b5a-4968-8776-655443322110
