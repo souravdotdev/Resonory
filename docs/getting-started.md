@@ -119,14 +119,14 @@ pnpm build             # production build for every app (tsup for api/worker, ne
 pnpm lint              # eslint across every package
 pnpm check-types       # tsc --noEmit across every package
 pnpm test              # vitest run across every package, no database needed — see docs/testing.md
-pnpm test:integration  # the API's Postgres-backed tests (needs the Compose Postgres)
+pnpm test:integration  # the API's and the worker's Postgres-backed tests (needs the Compose Postgres)
 pnpm format            # prettier --write across the repo
 pnpm format:check      # prettier --check (CI-style, no writes)
 ```
 
 All of these (except `format`/`format:check`, which run Prettier directly rather than through Turborepo — see [Code Quality](./code-quality.md)) are Turborepo tasks, so results are cached and only re-run for packages whose inputs actually changed. `test:integration` is the exception: never cached, since its result depends on the database.
 
-**Running the integration tests.** With `docker compose up -d` running, `pnpm test:integration` (or `pnpm --filter api test:integration`) creates a throwaway database on the Compose Postgres for each test file (`resonory_test_<random>`), runs every migration in it, and drops it afterwards, even when a test fails. Your `resonory` database isn't touched, and nothing needs migrating first. To use another server, set `TEST_DATABASE_URL` to a connection string for it (any database the user can connect to; the throwaway ones are created next to it), e.g. `TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm test:integration`. See [Testing](./testing.md#integration-tests-apps-api).
+**Running the integration tests.** With `docker compose up -d` running, `pnpm test:integration` (or `pnpm --filter api test:integration` / `pnpm --filter worker test:integration`) creates a throwaway database on the Compose Postgres for each test file (`resonory_test_<random>`), runs every migration in it, and drops it afterwards, even when a test fails. Your `resonory` database isn't touched, and nothing needs migrating first. To use another server, set `TEST_DATABASE_URL` to a connection string for it (any database the user can connect to; the throwaway ones are created next to it), e.g. `TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm test:integration`. See [Testing](./testing.md#integration-tests-apps-api) and [the worker's](./testing.md#integration-tests-apps-worker).
 
 These same checks (plus commit-message linting) also run automatically in CI on every push and PR — see [Code Quality](./code-quality.md#continuous-integration).
 

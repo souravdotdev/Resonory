@@ -142,7 +142,7 @@ Don't create empty layer folders ahead of time. A folder appears with its first 
 
 ## The worker
 
-`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and `createContainer()` (`src/di/container.ts`), `reflect-metadata` loaded first in `index.ts`, `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/`, and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis, htmlparser2, linkedom, Readability, sharp, Supabase and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
+`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and `createContainer()` (`src/di/container.ts`), `reflect-metadata` loaded first in `index.ts`, `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/` (and Postgres-backed ones in `tests/integration/`), and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis, htmlparser2, linkedom, Readability, sharp, Supabase, `openai` and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
 
 ```
 apps/worker/src/
@@ -151,9 +151,10 @@ apps/worker/src/
   domain/
     entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; CachedPreview, a URL's
                         shared preview; ReadyItem, what Processing learned: the CachedPreview plus
-                        Text; Item types and statuses),
+                        Text; TaggableItem, the excerpt AI tagging sends; Item types and statuses),
                         PageHead.ts (a page head's extracted tags)
-    repositories/       IItemRepository.ts (findById, markReady, markFailed)
+    repositories/       IItemRepository.ts (findById, findTaggable, markReady, markFailed),
+                        ITagRepository.ts (listNames, listRejectedNames, applyAsAi)
     providers/          IUrlFetcher.ts (fetchPage → FetchedPage: html | file | unsuccessful),
                         IJsonFetcher.ts (fetchJson), IOEmbedProvider.ts (fetchOEmbed),
                         IImageFetcher.ts (fetchImage), IThumbnailResizer.ts (toCardThumbnail),
@@ -161,7 +162,8 @@ apps/worker/src/
                         page's HTML → PageHead, the same shape IUrlFetcher's HtmlPage carries, so
                         already-rendered content (issue #143/#145) skips the fetch but not this step),
                         ITextExtractor.ts (extractText: an already-captured page's HTML → its
-                        main-content text, or null)
+                        main-content text, or null), ITagSuggester.ts (suggestTags: the model's raw
+                        Tag names for an Item), IQueueProvider.ts (enqueueTagItem)
     rules/              thumbnailCandidates.ts (which images, in which order), thumbnailImage.ts
                         (the one list of accepted image formats), magicBytes.ts (file signatures, shared
                         with itemTypeFromMagicBytes.ts), thumbnailKey.ts,
@@ -172,10 +174,11 @@ apps/worker/src/
                         itemTypeFromJsonLd.ts, itemTypeFromOpenGraph.ts, itemTypeFromTwitterCard.ts,
                         oEmbed.ts (which endpoint to ask, oEmbed types), pageMetadata.ts,
                         parsedUrl.ts, collapseWhitespace.ts, itemText.ts (an Item's Text: normalised,
-                        capped) (pure functions)
+                        capped), tagName.ts and tagLimits.ts (copies of the API's), aiTagNames.ts
+                        (cleans the model's answer) (pure functions)
   application/
-    use-cases/items/    ProcessItemUseCase, FailItemUseCase
-    dto/items/          ProcessItemResult.ts, FailItemResult.ts
+    use-cases/items/    ProcessItemUseCase, FailItemUseCase, TagItemUseCase
+    dto/items/          ProcessItemResult.ts, FailItemResult.ts, TagItemResult.ts
   infrastructure/
     database/           Database.ts, db.ts
     http/               SafeUrlFetcher.ts, publicAddress.ts (the guarded fetch), readBody.ts (bounded body
@@ -190,12 +193,17 @@ apps/worker/src/
     images/             SharpThumbnailResizer.ts (the card Thumbnail, with sharp)
     storage/            SupabaseThumbnailStore.ts, supabaseEnv.ts (the optional SUPABASE_URL /
                         SUPABASE_SERVICE_ROLE_KEY; unset, no store is bound)
-    repositories/       DrizzleItemRepository.ts
+    repositories/       DrizzleItemRepository.ts, DrizzleTagRepository.ts (applyAsAi: Item lock, then
+                        User lock, one transaction)
+    queue/              BullMqQueueProvider.ts, itemsQueue.ts (the Items queue, produced onto)
+    ai/                 OpenAiCompatibleTagSuggester.ts (the `openai` client, JSON mode), aiTaggingEnv.ts
+                        (the optional AI_TAGGING_* trio; no key, no suggester is bound)
   interface/
     itemsJobs.ts        the job-name map: each name's processor and final-failure step
     itemsWorker.ts      createItemsWorker (the BullMQ Worker) and runItemsJob (the job switch)
     itemsJobFailed.ts   onItemsJobFailed (the Worker's `failed` handler)
-    processors/         processItem.processor.ts, processItemFailed.processor.ts
+    processors/         processItem.processor.ts, processItemFailed.processor.ts,
+                        tagItem.processor.ts, tagItemFailed.processor.ts (only logs: the Item stays Ready)
 ```
 
 | Part           | In the API                    | In the worker                                                   |
@@ -206,10 +214,10 @@ apps/worker/src/
 | Tokens         | `TOKENS` in `apps/api/src/di` | the worker's own `WORKER_TOKENS` and container                  |
 | Queue names    | n/a                           | constants from a shared queue entry point, no typed-out strings |
 
-- **The API enqueues through a port.** `SaveItemUseCase` depends on `IQueueProvider` in the domain, and `BullMqQueueProvider` in infrastructure implements it. The port takes its own `ProcessItemRequest`; the adapter maps it to the shared job payload. The use case never imports `bullmq`; the lint guard blocks it.
-- **One worker per queue, routing by job name.** `interface/itemsWorker.ts` creates the BullMQ `Worker` for the Items queue. `interface/itemsJobs.ts` maps each job name to `{ process, onFinalFailure }`. The job switch `runItemsJob(container, job)` runs the name's `process`; an unknown name throws `UnrecoverableError`, so it is not retried. The `failed` handler, `onItemsJobFailed`, logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs the name's `onFinalFailure` (`processItemFailed`), which runs a use case like any processor.
+- **The API enqueues through a port.** `SaveItemUseCase` depends on `IQueueProvider` in the domain, and `BullMqQueueProvider` in infrastructure implements it. The port takes its own `ProcessItemRequest`; the adapter maps it to the shared job payload. The use case never imports `bullmq`; the lint guard blocks it. The worker enqueues the same way: `ProcessItemUseCase` queues AI tagging through its own `IQueueProvider` (`enqueueTagItem`), implemented by its own `BullMqQueueProvider`.
+- **One worker per queue, routing by job name.** `interface/itemsWorker.ts` creates the BullMQ `Worker` for the Items queue. `interface/itemsJobs.ts` maps each job name to `{ process, onFinalFailure }`. The job switch `runItemsJob(container, job)` runs the name's `process`; an unknown name throws `UnrecoverableError`, so it is not retried. The `failed` handler, `onItemsJobFailed`, logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs the name's `onFinalFailure` (`processItemFailed`, which runs a use case like any processor; `tagItemFailed` only logs).
 - **A processor is a thin controller.** It lives in `interface/processors/`. It parses `job.data` with the payload's zod schema (an invalid payload throws `UnrecoverableError`), maps it to the use case's input, and calls `container.get<XUseCase>(WORKER_TOKENS.XUseCase).execute(input)`. Errors from the use case pass through, so BullMQ retries.
-- **The worker has its own `di/tokens.ts` and `di/container.ts`.** It never shares or mixes the API's `TOKENS`. Its port symbols are named after their interfaces too (`WORKER_TOKENS.ItemRepository = Symbol("IItemRepository")`). Adapters (`DrizzleItemRepository`, `SafeUrlFetcher`, `GuardedOEmbedProvider`) are `@injectable()` singletons bound to their port's token with `.to(...).inSingletonScope()`, and depend on other ports by token only, never on a concrete class; use cases are transient. One `SafeUrlFetcher` implements two ports: it is bound to `WORKER_TOKENS.UrlFetcher` (`IUrlFetcher`), and `WORKER_TOKENS.JsonFetcher` (`IJsonFetcher`, which `GuardedOEmbedProvider` injects) is `.toService(WORKER_TOKENS.UrlFetcher)`, the same instance, so the page fetch and the oEmbed call share one guard; `WORKER_TOKENS.ImageFetcher` (`IImageFetcher`) is bound the same way, so the Thumbnail download shares it too. `WORKER_TOKENS.ThumbnailStore` is bound to a constant `SupabaseThumbnailStore` over `@supabase/storage-js`'s `StorageClient` (as in the API), and left unbound when Supabase Storage isn't configured, so `ProcessItemUseCase` (whose store is `@optional()`) gets none and downloads no image. `SafeUrlFetcher`'s options parameter is `@unmanaged()`, so the container builds it with the defaults and tests construct it directly with their own. Use-case results sit in `application/dto/items/`, as in the API. The worker's `Item` entity is its own (the domain can't import the API's); `tests/unit/domain/schema-agreement.test.ts` keeps its Item types and statuses equal to the database enums.
+- **The worker has its own `di/tokens.ts` and `di/container.ts`.** It never shares or mixes the API's `TOKENS`. Its port symbols are named after their interfaces too (`WORKER_TOKENS.ItemRepository = Symbol("IItemRepository")`). Adapters (`DrizzleItemRepository`, `SafeUrlFetcher`, `GuardedOEmbedProvider`) are `@injectable()` singletons bound to their port's token with `.to(...).inSingletonScope()`, and depend on other ports by token only, never on a concrete class; use cases are transient. One `SafeUrlFetcher` implements two ports: it is bound to `WORKER_TOKENS.UrlFetcher` (`IUrlFetcher`), and `WORKER_TOKENS.JsonFetcher` (`IJsonFetcher`, which `GuardedOEmbedProvider` injects) is `.toService(WORKER_TOKENS.UrlFetcher)`, the same instance, so the page fetch and the oEmbed call share one guard; `WORKER_TOKENS.ImageFetcher` (`IImageFetcher`) is bound the same way, so the Thumbnail download shares it too. `WORKER_TOKENS.ThumbnailStore` is bound to a constant `SupabaseThumbnailStore` over `@supabase/storage-js`'s `StorageClient` (as in the API), and left unbound when Supabase Storage isn't configured, so `ProcessItemUseCase` (whose store is `@optional()`) gets none and downloads no image. `WORKER_TOKENS.TagSuggester` works the same way: bound to a constant `OpenAiCompatibleTagSuggester` only when `AI_TAGGING_API_KEY` is set, and `TagItemUseCase`'s suggester is `@optional()`. `SafeUrlFetcher`'s options parameter is `@unmanaged()`, so the container builds it with the defaults and tests construct it directly with their own. Use-case results sit in `application/dto/items/`, as in the API. The worker's `Item` entity is its own (the domain can't import the API's); `tests/unit/domain/schema-agreement.test.ts` keeps its Item types and statuses equal to the database enums, and `tests/unit/domain/tag-rules-agreement.test.ts` its copy of the Tag name rule and limits equal to the API's.
 - **Two test seams, as in the API.** The processor seam drives `runItemsJob` with a fake job and a test container whose use case is a stand-in; use cases are tested with `new XUseCase(fake)`.
 
-Payload schemas and queue names go in `@resonory/shared/schemas/queue` (today `ITEMS_QUEUE`, `PROCESS_ITEM_JOB`, `ProcessItemJobSchema`). See [Queue](./queue.md).
+Payload schemas and queue names go in `@resonory/shared/schemas/queue` (today `ITEMS_QUEUE`, `PROCESS_ITEM_JOB`, `ProcessItemJobSchema`, `TAG_ITEM_JOB`, `TagItemJobSchema`). See [Queue](./queue.md).
