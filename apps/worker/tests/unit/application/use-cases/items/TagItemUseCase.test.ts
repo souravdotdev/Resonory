@@ -225,6 +225,19 @@ describe("TagItemUseCase", () => {
     expect(applied).toEqual(["tag-7", "tag-999"]);
   });
 
+  it("tells the model the Source URL without its query string, fragment or credentials", async () => {
+    const items = itemsHolding({
+      ...ARTICLE,
+      sourceUrl: "https://user:pass@example.com/doc?token=abc123#top",
+    });
+    const { repository: tags } = tagsHolding();
+    const suggester = suggesterAnswering("postgres");
+
+    await new TagItemUseCase(items, tags, suggester).execute(REF);
+
+    expect(suggester.suggestTags.mock.calls[0]![0].sourceUrl).toBe("https://example.com/doc");
+  });
+
   it("tells the model only the User's 200 most recently used Tag names", async () => {
     // listNames answers most recently used first.
     const names = Array.from({ length: 300 }, (_, index) => `tag-${index}`);

@@ -6,9 +6,11 @@ import type { ITagSuggester } from "@/domain/providers/ITagSuggester";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { aiTagNames } from "@/domain/rules/aiTagNames";
+import { sourceUrlForTagging } from "@/domain/rules/sourceUrlForTagging";
 
 /**
- * Runs an Item's AI tagging: tells the model the Item's excerpt and its User's
+ * Runs an Item's AI tagging: tells the model the Item's excerpt (its Source URL
+ * without query string, fragment or credentials, `sourceUrlForTagging`) and its User's
  * most recently used Tag names (the first `TAGGING_TAG_NAMES_LIMIT` of
  * `listNames`, which leaves out a Tag only the AI used that's on no Items
  * now), cleans the names it answers (`aiTagNames`: the Tag
@@ -50,6 +52,7 @@ export class TagItemUseCase {
     ]);
     const suggested = await this.suggester.suggestTags({
       ...item,
+      sourceUrl: sourceUrlForTagging(item.sourceUrl),
       tagNames: tagNames.slice(0, TAGGING_TAG_NAMES_LIMIT),
     });
     const applied = await this.tags.applyAsAi(ref, aiTagNames(suggested, { tagNames, rejected }));
