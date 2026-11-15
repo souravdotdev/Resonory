@@ -14,9 +14,10 @@ import {
 import { users } from "./auth";
 import { items } from "./items";
 
-// The Items domain's Tag sources and Tag name rule (slugifyTagName); the API's
-// schema-agreement test checks the two agree.
+// The Items domain's Tag sources, Tag origins and Tag name rule (slugifyTagName);
+// the API's schema-agreement test checks the two agree.
 export const tagSourceEnum = pgEnum("tag_source", ["ai", "user"]);
+export const tagOriginEnum = pgEnum("tag_origin", ["ai", "user"]);
 
 export const tagNameRule = {
   pattern: "^[a-z0-9+#.]+(-[a-z0-9+#.]+)*$",
@@ -32,6 +33,10 @@ export const tags = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     // The canonical slug; no separate display name is kept.
     name: text("name").notNull(),
+    // `ai` while only the AI has used the Tag; `user` once the User applies it,
+    // never back. An `ai` Tag is deleted once it's on no Items. Tags from before
+    // AI tagging are the User's, which the default gives them.
+    origin: tagOriginEnum("origin").notNull().default("user"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

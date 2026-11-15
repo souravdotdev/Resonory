@@ -7,6 +7,7 @@ export function toTag(row: typeof tags.$inferSelect): Tag {
     id: row.id,
     userId: row.userId,
     name: row.name,
+    origin: row.origin,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

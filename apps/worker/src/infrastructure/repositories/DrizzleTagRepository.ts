@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, exists, inArray, or } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -21,7 +21,22 @@ export class DrizzleTagRepository implements ITagRepository {
     const rows = await this.db
       .select({ name: tags.name })
       .from(tags)
-      .where(eq(tags.userId, userId))
+      .where(
+        and(
+          eq(tags.userId, userId),
+          // A Tag only the AI used is left out once it's on no Items, so the model
+          // isn't offered it back as one of the User's.
+          or(
+            eq(tags.origin, "user"),
+            exists(
+              this.db
+                .select({ tagId: itemTags.tagId })
+                .from(itemTags)
+                .where(eq(itemTags.tagId, tags.id)),
+            ),
+          ),
+        ),
+      )
       .orderBy(asc(tags.name))
       // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
       .limit(MAX_TAGS_PER_USER);
@@ -54,6 +69,9 @@ export class DrizzleTagRepository implements ITagRepository {
 
       // Locking the User's row makes their Tag creations take turns, so each
       // counts the Tags the last one committed and the limit can't be raced past.
+      // Untagging takes it too before deleting a Tag only the AI used, so the
+      // Tags read below are never ones it's deleting: a Tag it deleted first is
+      // made again, and one linked here first isn't deleted.
       await tx
         .select({ id: users.id })
         .from(users)
@@ -62,8 +80,8 @@ export class DrizzleTagRepository implements ITagRepository {
       if (names.length === 0) return [];
 
       // Checked again here, not only by the use case, for a rejection recorded
-      // while the model was answering. Untagging takes no lock on the Item, so a
-      // rejection committed after this read can still lose the race.
+      // while the model was answering. Untagging locks the Item's row too, so no
+      // rejection of this Item can commit until this transaction does.
       const rejected = await tx
         .select({ name: rejectedItemTags.tagName })
         .from(rejectedItemTags)
@@ -101,9 +119,11 @@ export class DrizzleTagRepository implements ITagRepository {
           if (owned >= MAX_TAGS_PER_USER) continue;
           // The lock already serializes same-name creates; tags_user_id_name_unique
           // stays the backstop, and a conflict there means the Tag now exists.
+          // Made as only the AI's; an existing Tag's origin is never touched, so
+          // a Tag the User applied is never made the AI's.
           const [created] = await tx
             .insert(tags)
-            .values({ userId, name })
+            .values({ userId, name, origin: "ai" })
             .onConflictDoNothing({ target: [tags.userId, tags.name] })
             .returning({ id: tags.id });
           if (created !== undefined) owned++;

@@ -8,8 +8,9 @@ import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { aiTagNames } from "@/domain/rules/aiTagNames";
 
 /**
- * Runs an Item's AI tagging: tells the model the Item's excerpt and every one
- * of its User's Tag names, cleans the names it answers (`aiTagNames`: the Tag
+ * Runs an Item's AI tagging: tells the model the Item's excerpt and its User's
+ * Tag names (`listNames`: all but a Tag only the AI used that's on no Items
+ * now), cleans the names it answers (`aiTagNames`: the Tag
  * name rule, deduped, no Rejected tag, no new Tag once the User is at the
  * limit, at most 3), and puts them on the Item with Tag source `ai`. Zero
  * names is a valid answer.

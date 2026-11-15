@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
-import { count, eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { ItemTagLimitError, NotFoundError, UserTagLimitError } from "@/domain/errors";
@@ -46,6 +46,20 @@ async function aTag(userId: string, name: string, createdAt?: Date): Promise<str
   return tag!.id;
 }
 
+// A Tag only the AI has used, as the AI tagger creates it.
+async function anAiTag(userId: string, name: string): Promise<string> {
+  const [tag] = await db
+    .insert(tags)
+    .values({ userId, name, origin: "ai" })
+    .returning({ id: tags.id });
+  return tag!.id;
+}
+
+async function originOf(tagId: string) {
+  const [tag] = await db.select({ origin: tags.origin }).from(tags).where(eq(tags.id, tagId));
+  return tag?.origin;
+}
+
 // A link written straight to item_tags, as the AI tagger will: no limit, any source and time.
 async function aLink(
   userId: string,
@@ -72,6 +86,18 @@ async function tagCount(userId: string): Promise<number> {
   return owned;
 }
 
+// Resolves once another connection to the test database is waiting on a lock.
+async function untilWaitingOnALock(): Promise<void> {
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const waiting = await db.execute(
+      sql`select pid from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'`,
+    );
+    if (waiting.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("Nothing started waiting on a lock");
+}
+
 // The calls' settled results, split into what they returned and what they threw.
 async function settle<T>(calls: Promise<T>[]) {
   const results = await Promise.allSettled(calls);
@@ -93,6 +119,25 @@ describe("DrizzleTagRepository against Postgres", () => {
       const rows = await db.select().from(tags).where(eq(tags.userId, userId));
       expect(rows).toHaveLength(1);
       expect(new Set(found.map((tag) => tag.id))).toEqual(new Set([rows[0]!.id]));
+    });
+
+    it("creates a new Tag as the User's", async () => {
+      const userId = await aUser();
+
+      const tag = await repository.findOrCreate(userId, "memory");
+
+      expect(tag.origin).toBe("user");
+      expect(await originOf(tag.id)).toBe("user");
+    });
+
+    it("makes a Tag only the AI used the User's when they name it", async () => {
+      const userId = await aUser();
+      const tagId = await anAiTag(userId, "memory");
+
+      const tag = await repository.findOrCreate(userId, "memory");
+
+      expect(tag).toMatchObject({ id: tagId, origin: "user" });
+      expect(await originOf(tagId)).toBe("user");
     });
 
     it("lets exactly 10 of 20 concurrent creates through for a User's last 10 Tag slots", async () => {
@@ -128,6 +173,17 @@ describe("DrizzleTagRepository against Postgres", () => {
       expect(await linksOn(itemId)).toEqual([
         expect.objectContaining({ tagId, source: "user", createdAt: linkedAt }),
       ]);
+    });
+
+    it("makes a Tag only the AI used the User's", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await anAiTag(userId, "memory");
+      await aLink(userId, itemId, tagId, { source: "ai" });
+
+      await repository.applyAsUser({ userId, itemId, tagId });
+
+      expect(await originOf(tagId)).toBe("user");
     });
 
     it("leaves the User's own link as it is", async () => {
@@ -353,6 +409,100 @@ describe("DrizzleTagRepository against Postgres", () => {
     });
   });
 
+  describe("removeFromItem on a Tag only the AI used", () => {
+    it("deletes the Tag with its last link, keeping the Rejected tag", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await anAiTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await repository.findById(userId, tagId)).toBeNull();
+      expect(await rejectionsOn(itemId)).toEqual([expect.objectContaining({ tagName: "memory" })]);
+    });
+
+    it("keeps the Tag while it's still on another Item", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const otherItemId = await anItem(userId);
+      const tagId = await anAiTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+      await aLink(userId, otherItemId, tagId);
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await repository.findById(userId, tagId)).not.toBeNull();
+      expect((await linksOn(otherItemId)).map((link) => link.tagId)).toEqual([tagId]);
+    });
+
+    it("keeps a Tag the User applied, on no Items", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await aTag(userId, "memory");
+      await aLink(userId, itemId, tagId, { source: "user" });
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await repository.findById(userId, tagId)).not.toBeNull();
+    });
+
+    it("keeps an AI Tag the User confirmed, once it's taken off", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await anAiTag(userId, "memory");
+      await aLink(userId, itemId, tagId, { source: "ai" });
+      await repository.applyAsUser({ userId, itemId, tagId });
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await repository.findById(userId, tagId)).toMatchObject({ origin: "user" });
+    });
+
+    it("deletes the Tag when its last two links are taken off at once", async () => {
+      const userId = await aUser();
+      const itemIds = [await anItem(userId), await anItem(userId)];
+      const tagId = await anAiTag(userId, "memory");
+      for (const itemId of itemIds) await aLink(userId, itemId, tagId);
+
+      await Promise.all(
+        itemIds.map((itemId) => repository.removeFromItem({ userId, itemId, tagId })),
+      );
+
+      expect(await repository.findById(userId, tagId)).toBeNull();
+    });
+
+    it("keeps the Tag, on the other Item, when the AI puts it there as its last link is taken off", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const otherItemId = await anItem(userId);
+      const tagId = await anAiTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+      let linked!: () => void;
+      const aiLinked = new Promise<void>((resolve) => (linked = resolve));
+      let finishAiTagging!: () => void;
+      const aiTaggingCanFinish = new Promise<void>((resolve) => (finishAiTagging = resolve));
+
+      // The AI writer has linked the Tag to the other Item, and still holds its locks, as the untag starts.
+      const aiTagging = applyAsAiLike(userId, otherItemId, tagId, async () => {
+        linked();
+        await aiTaggingCanFinish;
+      });
+      await aiLinked;
+      const untagging = repository.removeFromItem({ userId, itemId, tagId });
+      try {
+        await untilWaitingOnALock();
+      } finally {
+        finishAiTagging();
+        await Promise.all([aiTagging, untagging]);
+      }
+
+      expect(await repository.findById(userId, tagId)).not.toBeNull();
+      expect((await linksOn(otherItemId)).map((link) => link.tagId)).toEqual([tagId]);
+      expect(await linksOn(itemId)).toEqual([]);
+    });
+  });
+
   describe("rejected_item_tags", () => {
     it("loses an Item's Rejected tags when the Item is deleted", async () => {
       const userId = await aUser();
@@ -435,6 +585,21 @@ describe("DrizzleTagRepository against Postgres", () => {
       expect(listed.map((tag) => tag.id)).toEqual([latest, byAi, unused, tiedA, tiedB]);
     });
 
+    it("leaves out a Tag only the AI used once it's on no Items", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      await aLink(userId, itemId, await anAiTag(userId, "on-an-item"));
+      // Left on no Items without being taken off: its Item was deleted.
+      const deletedItemId = await anItem(userId);
+      await aLink(userId, deletedItemId, await anAiTag(userId, "orphaned"));
+      await db.delete(items).where(eq(items.id, deletedItemId));
+      await aTag(userId, "the-users");
+
+      const listed = await repository.listForUser(userId);
+
+      expect(listed.map((tag) => tag.name).sort()).toEqual(["on-an-item", "the-users"]);
+    });
+
     it("is empty for a User with no Tags", async () => {
       expect(await repository.listForUser(await aUser())).toEqual([]);
     });
@@ -450,3 +615,22 @@ describe("DrizzleTagRepository against Postgres", () => {
     });
   });
 });
+
+/**
+ * A stand-in for the worker's `applyAsAi` (apps/worker's DrizzleTagRepository),
+ * which the API can't import: in one transaction, the Item's row lock, then the
+ * User's, then the link with source `ai`. `whileLocked` runs before it commits.
+ */
+async function applyAsAiLike(
+  userId: string,
+  itemId: string,
+  tagId: string,
+  whileLocked: () => Promise<void>,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.select({ id: items.id }).from(items).where(eq(items.id, itemId)).for("no key update");
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("no key update");
+    await tx.insert(itemTags).values({ itemId, tagId, userId, source: "ai" });
+    await whileLocked();
+  });
+}

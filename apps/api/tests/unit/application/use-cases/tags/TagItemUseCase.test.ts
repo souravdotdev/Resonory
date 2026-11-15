@@ -154,6 +154,23 @@ describe("TagItemUseCase", () => {
     expect(result).toEqual([{ id: tag.id, name: "memory", source: "user" }]);
   });
 
+  it("makes an AI Tag the User's when they tag an Item with its name", async () => {
+    const { useCase, tags, aiMadeTag } = scene();
+    const tag = aiMadeTag(USER_ID, "memory");
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });
+
+    expect(tags).toEqual([expect.objectContaining({ id: tag.id, origin: "user" })]);
+  });
+
+  it("creates a new Tag as the User's", async () => {
+    const { useCase, tags } = scene();
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });
+
+    expect(tags).toEqual([expect.objectContaining({ name: "memory", origin: "user" })]);
+  });
+
   it("changes nothing and returns the same Tags when repeated", async () => {
     const { useCase, tags, links } = scene();
     const first = await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "memory" });

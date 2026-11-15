@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, notExists, or, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -38,6 +38,16 @@ export class DrizzleTagRepository implements ITagRepository {
       };
 
       const existing = await findByName();
+      // The User has named it, so it's theirs now, and never deleted for being on
+      // no Items. Under the lock, so an untag can't be deleting it meanwhile.
+      if (existing?.origin === "ai") {
+        const [claimed] = await tx
+          .update(tags)
+          .set({ origin: "user" })
+          .where(eq(tags.id, existing.id))
+          .returning();
+        return toTag(claimed!);
+      }
       if (existing !== undefined) return toTag(existing);
 
       const [{ owned } = { owned: 0 }] = await tx
@@ -50,7 +60,7 @@ export class DrizzleTagRepository implements ITagRepository {
       // stays the backstop, and a conflict there means the Tag now exists.
       const [created] = await tx
         .insert(tags)
-        .values({ userId, name })
+        .values({ userId, name, origin: "user" })
         .onConflictDoNothing({ target: [tags.userId, tags.name] })
         .returning();
       if (created !== undefined) return toTag(created);
@@ -96,6 +106,12 @@ export class DrizzleTagRepository implements ITagRepository {
           // Only the AI's link changes; the User's own is left untouched.
           setWhere: eq(itemTags.source, "ai"),
         });
+      // The User has applied it, so it's theirs now and stays theirs. Through
+      // TagItemUseCase, findOrCreate has already made it theirs under the User's lock.
+      await tx
+        .update(tags)
+        .set({ origin: "user" })
+        .where(and(eq(tags.id, tagId), eq(tags.origin, "ai")));
     });
   }
 
@@ -113,12 +129,16 @@ export class DrizzleTagRepository implements ITagRepository {
     // A link's created_at is when the Tag went on the Item; upgrading an AI link to
     // the User's keeps it. A Tag on no Items has no links, so it falls back to its own.
     const lastUsedAt = sql`coalesce(max(${itemTags.createdAt}), ${tags.createdAt})`;
+    // A Tag only the AI used is left out once it's on no Items: untagging deletes
+    // it, but one whose Items were all deleted is still there.
+    const isListed = or(eq(tags.origin, "user"), sql`count(${itemTags.tagId}) > 0`);
     const rows = await this.db
       .select(getTableColumns(tags))
       .from(tags)
       .leftJoin(itemTags, eq(itemTags.tagId, tags.id))
       .where(eq(tags.userId, userId))
       .groupBy(tags.id)
+      .having(isListed)
       .orderBy(desc(lastUsedAt), asc(tags.name))
       // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
       .limit(MAX_TAGS_PER_USER);
@@ -136,7 +156,24 @@ export class DrizzleTagRepository implements ITagRepository {
 
   async removeFromItem({ userId, itemId, tagId }: ItemTagRef): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Only the link goes; the Tag stays the User's even when it's on no Items now.
+      // The Item's row, then the User's: the order the AI writer takes them in, so
+      // the two can't deadlock. The User's lock makes the check below on the Tag's
+      // other links wait for an AI writer putting it on another Item, so the Tag
+      // ends up deleted or on an Item, never both. The Item's lock makes the AI
+      // writer's own Rejected tag check on this Item wait for this one.
+      const [item] = await tx
+        .select({ id: items.id })
+        .from(items)
+        .where(and(eq(items.id, itemId), eq(items.userId, userId)))
+        .for("no key update");
+      // No Item, so no link to take off.
+      if (item === undefined) return;
+      await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for("no key update");
+
       const [removed] = await tx
         .delete(itemTags)
         .where(
@@ -157,6 +194,20 @@ export class DrizzleTagRepository implements ITagRepository {
         .insert(rejectedItemTags)
         .values({ itemId, userId, tagName: tag!.name })
         .onConflictDoNothing({ target: [rejectedItemTags.itemId, rejectedItemTags.tagName] });
+
+      // A Tag the User applied stays theirs on no Items; one only the AI used goes
+      // with its last link. The Rejected tag above is kept, being keyed by name.
+      await tx
+        .delete(tags)
+        .where(
+          and(
+            eq(tags.id, tagId),
+            eq(tags.origin, "ai"),
+            notExists(
+              tx.select({ tagId: itemTags.tagId }).from(itemTags).where(eq(itemTags.tagId, tagId)),
+            ),
+          ),
+        );
     });
   }
 }

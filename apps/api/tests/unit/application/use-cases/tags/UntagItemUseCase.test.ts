@@ -27,7 +27,19 @@ function scene() {
     });
     return tag;
   };
-  return { ...store, useCase, tagged };
+  // A Tag the AI made and put on the Item, which the User never applied.
+  const aiTagged = (name: string) => {
+    const tag = store.aiMadeTag(USER_ID, name);
+    store.links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: tag.id,
+      source: "ai",
+      createdAt: store.tick(),
+    });
+    return tag;
+  };
+  return { ...store, useCase, tagged, aiTagged };
 }
 
 describe("UntagItemUseCase", () => {
@@ -52,13 +64,52 @@ describe("UntagItemUseCase", () => {
     expect(result).toEqual([]);
   });
 
-  it("keeps the Tag, even when it's then on no Items", async () => {
+  it("keeps a Tag the User applied, even when it's then on no Items", async () => {
     const { useCase, tags, tagged } = scene();
     const memory = await tagged("memory", "user");
 
     await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
 
     expect(tags).toEqual([memory]);
+  });
+
+  it("deletes a Tag only the AI used once it's on no Items, keeping its Rejected tag", async () => {
+    const { useCase, tags, rejections, aiTagged } = scene();
+    const memory = aiTagged("memory");
+
+    const result = await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(tags).toEqual([]);
+    expect(rejections).toEqual([expect.objectContaining({ itemId: ITEM_ID, tagName: "memory" })]);
+    expect(result).toEqual([]);
+  });
+
+  it("keeps a Tag only the AI used while it's still on another Item", async () => {
+    const { useCase, tags, items, links, tick, aiTagged } = scene();
+    const otherItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: otherItemId, userId: USER_ID }));
+    const memory = aiTagged("memory");
+    links.push({
+      userId: USER_ID,
+      itemId: otherItemId,
+      tagId: memory.id,
+      source: "ai",
+      createdAt: tick(),
+    });
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(tags).toEqual([memory]);
+  });
+
+  it("keeps an AI Tag the User confirmed, once it's on no Items", async () => {
+    const { useCase, tags, aiTagged, tagRepository } = scene();
+    const memory = aiTagged("memory");
+    await tagRepository.applyAsUser({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(tags).toEqual([expect.objectContaining({ id: memory.id, origin: "user" })]);
   });
 
   it("leaves the Tag on the User's other Items", async () => {
