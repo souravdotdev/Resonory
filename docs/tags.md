@@ -2,7 +2,7 @@
 
 How a User organises their Items with Tags: what a Tag is, how one gets created and put on an Item, the rules around it, and why each rule is the way it is. The exact requests, responses and error codes are in [API → Tags](./api.md#tags); the tables and constraints in [Database](./database.md). This doc is the one place that explains the feature as a whole, and the one to read before building on it (AI tagging, filtering by Tag, the web picker).
 
-The design was settled in issue #167 and built in #168–#171 (PR #172). Terms are the Items context's: **Tag**, **Tag name** and **Tag source** in its [glossary](./contexts/items/GLOSSARY.md).
+The design was settled in issue #167 and built in #168–#171 (PR #172). Terms are the Items context's: **Tag**, **Tag name**, **Tag source**, **AI tagging** and **Rejected tag** in its [glossary](./contexts/items/GLOSSARY.md). AI tagging is designed but not built: issue #176 (see [AI tagging](#ai-tagging-designed-not-built)).
 
 ## In one picture
 
@@ -12,7 +12,7 @@ flowchart LR
     P -- "GET /tags" --> L["the User's Tags,<br/>most recently used first"]
     P -- "POST /items/:itemId/tags {name}" --> T["find or create the Tag,<br/>put it on the Item"]
     P -- "DELETE /items/:itemId/tags/:tagId" --> R["take it off the Item,<br/>keep the Tag"]
-    AI["AI tagger<br/>(not built yet)"] -. "same tables, same Item lock" .-> T
+    AI["AI tagging<br/>(issue #176, not built yet)"] -. "same tables, same locks" .-> T
 ```
 
 ## The model
@@ -36,7 +36,7 @@ The API is built; nothing in a client uses it yet (see [What's not built](#whats
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A Tag is created only by tagging an Item with a new name; there is no "create an empty Tag" or manage-Tags page.                                              | Pre-made, empty Tags are folders by another name, and Resonory is "save anything, never organise".                                                                                                                                                               |
 | Names are stored and shown as the slug.                                                                                                                       | Near-duplicates (`ML`, `ml`, `M.L.`) can't pile up, and there's one form to match on. A display name would bring back two spellings of one Tag.                                                                                                                  |
-| A Tag left on no Items is kept.                                                                                                                               | It stays in the picker for reuse. It matches the schema, which already keeps Tags when their Items are deleted. Deleting a Tag is a separate, later action.                                                                                                      |
+| A Tag left on no Items is kept. (Planned, #176: except a Tag only the AI ever used, which is deleted once it's on no Items.)                                  | It stays in the picker for reuse. It matches the schema, which already keeps Tags when their Items are deleted. Deleting a Tag is a separate, later action. A Tag the User never chose shouldn't linger and be fed back to the AI as one of their own.           |
 | Picking a Tag the AI already put on that Item turns the link's source into `user`.                                                                            | The User has confirmed it, and that's worth recording. The link keeps its original time, so confirming doesn't count as a new use in `GET /tags`.                                                                                                                |
 | Re-tagging with the same name changes nothing.                                                                                                                | Retries and double clicks are harmless, with no duplicates and no errors.                                                                                                                                                                                        |
 | "Most recently used" means the latest time the Tag was put on any Item, by the AI or the User, falling back to when the Tag was created. Ties go by Tag name. | It surfaces the Tags in active use whoever applied them, and gives Tags on no Items a stable place.                                                                                                                                                              |
@@ -97,9 +97,19 @@ Ownership doesn't depend on the use cases alone: `item_tags` has composite forei
 - **Tagging from the extension**, at save time or later. The API refuses API keys on these routes on purpose (see above).
 - **Renaming, deleting and merging Tags.** Renaming onto an existing name would hit `tags_user_id_name_unique`, so a rename will need a merge rule.
 - **Filtering Items by Tag** (roadmap item 9). The `item_tags_tag_id_idx` index already serves "every Item with this Tag".
-- **AI tagging.** It writes links with source `ai`, and must follow the locking rule above.
+- **AI tagging.** Designed below; issue #176.
+
+## AI tagging (designed, not built)
+
+Settled in a grilling session; built by issue #176. What's sent to the model, and why Groq, is [Items ADR 0004](./contexts/items/adr/0004-ai-tagging-sends-an-item-excerpt-to-a-third-party-model.md).
+
+- **When.** Once Processing marks an Item Ready, the worker queues a `tag-item` job (see [Queue](./queue.md)). It's separate from Processing, so a slow or failing model never delays Ready or makes an Item Failed. A final failure is only logged; the User sees an Item without AI Tags. A Failed Item retried to Ready is tagged again. New saves only: existing Items aren't backfilled. There's no per-User setting in v1.
+- **What the model sees.** Title, description, Source URL, Item type, the first ~4,000 characters of Text, and all of the User's Tag names. An Item without Text is still tagged from the rest.
+- **What it does.** It puts 0–3 Tags on the Item with source `ai`, applied directly (not suggestions). It reuses one of the User's Tags whenever one fits and makes a new Tag only when none does. Names go through `slugifyTagName` and are deduped; a Tag already on the Item, from either source, is left alone. Zero Tags is a valid answer when the model isn't confident.
+- **Rejected tags.** Taking any Tag off an Item, whoever put it there, records that Tag _name_ as rejected for that Item, and the AI never puts it back. It's keyed by name, not Tag id, so the rejection survives the Tag being deleted (below) and made again.
+- **Tags only the AI used.** A Tag the AI created and the User never applied themselves is deleted once it's on no Items, so rejected inventions don't pile up and come back as "existing Tags" for the AI to reuse.
+- **Limits.** The AI writer takes the Item's `items` row lock, then the User's `users` row lock, in one transaction: the order #173 sets for the API, so the two writers can't deadlock. At the 1,000-Tag cap it only reuses existing Tags; at the 20-Tag Item cap it adds nothing. It never fails on a limit. It gets the same concurrency tests as `applyAsUser`.
 
 ## Open questions
 
-- **Can a Tag the User removed come back from the AI?** Today removal only deletes the link, so a later AI run could add it again. Decide when AI tagging is designed: remembering a removal needs somewhere to record it.
 - **Should confirming an AI Tag count as a use?** Today it doesn't move the Tag up `GET /tags`, because the link keeps its original time. That follows #167's wording; revisit if the picker feels wrong.

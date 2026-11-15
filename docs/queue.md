@@ -152,4 +152,4 @@ An extractor that throws counts as none, but isn't silent: `ProcessItemUseCase` 
 
 ## Not yet built
 
-The worker follows the same layering as the API (see [Clean Architecture](./clean-architecture.md#the-worker)). PDF Text and the AI tag-suggestion call are not implemented; see product plan section 6 for the intended scope. Why an Item failed is logged by the worker with the Item id, not stored (see [Database](./database.md#schema)).
+The worker follows the same layering as the API (see [Clean Architecture](./clean-architecture.md#the-worker)). PDF Text is not implemented; see product plan section 6 for the intended scope. AI tagging is designed but not built (issue #176, [Tags → AI tagging](./tags.md#ai-tagging-designed-not-built)). It will be a second job on the Items queue, `tag-item` (`{ itemId, userId }`), queued once `process-item` marks an Item Ready. It retries on its own, and its final failure is only logged: unlike `process-item`, it never marks an Item Failed, because the Item is already Ready. Why an Item failed is logged by the worker with the Item id, not stored (see [Database](./database.md#schema)).

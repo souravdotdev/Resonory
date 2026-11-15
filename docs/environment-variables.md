@@ -69,6 +69,8 @@ Optional Thumbnail storage, read by the same rules as the worker. With either on
 
 The Supabase pair is optional, read by the same rules as the API: with either one unset (or empty), the worker still starts (it logs that Supabase Storage isn't configured), downloads no images, and every Item goes Ready without a Thumbnail. The bucket must exist before Thumbnails can be kept; the worker never creates it (see [Getting Started](./getting-started.md#thumbnail-storage)).
 
+Planned for AI tagging (issue #176), not yet read: `AI_TAGGING_API_KEY`, `AI_TAGGING_BASE_URL` and `AI_TAGGING_MODEL`, for an OpenAI-compatible model API (Groq's free tier at first; see [Items ADR 0004](./contexts/items/adr/0004-ai-tagging-sends-an-item-excerpt-to-a-third-party-model.md)). They'll be optional: with no key, the worker skips AI tagging and Items go Ready without AI Tags. The key is server only, like the service role key.
+
 **The service role key belongs only on the server.** It bypasses Supabase's row-level security for the whole project, so it goes only in server-side `.env` files and the deploy's secret store: never in `apps/web`, never behind a `NEXT_PUBLIC_` prefix, never in a client bundle, a log or a commit (see [Security](./security.md#thumbnail-storage)).
 
 ## `apps/web/.env`

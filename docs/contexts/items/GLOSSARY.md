@@ -21,7 +21,7 @@ _Avoid_: Cover, preview image, OG image
 ### Tags
 
 **Tag**:
-A short topic name a User organises their Items by. Every User has their own Tags, and a Tag can go on any of their Items, never on a Cue. A User makes one by naming it while tagging an Item, and it stays theirs even when it's on no Items.
+A short topic name a User organises their Items by. Every User has their own Tags, and a Tag can go on any of their Items, never on a Cue. A User makes one by naming it while tagging an Item, and it stays theirs even when it's on no Items. Resonory's AI can also make one during AI tagging; a Tag only the AI ever used goes away once it's on no Items.
 _Avoid_: Label, category, folder, collection
 
 **Tag name**:
@@ -31,6 +31,14 @@ _Avoid_: Display name, label
 **Tag source**:
 Who put a Tag on a particular Item: Resonory's AI or the User. The same Tag can come from the AI on one Item and from the User on another.
 _Avoid_: AI-generated flag, origin
+
+**AI tagging**:
+Resonory's AI putting up to three Tags on an Item once it's Ready, chosen from what the Item is about. It reuses the User's own Tags where one fits and makes a new Tag only when none does. It isn't part of Processing: an Item is Ready whether or not AI tagging works.
+_Avoid_: Auto-tagging, tag suggestions, smart tags
+
+**Rejected tag**:
+A Tag the User took off an Item, whoever put it there. Resonory's AI never puts it back on that Item, even if the Tag is later deleted and made again.
+_Avoid_: Dismissed tag, removed tag, blocked tag
 
 ### Item types
 
