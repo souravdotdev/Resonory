@@ -32,6 +32,11 @@ function stubAiTagging() {
   vi.stubEnv("AI_TAGGING_API_KEY", "gsk_test");
 }
 
+// Each test imports the whole container graph afresh, openai's SDK included. That
+// is slow when turbo runs the suite beside typecheck and lint, so the default
+// 5s isn't enough.
+vi.setConfig({ testTimeout: 30_000 });
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
