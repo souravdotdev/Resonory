@@ -32,11 +32,21 @@ function itemsHolding(item: TaggableItem | null = ARTICLE) {
 
 // The User's Tags and this Item's Rejected tags, held as plain names; applyAsAi
 // puts every name it's given on the Item (the real limits and locks are the
-// adapter's, covered by its integration tests).
-function tagsHolding({ names = [] as string[], rejected = [] as string[], itemGone = false } = {}) {
+// adapter's, covered by its integration tests). `unused` are Tags only the AI
+// used that are on no Items: listNames leaves them out, as applyAsAi deletes
+// them before counting the User's Tags.
+function tagsHolding({
+  names = [] as string[],
+  unused = [] as string[],
+  rejected = [] as string[],
+  itemGone = false,
+} = {}) {
   const applied: string[] = [];
+  const left = new Set(unused);
   const repository = {
-    listNames: vi.fn(async (userId: string) => (userId === USER_ID ? [...names] : [])),
+    listNames: vi.fn(async (userId: string) =>
+      userId === USER_ID ? names.filter((name) => !left.has(name)) : [],
+    ),
     listRejectedNames: vi.fn(async (_ref: ItemRef) => [...rejected]),
     applyAsAi: vi.fn(async (_ref: ItemRef, toApply: string[]) => {
       if (itemGone) return null;
@@ -218,6 +228,19 @@ describe("TagItemUseCase", () => {
   it("creates Tags as usual for a User one short of 1,000", async () => {
     const names = Array.from({ length: 999 }, (_, index) => `tag-${index}`);
     const { repository: tags, applied } = tagsHolding({ names });
+
+    await new TagItemUseCase(
+      itemsHolding(),
+      tags,
+      suggesterAnswering("brand-new", "tag-7"),
+    ).execute(REF);
+
+    expect(applied).toEqual(["brand-new", "tag-7"]);
+  });
+
+  it("doesn't count a Tag only the AI used that's on no Items towards the 1,000", async () => {
+    const names = Array.from({ length: 1000 }, (_, index) => `tag-${index}`);
+    const { repository: tags, applied } = tagsHolding({ names, unused: ["tag-0"] });
 
     await new TagItemUseCase(
       itemsHolding(),

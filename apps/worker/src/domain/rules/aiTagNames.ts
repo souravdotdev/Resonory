@@ -8,7 +8,7 @@ export const MAX_AI_TAGS = 3;
 export const TAGGING_TEXT_LENGTH = 4000;
 
 export interface AiTagNamesContext {
-  /** Every one of the User's Tag names. */
+  /** Every one of the User's Tag names: exactly those counting towards `MAX_TAGS_PER_USER`. */
   tagNames: readonly string[];
   /** The names the User took off this Item, which the AI never puts back. */
   rejected: readonly string[];

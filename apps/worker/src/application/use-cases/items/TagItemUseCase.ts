@@ -16,9 +16,10 @@ import { aiTagNames } from "@/domain/rules/aiTagNames";
  * names is a valid answer.
  *
  * The User-limit and Rejected-tag checks here save asking for what can't be
- * applied; `applyAsAi` checks the limits again under its locks, which is what
- * actually holds them when writers race. Running it twice on one Item adds
- * nothing new: a Tag already on the Item is left alone.
+ * applied (`listNames` holds exactly the Tags `applyAsAi` counts, so its
+ * length is the User's count); `applyAsAi` checks the limits again under its
+ * locks, which is what actually holds them when writers race. Running it twice
+ * on one Item adds nothing new: a Tag already on the Item is left alone.
  *
  * Without a model configured it reads nothing and returns `unconfigured`. A
  * deleted Item, before the model is asked or while it answers, is `missing`.
