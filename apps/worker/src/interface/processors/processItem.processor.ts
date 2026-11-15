@@ -35,8 +35,9 @@ export async function processItem(container: Container, data: unknown): Promise<
       );
     }
     if ("tagQueueError" in result) {
+      // `event` is a stable key to count how often an Item is left untagged this way.
       logger.warn(
-        { err: describeError(result.tagQueueError) },
+        { event: "tag_item_enqueue_failed", err: describeError(result.tagQueueError) },
         "couldn't queue AI tagging; the Item is Ready without AI Tags",
       );
     }

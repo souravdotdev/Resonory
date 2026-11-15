@@ -129,7 +129,7 @@ describe("a Process Item job", () => {
       {
         level: "warn",
         bindings: { itemId: ITEM_ID },
-        fields: { err: "Error" },
+        fields: { event: "tag_item_enqueue_failed", err: "Error" },
         msg: "couldn't queue AI tagging; the Item is Ready without AI Tags",
       },
       {
