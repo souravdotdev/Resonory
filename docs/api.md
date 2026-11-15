@@ -256,10 +256,10 @@ The adapter enforces each limit in the same transaction as the write it guards, 
 Takes one of the signed-in User's Tags off one of their Items, whoever put it there (the AI or the User). Served by `UntagItemUseCase`, which:
 
 1. finds the Item through `IItemRepository.findById(userId, itemId)` and the Tag through `ITagRepository.findById(userId, tagId)`; either missing, or another User's, is a `NotFoundError`;
-2. deletes the link (`ITagRepository.removeFromItem`), whatever its Tag source. The Tag itself is kept, even when it's then on no Items, so it can be reused. A Tag that isn't on the Item is left alone, so removing it again is harmless;
-3. returns the Item's remaining Tags (`ItemTagsResponseSchema`), oldest link first.
+2. deletes the link and records the Tag's name as a Rejected tag for that Item (`ITagRepository.removeFromItem`), in one transaction, whatever its Tag source. AI tagging will never put a rejected name back on that Item; the User still can. The Tag itself is kept, even when it's then on no Items, so it can be reused. A Tag that isn't on the Item is left alone and nothing is recorded, so removing it again is harmless; a name rejected twice stays one Rejected tag (`rejected_item_tags` in [Database](./database.md));
+3. returns the Item's remaining Tags (`ItemTagsResponseSchema`), oldest link first. The response doesn't mention the Rejected tag.
 
-Planned with AI tagging (issue #176): the same call will also record the Tag's name as a Rejected tag for that Item, so the AI never puts it back, and delete the Tag if only the AI ever used it and it's now on no Items. For now removal only deletes the link. See [Tags → AI tagging](./tags.md#ai-tagging-designed-not-built).
+Planned with AI tagging (issue #176): the same call will also delete the Tag if only the AI ever used it and it's now on no Items. See [Tags → AI tagging](./tags.md#ai-tagging-designed-not-built).
 
 ```
 DELETE /items/3b241101-e2bb-4255-8caf-4136c566a962/tags/0f1e2d3c-4b5a-4968-8776-655443322110
