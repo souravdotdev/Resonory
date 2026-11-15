@@ -13,6 +13,6 @@ This is not the Cue signal of [ADR 0002](../../../adr/0002-cues-send-only-search
 
 ## Consequences
 
-- Before real Users arrive, someone has to check Groq's data-use and retention terms. If they don't fit, switch to a paid tier or a different provider.
+- Groq's own pages (read 2026-11-15: [Your Data](https://console.groq.com/docs/your-data) and its Services Agreement, section 4.2) say it doesn't retain inference prompts or outputs by default, and isn't permitted to train on them unless the customer says so. It may log them for up to 30 days to troubleshoot errors or investigate abuse, which a Zero Data Retention setting in the console turns off. They draw no free-versus-paid distinction, and say nothing about who may read those logs. Before real Users arrive, someone should turn on ZDR, confirm it with the paid plan, and re-read the terms; if they no longer fit, switch provider.
 - Every call sends at most the User's 200 most recently used Tag names, so a User with many Tags (up to 1,000) can't push a call past Groq's free-tier token limits. A Tag beyond the 200 isn't offered to the model, which may then make a near-duplicate of it; if the model answers with its exact name, it's reused.
 - Sending more than this excerpt (full Text, Thumbnails) changes what leaves Resonory. It needs a new ADR.
