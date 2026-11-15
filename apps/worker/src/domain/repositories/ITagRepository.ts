@@ -3,9 +3,11 @@ import type { ItemRef } from "@/domain/entities/Item";
 /** The Tags AI tagging reads and writes. The persistence adapter implements it. */
 export interface ITagRepository {
   /**
-   * The names of the User's Tags (at most `MAX_TAGS_PER_USER`), leaving out a
-   * Tag only the AI used once it's on no Items. `applyAsAi` deletes those before
-   * counting, so these are exactly the Tags that count towards the limit.
+   * The names of the User's Tags (at most `MAX_TAGS_PER_USER`), most recently
+   * used first (as the API's `GET /tags`: the latest time the Tag went on an Item,
+   * else when it was made, ties by name), leaving out a Tag only the AI used once
+   * it's on no Items. `applyAsAi` deletes those before counting, so these are
+   * exactly the Tags that count towards the limit.
    */
   listNames(userId: string): Promise<string[]>;
   /** The Tag names the User has taken off this Item (its Rejected tags). */

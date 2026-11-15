@@ -14,5 +14,5 @@ This is not the Cue signal of [ADR 0002](../../../adr/0002-cues-send-only-search
 ## Consequences
 
 - Before real Users arrive, someone has to check Groq's data-use and retention terms. If they don't fit, switch to a paid tier or a different provider.
-- Every call sends all of the User's Tag names (up to 1,000). For a User with many Tags, that can hit Groq's free-tier token limits. If it does, cap the list (the most recently used first) rather than drop Tag reuse.
+- Every call sends at most the User's 200 most recently used Tag names, so a User with many Tags (up to 1,000) can't push a call past Groq's free-tier token limits. A Tag beyond the 200 isn't offered to the model, which may then make a near-duplicate of it; if the model answers with its exact name, it's reused.
 - Sending more than this excerpt (full Text, Thumbnails) changes what leaves Resonory. It needs a new ADR.

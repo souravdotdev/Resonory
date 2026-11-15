@@ -1,4 +1,4 @@
-import { and, asc, count, eq, exists, inArray, notExists, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, inArray, notExists, or, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -40,7 +40,13 @@ export class DrizzleTagRepository implements ITagRepository {
           ),
         ),
       )
-      .orderBy(asc(tags.name))
+      // Most recently used first, as the API's listForUser: the latest link, else the Tag's own time.
+      .orderBy(
+        desc(
+          sql`coalesce((select max(${itemTags.createdAt}) from ${itemTags} where ${itemTags.tagId} = ${tags.id}), ${tags.createdAt})`,
+        ),
+        asc(tags.name),
+      )
       // A User has at most this many Tags; the bound keeps a runaway list from going unbounded.
       .limit(MAX_TAGS_PER_USER);
     return rows.map((row) => row.name);

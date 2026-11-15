@@ -150,6 +150,24 @@ describe("the worker's DrizzleTagRepository against Postgres", () => {
       expect((await repository.listNames(userId)).sort()).toEqual(["cooking", "postgres"]);
     });
 
+    it("lists them most recently used first, a Tag on no Items by when it was made, ties by name", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const days = (ago: number) => new Date(Date.now() - ago * 86_400_000);
+      await aLink(userId, itemId, await aTag(userId, "old-use"), { createdAt: days(5) });
+      await aLink(userId, itemId, await aTag(userId, "new-use"), { createdAt: days(1) });
+      // A Tag on no Items falls back to its own creation time, which is now.
+      await aTag(userId, "no-items-b");
+      await aTag(userId, "no-items-a");
+
+      expect(await repository.listNames(userId)).toEqual([
+        "no-items-a",
+        "no-items-b",
+        "new-use",
+        "old-use",
+      ]);
+    });
+
     it("leaves out a Tag only the AI used once it's on no Items", async () => {
       const userId = await aUser();
       const itemId = await anItem(userId);

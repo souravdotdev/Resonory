@@ -225,6 +225,26 @@ describe("TagItemUseCase", () => {
     expect(applied).toEqual(["tag-7", "tag-999"]);
   });
 
+  it("tells the model only the User's 200 most recently used Tag names", async () => {
+    // listNames answers most recently used first.
+    const names = Array.from({ length: 300 }, (_, index) => `tag-${index}`);
+    const { repository: tags } = tagsHolding({ names });
+    const suggester = suggesterAnswering("postgres");
+
+    await new TagItemUseCase(itemsHolding(), tags, suggester).execute(REF);
+
+    expect(suggester.suggestTags.mock.calls[0]![0].tagNames).toEqual(names.slice(0, 200));
+  });
+
+  it("still reuses one of the User's Tags the model wasn't told about", async () => {
+    const names = Array.from({ length: 300 }, (_, index) => `tag-${index}`);
+    const { repository: tags, applied } = tagsHolding({ names });
+
+    await new TagItemUseCase(itemsHolding(), tags, suggesterAnswering("tag-250")).execute(REF);
+
+    expect(applied).toEqual(["tag-250"]);
+  });
+
   it("creates Tags as usual for a User one short of 1,000", async () => {
     const names = Array.from({ length: 999 }, (_, index) => `tag-${index}`);
     const { repository: tags, applied } = tagsHolding({ names });

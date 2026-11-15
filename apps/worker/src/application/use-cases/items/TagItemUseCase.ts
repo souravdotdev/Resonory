@@ -1,7 +1,7 @@
 import { inject, injectable, optional } from "inversify";
 import type { TagItemResult } from "@/application/dto/items/TagItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
-import type { ItemRef } from "@/domain/entities/Item";
+import { TAGGING_TAG_NAMES_LIMIT, type ItemRef } from "@/domain/entities/Item";
 import type { ITagSuggester } from "@/domain/providers/ITagSuggester";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
@@ -9,7 +9,8 @@ import { aiTagNames } from "@/domain/rules/aiTagNames";
 
 /**
  * Runs an Item's AI tagging: tells the model the Item's excerpt and its User's
- * Tag names (`listNames`: all but a Tag only the AI used that's on no Items
+ * most recently used Tag names (the first `TAGGING_TAG_NAMES_LIMIT` of
+ * `listNames`, which leaves out a Tag only the AI used that's on no Items
  * now), cleans the names it answers (`aiTagNames`: the Tag
  * name rule, deduped, no Rejected tag, no new Tag once the User is at the
  * limit, at most 3), and puts them on the Item with Tag source `ai`. Zero
@@ -47,7 +48,10 @@ export class TagItemUseCase {
       this.tags.listNames(ref.userId),
       this.tags.listRejectedNames(ref),
     ]);
-    const suggested = await this.suggester.suggestTags({ ...item, tagNames });
+    const suggested = await this.suggester.suggestTags({
+      ...item,
+      tagNames: tagNames.slice(0, TAGGING_TAG_NAMES_LIMIT),
+    });
     const applied = await this.tags.applyAsAi(ref, aiTagNames(suggested, { tagNames, rejected }));
     if (applied === null) return { outcome: "missing" };
     return { outcome: "tagged", suggested, applied };
