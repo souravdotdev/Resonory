@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { count, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { items, itemTags, tags, users } from "@resonory/db/schema";
+import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { ItemTagLimitError, NotFoundError, UserTagLimitError } from "@/domain/errors";
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
@@ -58,6 +58,10 @@ async function aLink(
 
 async function linksOn(itemId: string) {
   return db.select().from(itemTags).where(eq(itemTags.itemId, itemId));
+}
+
+async function rejectionsOn(itemId: string) {
+  return db.select().from(rejectedItemTags).where(eq(rejectedItemTags.itemId, itemId));
 }
 
 async function tagCount(userId: string): Promise<number> {
@@ -263,6 +267,7 @@ describe("DrizzleTagRepository against Postgres", () => {
       await repository.removeFromItem({ userId: await aUser(), itemId, tagId });
 
       expect(await linksOn(itemId)).toHaveLength(1);
+      expect(await rejectionsOn(itemId)).toEqual([]);
     });
 
     it("removes only that link when scoped to the owner, keeping the Tag", async () => {
@@ -280,6 +285,112 @@ describe("DrizzleTagRepository against Postgres", () => {
       expect((await linksOn(itemId)).map((link) => link.tagId)).toEqual([keptTagId]);
       expect((await linksOn(otherItemId)).map((link) => link.tagId)).toEqual([tagId]);
       expect(await repository.findById(userId, tagId)).not.toBeNull();
+    });
+
+    it.each(["ai", "user"] as const)(
+      "records the Tag name as a Rejected tag for the Item, for a link with source %s",
+      async (source) => {
+        const userId = await aUser();
+        const itemId = await anItem(userId);
+        const tagId = await aTag(userId, "memory");
+        await aLink(userId, itemId, tagId, { source });
+
+        await repository.removeFromItem({ userId, itemId, tagId });
+
+        expect(await rejectionsOn(itemId)).toEqual([
+          expect.objectContaining({ itemId, userId, tagName: "memory" }),
+        ]);
+      },
+    );
+
+    it("records nothing for a Tag that isn't on the Item", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await aTag(userId, "memory");
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await rejectionsOn(itemId)).toEqual([]);
+    });
+
+    it("keeps one Rejected tag, from the first time, when the same name is rejected twice", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await aTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+      await repository.removeFromItem({ userId, itemId, tagId });
+      const [first] = await rejectionsOn(itemId);
+      await repository.applyAsUser({ userId, itemId, tagId });
+
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      expect(await rejectionsOn(itemId)).toEqual([first]);
+      expect(await linksOn(itemId)).toEqual([]);
+    });
+
+    it("keeps the Rejected tag after the Tag itself is deleted", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await aTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      await db.delete(tags).where(eq(tags.id, tagId));
+
+      expect(await rejectionsOn(itemId)).toEqual([expect.objectContaining({ tagName: "memory" })]);
+    });
+
+    it("doesn't stop the User putting a rejected Tag back on the Item", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      const tagId = await aTag(userId, "memory");
+      await aLink(userId, itemId, tagId);
+      await repository.removeFromItem({ userId, itemId, tagId });
+
+      await repository.applyAsUser({ userId, itemId, tagId });
+
+      expect(await linksOn(itemId)).toEqual([expect.objectContaining({ tagId, source: "user" })]);
+    });
+  });
+
+  describe("rejected_item_tags", () => {
+    it("loses an Item's Rejected tags when the Item is deleted", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+      await db.insert(rejectedItemTags).values({ userId, itemId, tagName: "memory" });
+
+      await db.delete(items).where(eq(items.id, itemId));
+
+      expect(await rejectionsOn(itemId)).toEqual([]);
+    });
+
+    it("refuses a Rejected tag on another User's Item through the composite foreign key", async () => {
+      const userId = await aUser();
+      const othersItemId = await anItem(await aUser());
+
+      const error = await postgresErrorOf(
+        db.insert(rejectedItemTags).values({ userId, itemId: othersItemId, tagName: "memory" }),
+      );
+
+      expect(error).toMatchObject({
+        code: "23503",
+        constraint_name: "rejected_item_tags_item_id_user_id_items_fk",
+      });
+      expect(await rejectionsOn(othersItemId)).toEqual([]);
+    });
+
+    it("refuses a name that breaks the Tag name rule", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId);
+
+      const error = await postgresErrorOf(
+        db.insert(rejectedItemTags).values({ userId, itemId, tagName: "Machine Learning" }),
+      );
+
+      expect(error).toMatchObject({
+        code: "23514",
+        constraint_name: "rejected_item_tags_tag_name_is_slug",
+      });
     });
   });
 

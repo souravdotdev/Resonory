@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
-import { items, itemTags, tags, users } from "@resonory/db/schema";
+import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
 import type { AppliedTag, Tag } from "@/domain/entities/Tag";
 import { ItemTagLimitError, NotFoundError, UserTagLimitError } from "@/domain/errors";
@@ -9,7 +9,10 @@ import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
 import { toTag } from "@/infrastructure/mappers/tagMapper";
 
-/** Tags in the `tags` table and the Tags on Items in `item_tags`, through Drizzle. */
+/**
+ * Tags in the `tags` table, the Tags on Items in `item_tags` and Rejected tags in
+ * `rejected_item_tags`, through Drizzle.
+ */
 @injectable()
 export class DrizzleTagRepository implements ITagRepository {
   constructor(@inject(TOKENS.Database) private readonly db: Database) {}
@@ -132,11 +135,28 @@ export class DrizzleTagRepository implements ITagRepository {
   }
 
   async removeFromItem({ userId, itemId, tagId }: ItemTagRef): Promise<void> {
-    // Only the link goes; the Tag stays the User's even when it's on no Items now.
-    await this.db
-      .delete(itemTags)
-      .where(
-        and(eq(itemTags.itemId, itemId), eq(itemTags.tagId, tagId), eq(itemTags.userId, userId)),
-      );
+    await this.db.transaction(async (tx) => {
+      // Only the link goes; the Tag stays the User's even when it's on no Items now.
+      const [removed] = await tx
+        .delete(itemTags)
+        .where(
+          and(eq(itemTags.itemId, itemId), eq(itemTags.tagId, tagId), eq(itemTags.userId, userId)),
+        )
+        .returning({ tagId: itemTags.tagId });
+      // No link, so nothing was taken off and nothing is rejected.
+      if (removed === undefined) return;
+
+      // The link's composite foreign key means the Tag exists and is the User's.
+      const [tag] = await tx
+        .select({ name: tags.name })
+        .from(tags)
+        .where(and(eq(tags.id, tagId), eq(tags.userId, userId)));
+      // Rejected by name, so it outlives the Tag. A name already rejected for the
+      // Item keeps its first row.
+      await tx
+        .insert(rejectedItemTags)
+        .values({ itemId, userId, tagName: tag!.name })
+        .onConflictDoNothing({ target: [rejectedItemTags.itemId, rejectedItemTags.tagName] });
+    });
   }
 }

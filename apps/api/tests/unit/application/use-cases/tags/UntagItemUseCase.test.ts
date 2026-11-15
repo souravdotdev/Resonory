@@ -73,8 +73,40 @@ describe("UntagItemUseCase", () => {
     expect(links).toEqual([expect.objectContaining({ itemId: otherItemId, tagId: memory.id })]);
   });
 
-  it("changes nothing and returns the Item's Tags when the Tag isn't on the Item", async () => {
-    const { useCase, links, tagged, tagRepository } = scene();
+  it("records the Tag name as a Rejected tag for the Item", async () => {
+    const { useCase, rejections, tagged } = scene();
+    const memory = await tagged("memory", "user");
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(rejections).toEqual([
+      expect.objectContaining({ userId: USER_ID, itemId: ITEM_ID, tagName: "memory" }),
+    ]);
+  });
+
+  it("records a Rejected tag for a Tag the AI put on too", async () => {
+    const { useCase, rejections, tagged } = scene();
+    const memory = await tagged("memory", "ai");
+
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(rejections).toEqual([expect.objectContaining({ itemId: ITEM_ID, tagName: "memory" })]);
+  });
+
+  it("keeps one Rejected tag when the same name is taken off the Item twice", async () => {
+    const { useCase, rejections, tagged, tagRepository } = scene();
+    const memory = await tagged("memory", "ai");
+    await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+    await tagRepository.applyAsUser({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    const result = await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
+
+    expect(rejections).toEqual([expect.objectContaining({ itemId: ITEM_ID, tagName: "memory" })]);
+    expect(result).toEqual([]);
+  });
+
+  it("changes nothing, recording no Rejected tag, when the Tag isn't on the Item", async () => {
+    const { useCase, links, rejections, tagged, tagRepository } = scene();
     const sleep = await tagged("sleep", "ai");
     const memory = await tagRepository.findOrCreate(USER_ID, "memory");
     const linksBefore = structuredClone(links);
@@ -82,6 +114,7 @@ describe("UntagItemUseCase", () => {
     const result = await useCase.execute({ userId: USER_ID, itemId: ITEM_ID, tagId: memory.id });
 
     expect(links).toEqual(linksBefore);
+    expect(rejections).toEqual([]);
     expect(result).toEqual([{ id: sleep.id, name: "sleep", source: "ai" }]);
   });
 

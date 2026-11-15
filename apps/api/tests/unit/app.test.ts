@@ -962,8 +962,8 @@ describe("DELETE /items/:itemId/tags/:tagId", () => {
     return { ...store, app, memory, untag };
   }
 
-  it("answers 200 with the Item's remaining Tags, and keeps the Tag", async () => {
-    const { untag, memory, tags, links, tagRepository, tick } = await scene();
+  it("answers 200 with the Item's remaining Tags, keeps the Tag and records it as rejected", async () => {
+    const { untag, memory, tags, links, rejections, tagRepository, tick } = await scene();
     const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
     links.push({
       userId: USER_ID,
@@ -980,6 +980,7 @@ describe("DELETE /items/:itemId/tags/:tagId", () => {
     expect(ItemTagsResponseSchema.safeParse(res.json()).success).toBe(true);
     expect(links).toEqual([expect.objectContaining({ tagId: sleep.id })]);
     expect(tags.map((tag) => tag.name)).toEqual(["memory", "sleep"]);
+    expect(rejections).toEqual([expect.objectContaining({ itemId: ITEM_ID, tagName: "memory" })]);
   });
 
   it("takes off a Tag the AI put on, and keeps it though it's on no Items", async () => {
@@ -995,7 +996,7 @@ describe("DELETE /items/:itemId/tags/:tagId", () => {
   });
 
   it("answers 200 with the Item's Tags, changing nothing, when the Tag isn't on the Item", async () => {
-    const { untag, memory, links, tagRepository } = await scene();
+    const { untag, memory, links, rejections, tagRepository } = await scene();
     const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
 
     const res = await untag(sleep.id);
@@ -1003,16 +1004,18 @@ describe("DELETE /items/:itemId/tags/:tagId", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([{ id: memory.id, name: "memory", source: "user" }]);
     expect(links).toHaveLength(1);
+    expect(rejections).toEqual([]);
   });
 
-  it("is 200 again when repeated, with the Tag already off", async () => {
-    const { untag, memory } = await scene();
+  it("is 200 again when repeated, with the Tag already off and rejected once", async () => {
+    const { untag, memory, rejections } = await scene();
     await untag(memory.id);
 
     const res = await untag(memory.id);
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
+    expect(rejections).toHaveLength(1);
   });
 
   it.each([
@@ -1088,13 +1091,14 @@ describe("DELETE /items/:itemId/tags/:tagId", () => {
 
   it("is 403 forbidden for a request authenticated by an API key, and removes nothing", async () => {
     // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
-    const { untag, memory, links } = await scene();
+    const { untag, memory, links, rejections } = await scene();
 
     const res = await untag(memory.id, ITEM_ID, { "x-api-key": "resk_valid" });
 
     expect(res.statusCode).toBe(403);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
     expect(links).toHaveLength(1);
+    expect(rejections).toEqual([]);
   });
 });
 

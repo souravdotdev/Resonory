@@ -14,6 +14,14 @@ export interface StoredTagLink {
   createdAt: Date;
 }
 
+/** A stored Rejected tag: a Tag name the User took off an Item, like a `rejected_item_tags` row. */
+export interface StoredRejectedTag {
+  userId: string;
+  itemId: string;
+  tagName: string;
+  createdAt: Date;
+}
+
 // A Ready Item; each test overrides only what it's about.
 export const anItem = (overrides: Partial<Item> & Pick<Item, "id" | "userId">): Item => ({
   sourceUrl: "https://example.com/post",
@@ -29,17 +37,19 @@ export const anItem = (overrides: Partial<Item> & Pick<Item, "id" | "userId">): 
 });
 
 /**
- * In-memory Items, Tags and Tag links, behaving like the tables do: one Tag per
- * name per User (find-or-create is atomic, like the insert on
- * `tags_user_id_name_unique`), one link per Item and Tag, Items and Tags
- * scoped to their User, and the Tag limits checked atomically with each write,
- * like the Drizzle adapter's locked transactions. Seed `items`, `tags` and
- * `links` directly to set a scene (pushing skips the limits).
+ * In-memory Items, Tags, Tag links and Rejected tags, behaving like the tables
+ * do: one Tag per name per User (find-or-create is atomic, like the insert on
+ * `tags_user_id_name_unique`), one link per Item and Tag, one Rejected tag per
+ * Item and Tag name, Items and Tags scoped to their User, and the Tag limits
+ * checked atomically with each write, like the Drizzle adapter's locked
+ * transactions. Seed `items`, `tags` and `links` directly to set a scene
+ * (pushing skips the limits).
  */
 export function taggingInMemory() {
   const items: Item[] = [];
   const tags: Tag[] = [];
   const links: StoredTagLink[] = [];
+  const rejections: StoredRejectedTag[] = [];
   // Every write gets the next tick, so creation order is total and deterministic.
   let clock = Date.parse("2026-05-01T00:00:00.000Z");
   const tick = () => new Date((clock += 1000));
@@ -108,9 +118,17 @@ export function taggingInMemory() {
       const index = links.findIndex(
         (link) => link.userId === userId && link.itemId === itemId && link.tagId === tagId,
       );
-      if (index !== -1) links.splice(index, 1);
+      if (index === -1) return;
+      links.splice(index, 1);
+      // Keyed by Item and Tag name, like the table's primary key.
+      const tagName = tags.find((tag) => tag.id === tagId)!.name;
+      if (
+        !rejections.some((rejected) => rejected.itemId === itemId && rejected.tagName === tagName)
+      ) {
+        rejections.push({ userId, itemId, tagName, createdAt: tick() });
+      }
     },
   };
 
-  return { itemRepository, tagRepository, items, tags, links, tick };
+  return { itemRepository, tagRepository, items, tags, links, rejections, tick };
 }

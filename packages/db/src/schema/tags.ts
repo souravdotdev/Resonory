@@ -77,3 +77,30 @@ export const itemTags = pgTable(
     index("item_tags_tag_id_idx").on(table.tagId),
   ],
 );
+
+// Rejected tags: a Tag name the User took off an Item, so AI tagging never puts it
+// back. Keyed by name, not Tag id, so a rejection outlives the Tag being deleted.
+export const rejectedItemTags = pgTable(
+  "rejected_item_tags",
+  {
+    itemId: uuid("item_id").notNull(),
+    // Denormalized so the foreign key can require the Item's owner, like item_tags.
+    userId: uuid("user_id").notNull(),
+    tagName: text("tag_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.itemId, table.tagName] }),
+    // Deleting an Item removes its Rejected tags.
+    foreignKey({
+      name: "rejected_item_tags_item_id_user_id_items_fk",
+      columns: [table.itemId, table.userId],
+      foreignColumns: [items.id, items.userId],
+    }).onDelete("cascade"),
+    // The same backstop as tags_name_is_slug: only a Tag name can be rejected.
+    check(
+      "rejected_item_tags_tag_name_is_slug",
+      sql`${table.tagName} ~ '${sql.raw(tagNameRule.pattern)}' AND char_length(${table.tagName}) <= ${sql.raw(String(tagNameRule.maxLength))}`,
+    ),
+  ],
+);
