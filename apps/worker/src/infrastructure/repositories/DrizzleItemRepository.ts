@@ -1,9 +1,17 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
-import type { Item, ItemRef, ItemStatus, ItemType, ReadyItem } from "@/domain/entities/Item";
+import type {
+  Item,
+  ItemRef,
+  ItemStatus,
+  ItemType,
+  ReadyItem,
+  TaggableItem,
+} from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
+import { TAGGING_TEXT_LENGTH } from "@/domain/rules/aiTagNames";
 import type { Database } from "@/infrastructure/database/Database";
 
 /** The `items` columns ending Processing sets: a Failed Item keeps no title, description, Thumbnail key or Text. */
@@ -28,6 +36,22 @@ export class DrizzleItemRepository implements IItemRepository {
         sourceUrl: items.sourceUrl,
         type: items.type,
         status: items.status,
+      })
+      .from(items)
+      .where(ownedBy(ref))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findTaggable(ref: ItemRef): Promise<TaggableItem | null> {
+    const [row] = await this.db
+      .select({
+        title: items.title,
+        description: items.description,
+        sourceUrl: items.sourceUrl,
+        type: items.type,
+        // Cut in Postgres (in characters), so a long Text never leaves the database whole.
+        text: sql<string | null>`left(${items.extractedText}, ${TAGGING_TEXT_LENGTH})`,
       })
       .from(items)
       .where(ownedBy(ref))

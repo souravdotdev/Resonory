@@ -27,6 +27,7 @@ function itemsInMemory(type: ItemType | null = null) {
         item.type = failedType;
       }
     }),
+    findTaggable: vi.fn(async () => null),
   };
   return { repository, item };
 }

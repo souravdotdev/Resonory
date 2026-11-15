@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { UnrecoverableError } from "bullmq";
 import { Container } from "inversify";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
+import { PROCESS_ITEM_JOB, TAG_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { type FailedItemsJob, onItemsJobFailed } from "@/interface/itemsJobFailed";
@@ -170,6 +170,24 @@ describe("a failed job on the Items queue", () => {
         msg: "job failed",
       },
     ]);
+  });
+
+  it("never marks the Item Failed when its AI tagging fails for good, logging it with the Item's id", async () => {
+    const { container, useCase, logger } = testContainer();
+
+    await onItemsJobFailed(
+      container,
+      { ...processItemJob(3), name: TAG_ITEM_JOB },
+      new Error("429 Rate limit reached"),
+    );
+
+    expect(useCase.execute).not.toHaveBeenCalled();
+    expect(logger.logs).toContainEqual({
+      level: "warn",
+      bindings: { itemId: ITEM_ID },
+      fields: {},
+      msg: "AI tagging gave up; the Item stays Ready without AI Tags",
+    });
   });
 
   it("changes no Item for a job with an unknown name", async () => {

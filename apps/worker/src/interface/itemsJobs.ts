@@ -1,9 +1,11 @@
 import type { Container } from "inversify";
 import { describeError, type Logger } from "@resonory/logger";
-import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
+import { PROCESS_ITEM_JOB, TAG_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { processItem, slimProcessItemData } from "@/interface/processors/processItem.processor";
 import { processItemFailed } from "@/interface/processors/processItemFailed.processor";
+import { tagItem } from "@/interface/processors/tagItem.processor";
+import { tagItemFailed } from "@/interface/processors/tagItemFailed.processor";
 
 /** What the Items worker reads from a BullMQ job to dispatch it, and how it rewrites the job's data. */
 export interface ItemsJob {
@@ -32,6 +34,8 @@ const ITEMS_JOB_HANDLERS: ReadonlyMap<string, ItemsJobHandler> = new Map([
     PROCESS_ITEM_JOB,
     { process: processItem, onFinalFailure: processItemFailed, slimmed: slimProcessItemData },
   ],
+  // Its payload is only ids, so there's nothing to slim; its final failure leaves the Item Ready.
+  [TAG_ITEM_JOB, { process: tagItem, onFinalFailure: tagItemFailed, slimmed: () => undefined }],
 ]);
 
 /** The handler for a job name, or undefined for a job the Items queue doesn't carry. */

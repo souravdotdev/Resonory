@@ -22,7 +22,8 @@ export interface FailedItemsJob extends ItemsJob {
  * The Items worker's `failed` handler. Every failed attempt is logged with its
  * reason. Once no attempt is left, however the job failed (its last retry, an
  * unrecoverable error, or a stall), its name's final-failure step runs: a
- * Process Item job's Item becomes Failed, and then the job keeps only the
+ * Process Item job's Item becomes Failed (a Tag Item job's stays Ready; that
+ * failure is only logged), and then the job keeps only the
  * data worth keeping (`slimFinishedJob`). A payload that names no Item, or an
  * unknown job name, changes no Item. It never throws: it runs from an event listener.
  */

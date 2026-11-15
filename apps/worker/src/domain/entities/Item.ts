@@ -46,6 +46,19 @@ export interface Item {
   status: ItemStatus;
 }
 
+/**
+ * The excerpt of an Item AI tagging sends to the model (Items ADR 0004): its
+ * title, description, Source URL and Item type, and only the start of its Text
+ * (`TAGGING_TEXT_LENGTH` characters), never the whole. Without Text, `text` is null.
+ */
+export interface TaggableItem {
+  title: string | null;
+  description: string | null;
+  sourceUrl: string;
+  type: ItemType | null;
+  text: string | null;
+}
+
 /** What the page says it is called and is about; written to the Item when it becomes Ready. */
 export interface ItemMetadata {
   title: string | null;

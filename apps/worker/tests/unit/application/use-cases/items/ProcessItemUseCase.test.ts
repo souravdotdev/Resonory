@@ -20,6 +20,7 @@ import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
+import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueueProvider";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
@@ -57,6 +58,7 @@ function itemsInMemory(sourceUrl: string) {
         Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey, text });
     }),
     markFailed: vi.fn(async () => {}),
+    findTaggable: vi.fn(async () => null),
   };
   return { repository, item };
 }
@@ -239,6 +241,11 @@ function cacheFailing() {
   } satisfies IUrlPreviewCache;
 }
 
+// A queue recording each Tag Item job it's handed.
+function queueRecording() {
+  return { enqueueTagItem: vi.fn(async (_request: TagItemRequest) => {}) } satisfies IQueueProvider;
+}
+
 // By default without a Thumbnail store, as the worker runs without Supabase Storage,
 // and without anything already cached.
 const useCaseFor = (
@@ -252,6 +259,7 @@ const useCaseFor = (
   pageParser: IPageHeadParser = new HtmlPageParser(),
   // The real adapter too, for the same reason.
   textExtractor: ITextExtractor = new ReadabilityTextExtractor(),
+  queue: IQueueProvider = queueRecording(),
 ) =>
   new ProcessItemUseCase(
     repository,
@@ -262,6 +270,7 @@ const useCaseFor = (
     resizer,
     pageParser,
     textExtractor,
+    queue,
     store,
   );
 
@@ -1826,5 +1835,128 @@ describe("ProcessItemUseCase, an X post's Text", () => {
 
     await result;
     expect(item.text).not.toBe(POST_TEXT);
+  });
+});
+
+describe("ProcessItemUseCase, AI tagging", () => {
+  const POST_URL = "https://youtu.be/dQw4w9WgXcQ";
+
+  // Processes REF (with captured content when given) against this queue.
+  const processWith = (queue: IQueueProvider, fetcher: IUrlFetcher, job = {}) => {
+    const { repository, item } = itemsInMemory(POST_URL);
+    const useCase = useCaseFor(
+      repository,
+      fetcher,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      queue,
+    );
+    return { item, repository, result: useCase.execute({ ...REF, ...job }) };
+  };
+
+  it("queues the Item's AI tagging once it's Ready, with only its ids", async () => {
+    const queue = queueRecording();
+
+    const { result } = processWith(queue, fetcherAnswering(htmlPage()), {
+      html: "<html><head><title>A video</title></head></html>",
+      captions: "Hello",
+    });
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready" });
+    expect(queue.enqueueTagItem).toHaveBeenCalledExactlyOnceWith(REF);
+  });
+
+  it("queues it only after the Item is marked Ready", async () => {
+    const order: string[] = [];
+    const queue = {
+      enqueueTagItem: vi.fn(async () => {
+        order.push("queued");
+      }),
+    } satisfies IQueueProvider;
+    const { repository } = itemsInMemory(POST_URL);
+    const markReady = repository.markReady;
+    repository.markReady = vi.fn(async (...args: Parameters<typeof markReady>) => {
+      await markReady(...args);
+      order.push("ready");
+    });
+    const useCase = useCaseFor(
+      repository,
+      fetcherAnswering(htmlPage()),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      queue,
+    );
+
+    await useCase.execute(REF);
+
+    expect(order).toEqual(["ready", "queued"]);
+  });
+
+  it("queues it for a typed Item whose fetch failed, which is still Ready", async () => {
+    const queue = queueRecording();
+
+    await processWith(queue, fetcherFailing(new Error("offline"))).result;
+
+    expect(queue.enqueueTagItem).toHaveBeenCalledExactlyOnceWith(REF);
+  });
+
+  it("queues it for an Item Ready from a cached preview", async () => {
+    const queue = queueRecording();
+    const { repository } = itemsInMemory(POST_URL);
+    const cached: CachedPreview = { type: "video", metadata: NO_METADATA, thumbnailKey: null };
+    const useCase = useCaseFor(
+      repository,
+      fetcherAnswering(htmlPage()),
+      undefined,
+      undefined,
+      cacheAnswering(cached),
+      undefined,
+      undefined,
+      queue,
+    );
+
+    await useCase.execute(REF);
+
+    expect(queue.enqueueTagItem).toHaveBeenCalledExactlyOnceWith(REF);
+  });
+
+  it("queues nothing for an Item that isn't Ready", async () => {
+    const queue = queueRecording();
+    const { repository } = itemsInMemory("http://127.0.0.1:4000/health");
+    const useCase = useCaseFor(
+      repository,
+      fetcherFailing(new Error("127.0.0.1 isn't public")),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      queue,
+    );
+
+    await expect(useCase.execute(REF)).rejects.toThrow();
+    await useCase.execute({ itemId: ITEM_ID, userId: OTHER_USER_ID });
+
+    expect(queue.enqueueTagItem).not.toHaveBeenCalled();
+  });
+
+  it("keeps the Item Ready when its tagging can't be queued, handing the error back", async () => {
+    const queueError = new Error("Redis answered ECONNREFUSED");
+    const queue = {
+      enqueueTagItem: vi.fn(async (): Promise<void> => {
+        throw queueError;
+      }),
+    } satisfies IQueueProvider;
+
+    const { item, result } = processWith(queue, fetcherAnswering(htmlPage()));
+
+    await expect(result).resolves.toMatchObject({ outcome: "ready", tagQueueError: queueError });
+    expect(item).toMatchObject({ status: "ready" });
   });
 });

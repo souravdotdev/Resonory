@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { UnrecoverableError } from "bullmq";
 import { Container } from "inversify";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
+import { PROCESS_ITEM_JOB, TAG_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -148,5 +148,15 @@ describe("the Items queue's job switch", () => {
 
     await expect(run).rejects.toThrow("Postgres is down");
     await expect(run).rejects.not.toBeInstanceOf(UnrecoverableError);
+  });
+
+  it("runs a Tag Item job's AI tagging with its Item and User", async () => {
+    const { container } = testContainer();
+    const tagging = { execute: vi.fn(async () => ({ outcome: "unconfigured" as const })) };
+    container.bind(WORKER_TOKENS.TagItemUseCase).toConstantValue(tagging);
+
+    await runItemsJob(container, itemsJob(TAG_ITEM_JOB, { itemId: ITEM_ID, userId: USER_ID }));
+
+    expect(tagging.execute).toHaveBeenCalledWith({ itemId: ITEM_ID, userId: USER_ID });
   });
 });

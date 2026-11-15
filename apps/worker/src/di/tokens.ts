@@ -30,8 +30,18 @@ export const WORKER_TOKENS = {
   PageHeadParser: Symbol("IPageHeadParser"),
   /** `ITextExtractor`: turns already-captured page content into its main-content text. */
   TextExtractor: Symbol("ITextExtractor"),
+  /** The BullMQ Items queue the worker produces onto, as `ItemsQueue`. */
+  ItemsQueue: Symbol("ItemsQueue"),
+  /** `IQueueProvider`: queues the worker's follow-up jobs (AI tagging) on the Items queue. */
+  QueueProvider: Symbol("IQueueProvider"),
+  /** `ITagRepository`: the Tags AI tagging reads and puts on Items. */
+  TagRepository: Symbol("ITagRepository"),
+  /** `ITagSuggester`: the language model AI tagging asks (unbound without `AI_TAGGING_API_KEY`). */
+  TagSuggester: Symbol("ITagSuggester"),
   /** `ProcessItemUseCase`: what a Process Item job runs. */
   ProcessItemUseCase: Symbol("ProcessItemUseCase"),
   /** `FailItemUseCase`: what a Process Item job's last failed attempt runs. */
   FailItemUseCase: Symbol("FailItemUseCase"),
+  /** `TagItemUseCase`: what a Tag Item job runs. */
+  TagItemUseCase: Symbol("TagItemUseCase"),
 } as const;
