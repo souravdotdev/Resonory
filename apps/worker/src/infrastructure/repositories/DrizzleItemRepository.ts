@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -13,6 +13,7 @@ import {
 } from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { Database } from "@/infrastructure/database/Database";
+import { ownedBy } from "@/infrastructure/repositories/ownedBy";
 
 /** The `items` columns ending Processing sets: a Failed Item keeps no title, description, Thumbnail key or Text. */
 type FinishedFields = Pick<
@@ -80,9 +81,4 @@ export class DrizzleItemRepository implements IItemRepository {
       .set({ ...fields, updatedAt: new Date() })
       .where(ownedBy(ref));
   }
-}
-
-/** The one Item with this id, and only if it's this User's. */
-function ownedBy({ itemId, userId }: ItemRef) {
-  return and(eq(items.id, itemId), eq(items.userId, userId));
 }

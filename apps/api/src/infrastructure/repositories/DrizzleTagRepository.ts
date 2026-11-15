@@ -19,14 +19,7 @@ export class DrizzleTagRepository implements ITagRepository {
 
   async findOrCreate(userId: string, name: string): Promise<Tag> {
     return this.db.transaction(async (tx) => {
-      // Locking the User's row makes their Tag creations take turns, so each
-      // counts the Tags the last one committed and the limit can't be raced past.
-      // `no key update` still lets the foreign keys on their rows be checked.
-      await tx
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for("no key update");
+      await this.lockUser(tx, userId);
 
       const findByName = async () => {
         const [row] = await tx
@@ -77,17 +70,14 @@ export class DrizzleTagRepository implements ITagRepository {
       // Locking the Item's row makes links to it take turns, so the count below
       // is the one the link lands on. Residual race: a writer that links Tags
       // without taking this lock (the AI tagger, once it exists) can still push
-      // an Item past the limit, so it has to lock the same row.
-      const [item] = await tx
-        .select({ id: items.id })
-        .from(items)
-        .where(and(eq(items.id, itemId), eq(items.userId, userId)))
-        .for("no key update");
-      // Deleted since the use case found it. Once locked it can't be deleted until
+      // an Item past the limit, so it has to lock the same row. No row means it was
+      // deleted since the use case found it; once locked it can't be deleted until
       // commit, so the insert below can't then fail its foreign key as a 500. A Tag
       // findOrCreate just made for this call stays on no Item, which is harmless:
       // Tags outlive their links anyway.
-      if (item === undefined) throw new NotFoundError(`Item ${itemId} not found`);
+      if (!(await this.lockItem(tx, userId, itemId))) {
+        throw new NotFoundError(`Item ${itemId} not found`);
+      }
 
       const [{ onItem, linked } = { onItem: 0, linked: 0 }] = await tx
         .select({
@@ -164,19 +154,9 @@ export class DrizzleTagRepository implements ITagRepository {
       // the two can't deadlock. The User's lock makes the check below on the Tag's
       // other links wait for an AI writer putting it on another Item, so the Tag
       // ends up deleted or on an Item, never both. The Item's lock makes the AI
-      // writer's own Rejected tag check on this Item wait for this one.
-      const [item] = await tx
-        .select({ id: items.id })
-        .from(items)
-        .where(and(eq(items.id, itemId), eq(items.userId, userId)))
-        .for("no key update");
-      // No Item, so no link to take off.
-      if (item === undefined) return;
-      await tx
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for("no key update");
+      // writer's own Rejected tag check on this Item wait for this one. No Item,
+      // so no link to take off.
+      if (!(await this.lockItemThenUser(tx, userId, itemId))) return;
 
       const [removed] = await tx
         .delete(itemTags)
@@ -213,6 +193,37 @@ export class DrizzleTagRepository implements ITagRepository {
           ),
         );
     });
+  }
+
+  // Locks the User's row (`no key update`, so the foreign keys on their rows can
+  // still be checked). It makes their Tag creations take turns, so each counts
+  // the Tags the last one committed and the limit can't be raced past.
+  private async lockUser(tx: Transaction, userId: string): Promise<void> {
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("no key update");
+  }
+
+  // Locks the Item's row (`no key update`, so the foreign keys to it can still be
+  // checked), resolving to false when it doesn't exist or isn't the User's. Once
+  // locked it can't be deleted until the transaction ends.
+  private async lockItem(tx: Transaction, userId: string, itemId: string): Promise<boolean> {
+    const [item] = await tx
+      .select({ id: items.id })
+      .from(items)
+      .where(and(eq(items.id, itemId), eq(items.userId, userId)))
+      .for("no key update");
+    return item !== undefined;
+  }
+
+  // The Item's row, then the User's: the order the AI writer takes them in, so
+  // the two can't deadlock. Locks nothing more, resolving to false, without the Item.
+  private async lockItemThenUser(
+    tx: Transaction,
+    userId: string,
+    itemId: string,
+  ): Promise<boolean> {
+    if (!(await this.lockItem(tx, userId, itemId))) return false;
+    await this.lockUser(tx, userId);
+    return true;
   }
 
   // The User's Tags only the AI used that are on no Items: untagging deletes one

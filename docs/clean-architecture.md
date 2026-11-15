@@ -195,7 +195,7 @@ apps/worker/src/
     storage/            SupabaseThumbnailStore.ts, supabaseEnv.ts (the optional SUPABASE_URL /
                         SUPABASE_SERVICE_ROLE_KEY; unset, no store is bound)
     repositories/       DrizzleItemRepository.ts, DrizzleTagRepository.ts (applyAsAi: Item lock, then
-                        User lock, one transaction)
+                        User lock, one transaction), ownedBy.ts (the Item-scoped `where` both share)
     queue/              BullMqQueueProvider.ts, itemsQueue.ts (the Items queue, produced onto)
     ai/                 OpenAiCompatibleTagSuggester.ts (the `openai` client, JSON mode), aiTaggingEnv.ts
                         (the optional AI_TAGGING_* trio; no key, no suggester is bound)

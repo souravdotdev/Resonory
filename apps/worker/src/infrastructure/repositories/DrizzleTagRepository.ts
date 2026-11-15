@@ -6,6 +6,7 @@ import type { ItemRef } from "@/domain/entities/Item";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
+import { ownedBy } from "@/infrastructure/repositories/ownedBy";
 
 /**
  * The Tags AI tagging reads and writes: `tags`, `item_tags` and
@@ -54,31 +55,12 @@ export class DrizzleTagRepository implements ITagRepository {
     return rows.map((row) => row.name);
   }
 
-  async applyAsAi({ itemId, userId }: ItemRef, names: string[]): Promise<string[] | null> {
+  async applyAsAi(ref: ItemRef, names: string[]): Promise<string[] | null> {
+    const { itemId, userId } = ref;
     return this.db.transaction(async (tx) => {
-      // The Item's row first, then the User's: the order the API takes them in
-      // (#173), so the two writers can't deadlock. Locking the Item's row makes
-      // links to it take turns, so the count below is the one the links land on;
-      // `no key update` still lets the foreign keys on it be checked.
-      const [item] = await tx
-        .select({ id: items.id })
-        .from(items)
-        .where(and(eq(items.id, itemId), eq(items.userId, userId)))
-        .for("no key update");
       // Deleted (or not the User's). Once locked it can't be deleted until
       // commit, so the inserts below can't fail their foreign keys.
-      if (item === undefined) return null;
-
-      // Locking the User's row makes their Tag creations take turns, so each
-      // counts the Tags the last one committed and the limit can't be raced past.
-      // Untagging takes it too before deleting a Tag only the AI used, so the
-      // Tags read below are never ones it's deleting: a Tag it deleted first is
-      // made again, and one linked here first isn't deleted.
-      await tx
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for("no key update");
+      if (!(await this.lockItemThenUser(tx, ref))) return null;
       if (names.length === 0) return [];
 
       // Checked again here, not only by the use case, for a rejection recorded
@@ -109,48 +91,93 @@ export class DrizzleTagRepository implements ITagRepository {
         .where(eq(itemTags.itemId, itemId));
       const linked = new Set(links.map((row) => row.tagId));
       let freeSlots = MAX_TAGS_PER_ITEM - links.length;
-      // Counted only once a name would create a Tag.
-      let owned: number | undefined;
+      const userTags: UserTagCount = {};
 
       const applied: string[] = [];
       for (const name of wanted) {
-        let tagId = tagIdsByName.get(name);
+        const found = tagIdsByName.get(name);
         // Already on the Item, from either source: left as it is, taking no slot.
-        if (tagId !== undefined && linked.has(tagId)) continue;
+        if (found !== undefined && linked.has(found)) continue;
         // A full Item takes nothing more, and no Tag is made that couldn't go on it.
         if (freeSlots <= 0) break;
 
-        if (tagId === undefined) {
-          owned ??= await this.tagCount(tx, userId);
-          // At the User's limit only their existing Tags are reused.
-          if (owned >= MAX_TAGS_PER_USER) continue;
-          // The lock already serializes same-name creates; tags_user_id_name_unique
-          // stays the backstop, and a conflict there means the Tag now exists.
-          // Made as only the AI's; an existing Tag's origin is never touched, so
-          // a Tag the User applied is never made the AI's.
-          const [created] = await tx
-            .insert(tags)
-            .values({ userId, name, origin: "ai" })
-            .onConflictDoNothing({ target: [tags.userId, tags.name] })
-            .returning({ id: tags.id });
-          if (created !== undefined) owned++;
-          tagId = created?.id ?? (await this.tagIdByName(tx, userId, name));
-          tagIdsByName.set(name, tagId);
-        }
-
-        // A link already there, of either source, is never touched.
-        const [link] = await tx
-          .insert(itemTags)
-          .values({ itemId, tagId, userId, source: "ai" })
-          .onConflictDoNothing({ target: [itemTags.itemId, itemTags.tagId] })
-          .returning({ tagId: itemTags.tagId });
+        const tagId = found ?? (await this.createAsAi(tx, userId, name, userTags));
+        // At the User's limit only their existing Tags are reused.
+        if (tagId === null) continue;
+        tagIdsByName.set(name, tagId);
         linked.add(tagId);
-        if (link === undefined) continue;
+        if (!(await this.linkAsAi(tx, ref, tagId))) continue;
         freeSlots--;
         applied.push(name);
       }
       return applied;
     });
+  }
+
+  // The Item's row first, then the User's: the order the API takes them in
+  // (#173), so the two writers can't deadlock. Resolves to false, locking
+  // nothing more, when the Item doesn't exist or isn't the User's.
+  private async lockItemThenUser(tx: Transaction, ref: ItemRef): Promise<boolean> {
+    // Locking the Item's row makes links to it take turns, so the count the
+    // caller reads is the one its links land on; `no key update` still lets the
+    // foreign keys on it be checked.
+    const [item] = await tx
+      .select({ id: items.id })
+      .from(items)
+      .where(ownedBy(ref))
+      .for("no key update");
+    if (item === undefined) return false;
+
+    // Locking the User's row makes their Tag creations take turns, so each
+    // counts the Tags the last one committed and the limit can't be raced past.
+    // Untagging takes it too before deleting a Tag only the AI used, so the
+    // Tags read under it are never ones it's deleting: a Tag it deleted first is
+    // made again, and one linked here first isn't deleted.
+    await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, ref.userId))
+      .for("no key update");
+    return true;
+  }
+
+  // Makes the Tag as only the AI's and resolves to its id, or to null when the
+  // User is at their limit. The User's Tags are counted only once a name would
+  // create one, then kept up to date in `userTags`.
+  private async createAsAi(
+    tx: Transaction,
+    userId: string,
+    name: string,
+    userTags: UserTagCount,
+  ): Promise<string | null> {
+    userTags.owned ??= await this.tagCount(tx, userId);
+    if (userTags.owned >= MAX_TAGS_PER_USER) return null;
+    // The lock already serializes same-name creates; tags_user_id_name_unique
+    // stays the backstop, and a conflict there means the Tag now exists.
+    // Made as only the AI's; an existing Tag's origin is never touched, so
+    // a Tag the User applied is never made the AI's.
+    const [created] = await tx
+      .insert(tags)
+      .values({ userId, name, origin: "ai" })
+      .onConflictDoNothing({ target: [tags.userId, tags.name] })
+      .returning({ id: tags.id });
+    if (created !== undefined) userTags.owned++;
+    return created?.id ?? (await this.tagIdByName(tx, userId, name));
+  }
+
+  // Puts the Tag on the Item with Tag source `ai`, resolving to whether it
+  // added a link. A link already there, of either source, is never touched.
+  private async linkAsAi(
+    tx: Transaction,
+    { itemId, userId }: ItemRef,
+    tagId: string,
+  ): Promise<boolean> {
+    const [link] = await tx
+      .insert(itemTags)
+      .values({ itemId, tagId, userId, source: "ai" })
+      .onConflictDoNothing({ target: [itemTags.itemId, itemTags.tagId] })
+      .returning({ tagId: itemTags.tagId });
+    return link !== undefined;
   }
 
   // The User's Tags only the AI used that are on no Items: untagging deletes one
@@ -189,3 +216,8 @@ export class DrizzleTagRepository implements ITagRepository {
 
 /** The transaction handle `Database.transaction` passes its callback. */
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** How many Tags the User has, once `applyAsAi` has had to count them. */
+interface UserTagCount {
+  owned?: number;
+}
