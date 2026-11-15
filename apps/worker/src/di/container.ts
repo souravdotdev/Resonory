@@ -166,7 +166,9 @@ export function tagSuggester(logger: Pick<Logger, "info">): ITagSuggester | null
     apiKey: env.apiKey,
     baseURL: env.baseUrl,
     maxRetries: 0,
-    timeout: 30_000,
+    // The call holds the worker's one job slot, which Processing shares, so a hung
+    // model is cut off fast and BullMQ's retries (30 s, then 60 s later) cover the rest.
+    timeout: 10_000,
   });
   return new OpenAiCompatibleTagSuggester(client, env.model);
 }
