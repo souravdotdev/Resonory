@@ -5,11 +5,13 @@ import { WORKER_TOKENS } from "@/di/tokens";
 import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueueProvider";
 
 /**
- * The part of a BullMQ `Queue` this provider uses. The container binds the
- * production `itemsQueue` to it, which checks the real queue fits.
+ * The part of a BullMQ `Queue` the worker uses: this provider adds to it, and
+ * shutdown (`src/index.ts`) closes it. The container binds the production
+ * `itemsQueue` to it, which checks the real queue fits.
  */
 export interface ItemsQueue {
   add(name: string, data: TagItemJob, opts: JobsOptions): Promise<unknown>;
+  close(): Promise<void>;
 }
 
 // A failing model is retried twice more, 30 s then 60 s later: long enough for a

@@ -8,7 +8,8 @@ const job = {
   userId: "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
 };
 
-const queueRecording = () => ({ add: vi.fn(async () => ({})) }) satisfies ItemsQueue;
+const queueRecording = () =>
+  ({ add: vi.fn(async () => ({})), close: vi.fn(async () => {}) }) satisfies ItemsQueue;
 
 describe("the worker's BullMqQueueProvider", () => {
   it("adds a Tag Item job with the Item's and User's ids", async () => {

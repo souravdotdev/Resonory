@@ -1,11 +1,11 @@
 // Before anything that declares a decorated class.
 import "reflect-metadata";
-import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import { ITEMS_QUEUE } from "@resonory/shared/schemas/queue";
 import type { Logger } from "@resonory/logger";
 import { createContainer } from "@/di/container";
 import { WORKER_TOKENS } from "@/di/tokens";
+import type { ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
 import { createItemsWorker } from "@/interface/itemsWorker";
 
 // The worker consumes the Items queue until it's told to stop. Postgres
@@ -14,7 +14,7 @@ const container = createContainer();
 const logger = container.get<Logger>(WORKER_TOKENS.Logger);
 const redis = container.get<Redis>(WORKER_TOKENS.RedisConnection);
 // The same queue, produced onto: Processing queues AI tagging jobs.
-const itemsQueue = container.get<Queue>(WORKER_TOKENS.ItemsQueue);
+const itemsQueue = container.get<ItemsQueue>(WORKER_TOKENS.ItemsQueue);
 
 await redis.ping();
 const itemsWorker = createItemsWorker(container, redis);

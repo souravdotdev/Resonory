@@ -30,7 +30,7 @@ export const WORKER_TOKENS = {
   PageHeadParser: Symbol("IPageHeadParser"),
   /** `ITextExtractor`: turns already-captured page content into its main-content text. */
   TextExtractor: Symbol("ITextExtractor"),
-  /** The BullMQ Items queue the worker produces onto, as `ItemsQueue`. */
+  /** The BullMQ Items queue the worker produces onto and closes on shutdown, as `ItemsQueue`. */
   ItemsQueue: Symbol("ItemsQueue"),
   /** `IQueueProvider`: queues the worker's follow-up jobs (AI tagging) on the Items queue. */
   QueueProvider: Symbol("IQueueProvider"),
