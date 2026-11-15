@@ -219,6 +219,32 @@ describe("a failed job on the Items queue", () => {
     expect(JSON.stringify(logger.logs)).not.toContain("Postgres is still down");
   });
 
+  it("never says it couldn't mark the Item Failed when a Tag Item job's final-failure step throws", async () => {
+    const { container, logger } = testContainer();
+    const child = logger.child.bind(logger);
+    // The only thing tagItemFailed can trip on: its Item-scoped logger.
+    vi.spyOn(logger, "child").mockImplementation(((bindings: Record<string, unknown>) => {
+      if ("itemId" in bindings) throw new Error("logger is gone");
+      return child(bindings);
+    }) as typeof logger.child);
+
+    await expect(
+      onItemsJobFailed(
+        container,
+        { ...processItemJob(3), name: TAG_ITEM_JOB },
+        new Error("429 Rate limit reached"),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(logger.logs).toContainEqual({
+      level: "error",
+      bindings: { jobId: "42", jobName: TAG_ITEM_JOB },
+      fields: { err: "Error" },
+      msg: "couldn't log that AI tagging gave up",
+    });
+    expect(logger.logs.map((log) => log.msg)).not.toContain("couldn't mark the Item Failed");
+  });
+
   it("logs a failure BullMQ reports without its job, with no raw error message", async () => {
     const { container, useCase, logger } = testContainer();
 

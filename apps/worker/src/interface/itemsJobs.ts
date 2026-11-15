@@ -20,6 +20,8 @@ export interface ItemsJobHandler {
   process(container: Container, data: unknown): Promise<void>;
   /** Runs once the job has failed and no attempt is left. */
   onFinalFailure(container: Container, data: unknown): Promise<void>;
+  /** What's logged, at error, when `onFinalFailure` throws. */
+  finalFailureError: string;
   /**
    * The job's data worth keeping once it's finished, or undefined to keep it
    * all. BullMQ keeps finished jobs (docs/queue.md), so a large payload
@@ -32,10 +34,23 @@ export interface ItemsJobHandler {
 const ITEMS_JOB_HANDLERS: ReadonlyMap<string, ItemsJobHandler> = new Map([
   [
     PROCESS_ITEM_JOB,
-    { process: processItem, onFinalFailure: processItemFailed, slimmed: slimProcessItemData },
+    {
+      process: processItem,
+      onFinalFailure: processItemFailed,
+      finalFailureError: "couldn't mark the Item Failed",
+      slimmed: slimProcessItemData,
+    },
   ],
   // Its payload is only ids, so there's nothing to slim; its final failure leaves the Item Ready.
-  [TAG_ITEM_JOB, { process: tagItem, onFinalFailure: tagItemFailed, slimmed: () => undefined }],
+  [
+    TAG_ITEM_JOB,
+    {
+      process: tagItem,
+      onFinalFailure: tagItemFailed,
+      finalFailureError: "couldn't log that AI tagging gave up",
+      slimmed: () => undefined,
+    },
+  ],
 ]);
 
 /** The handler for a job name, or undefined for a job the Items queue doesn't carry. */
