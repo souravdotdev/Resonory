@@ -317,6 +317,58 @@ describe("the worker's DrizzleTagRepository against Postgres", () => {
       expect(await tagCount(userId)).toBe(MAX_TAGS_PER_USER);
     });
 
+    it("deletes the User's Tags only the AI used that are on no Items, keeping the rest", async () => {
+      const userId = await aUser();
+      const otherUserId = await aUser();
+      const itemId = await anItem(userId);
+      await aLink(userId, itemId, await anAiTag(userId, "on-an-item"));
+      await aTag(userId, "the-users");
+      // Left on no Items without being taken off: their Items were deleted.
+      for (const [owner, name] of [
+        [userId, "orphaned"],
+        [otherUserId, "another-users"],
+      ] as const) {
+        const deletedItemId = await anItem(owner);
+        await aLink(owner, deletedItemId, await anAiTag(owner, name));
+        await db.delete(items).where(eq(items.id, deletedItemId));
+      }
+
+      await repository.applyAsAi({ itemId: await anItem(userId), userId }, ["postgres"]);
+
+      expect(await tagNamesOf(userId)).toEqual(["on-an-item", "postgres", "the-users"]);
+      // Another User's are left for their own next write.
+      expect(await tagNamesOf(otherUserId)).toEqual(["another-users"]);
+    });
+
+    it("doesn't count a Tag only the AI used that's on no Items towards the 1,000", async () => {
+      const userId = await aUser();
+      await seedTags(userId, MAX_TAGS_PER_USER - 1);
+      const deletedItemId = await anItem(userId);
+      await aLink(userId, deletedItemId, await anAiTag(userId, "orphaned"));
+      await db.delete(items).where(eq(items.id, deletedItemId));
+
+      const applied = await repository.applyAsAi({ itemId: await anItem(userId), userId }, [
+        "brand-new",
+      ]);
+
+      expect(applied).toEqual(["brand-new"]);
+      expect(await tagCount(userId)).toBe(MAX_TAGS_PER_USER);
+    });
+
+    it("puts a Tag only the AI used back on as a new Tag when the model names it again", async () => {
+      const userId = await aUser();
+      const deletedItemId = await anItem(userId);
+      await aLink(userId, deletedItemId, await anAiTag(userId, "orphaned"));
+      await db.delete(items).where(eq(items.id, deletedItemId));
+      const itemId = await anItem(userId);
+
+      const applied = await repository.applyAsAi({ itemId, userId }, ["orphaned"]);
+
+      expect(applied).toEqual(["orphaned"]);
+      expect(await linksOn(itemId)).toMatchObject([{ name: "orphaned", source: "ai" }]);
+      expect(await originsOf(userId)).toEqual({ orphaned: "ai" });
+    });
+
     it("skips an Item that no longer exists quietly, creating no Tag", async () => {
       const userId = await aUser();
       const itemId = await anItem(userId);

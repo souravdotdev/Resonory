@@ -1,4 +1,4 @@
-import { and, asc, count, eq, exists, inArray, or } from "drizzle-orm";
+import { and, asc, count, eq, exists, inArray, notExists, or } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -25,7 +25,9 @@ export class DrizzleTagRepository implements ITagRepository {
         and(
           eq(tags.userId, userId),
           // A Tag only the AI used is left out once it's on no Items, so the model
-          // isn't offered it back as one of the User's.
+          // isn't offered it back as one of the User's. One its Items' deletion left
+          // there lingers until applyAsAi deletes it (deleteUnusedAiTags), so what's
+          // listed is exactly what applyAsAi counts towards the User's limit.
           or(
             eq(tags.origin, "user"),
             exists(
@@ -90,6 +92,11 @@ export class DrizzleTagRepository implements ITagRepository {
       const wanted = names.filter((name) => !rejectedNames.has(name));
       if (wanted.length === 0) return [];
 
+      // Before reading the User's Tags, so none read here is then deleted, and
+      // before counting them, so a Tag only the AI used that its Items' deletion
+      // left on no Items never holds a place towards the limit.
+      await this.deleteUnusedAiTags(tx, userId);
+
       const existing = await tx
         .select({ id: tags.id, name: tags.name })
         .from(tags)
@@ -144,6 +151,22 @@ export class DrizzleTagRepository implements ITagRepository {
       }
       return applied;
     });
+  }
+
+  // The User's Tags only the AI used that are on no Items: untagging deletes one
+  // with its last link, but deleting its Items leaves it. Under the User's lock.
+  private async deleteUnusedAiTags(tx: Transaction, userId: string): Promise<void> {
+    await tx
+      .delete(tags)
+      .where(
+        and(
+          eq(tags.userId, userId),
+          eq(tags.origin, "ai"),
+          notExists(
+            tx.select({ tagId: itemTags.tagId }).from(itemTags).where(eq(itemTags.tagId, tags.id)),
+          ),
+        ),
+      );
   }
 
   private async tagCount(tx: Transaction, userId: string): Promise<number> {

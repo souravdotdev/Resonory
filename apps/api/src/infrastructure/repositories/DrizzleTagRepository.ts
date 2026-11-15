@@ -50,6 +50,9 @@ export class DrizzleTagRepository implements ITagRepository {
       }
       if (existing !== undefined) return toTag(existing);
 
+      // Before counting, so a Tag only the AI used that its Items' deletion left
+      // on no Items never holds a place towards the limit.
+      await this.deleteUnusedAiTags(tx, userId);
       const [{ owned } = { owned: 0 }] = await tx
         .select({ owned: count() })
         .from(tags)
@@ -130,7 +133,8 @@ export class DrizzleTagRepository implements ITagRepository {
     // the User's keeps it. A Tag on no Items has no links, so it falls back to its own.
     const lastUsedAt = sql`coalesce(max(${itemTags.createdAt}), ${tags.createdAt})`;
     // A Tag only the AI used is left out once it's on no Items: untagging deletes
-    // it, but one whose Items were all deleted is still there.
+    // it, but one whose Items were all deleted lingers until the User's next Tag
+    // is created (deleteUnusedAiTags).
     const isListed = or(eq(tags.origin, "user"), sql`count(${itemTags.tagId}) > 0`);
     const rows = await this.db
       .select(getTableColumns(tags))
@@ -210,4 +214,24 @@ export class DrizzleTagRepository implements ITagRepository {
         );
     });
   }
+
+  // The User's Tags only the AI used that are on no Items: untagging deletes one
+  // with its last link, but deleting its Items leaves it. Under the User's lock,
+  // so the AI writer can't be putting one on an Item meanwhile.
+  private async deleteUnusedAiTags(tx: Transaction, userId: string): Promise<void> {
+    await tx
+      .delete(tags)
+      .where(
+        and(
+          eq(tags.userId, userId),
+          eq(tags.origin, "ai"),
+          notExists(
+            tx.select({ tagId: itemTags.tagId }).from(itemTags).where(eq(itemTags.tagId, tags.id)),
+          ),
+        ),
+      );
+  }
 }
+
+/** The transaction handle `Database.transaction` passes its callback. */
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];

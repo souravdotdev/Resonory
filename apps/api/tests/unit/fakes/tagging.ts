@@ -43,7 +43,8 @@ export const anItem = (overrides: Partial<Item> & Pick<Item, "id" | "userId">): 
  * Item and Tag name, Items and Tags scoped to their User, and the Tag limits
  * checked atomically with each write, like the Drizzle adapter's locked
  * transactions. A Tag the User names or applies becomes theirs; one only the
- * AI used (`aiMadeTag`) is deleted when it's taken off its last Item. Seed
+ * AI used (`aiMadeTag`) is deleted when it's taken off its last Item, and,
+ * left on no Items another way, before the User's next Tag is created. Seed
  * `items`, `tags` and `links` directly to set a scene (pushing skips the limits).
  */
 export function taggingInMemory() {
@@ -82,6 +83,10 @@ export function taggingInMemory() {
   // A Tag the AI tagger made: only the AI has used it.
   const aiMadeTag = (userId: string, name: string): Tag => createTag(userId, name, "ai");
 
+  const onAnItem = (tag: Tag) => links.some((link) => link.tagId === tag.id);
+  // Only the AI used it and it's on no Items.
+  const unusedAiTag = (tag: Tag) => tag.origin === "ai" && !onAnItem(tag);
+
   const tagRepository: ITagRepository = {
     findOrCreate: async (userId, name) => {
       const existing = tags.find((tag) => tag.userId === userId && tag.name === name);
@@ -89,6 +94,11 @@ export function taggingInMemory() {
       if (existing) {
         existing.origin = "user";
         return existing;
+      }
+      // Like the adapter, a Tag only the AI used that's on no Items is deleted
+      // before counting, so it never holds a place towards the limit.
+      for (const tag of tags.filter((tag) => tag.userId === userId && unusedAiTag(tag))) {
+        tags.splice(tags.indexOf(tag), 1);
       }
       if (tags.filter((tag) => tag.userId === userId).length >= MAX_TAGS_PER_USER) {
         throw new UserTagLimitError(userId);
@@ -125,11 +135,10 @@ export function taggingInMemory() {
           ? Math.max(...used.map((at) => at.getTime()))
           : tag.createdAt.getTime();
       };
-      const onAnItem = (tag: Tag) => links.some((link) => link.tagId === tag.id);
       return (
         tags
           // A Tag only the AI used is left out once it's on no Items.
-          .filter((tag) => tag.userId === userId && (tag.origin === "user" || onAnItem(tag)))
+          .filter((tag) => tag.userId === userId && !unusedAiTag(tag))
           .sort((a, b) => lastUsed(b) - lastUsed(a) || a.name.localeCompare(b.name))
       );
     },

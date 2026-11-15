@@ -16,6 +16,8 @@ export interface ITagRepository {
    * Two concurrent calls for the same new name end with one Tag.
    * Throws `UserTagLimitError`, creating nothing, when the Tag is new and the
    * User already has `MAX_TAGS_PER_USER`; an existing Tag is always found.
+   * Before counting, it deletes the User's Tags only the AI used that are on no
+   * Items (their Items deleted), so those never count towards the limit.
    */
   findOrCreate(userId: string, name: string): Promise<Tag>;
 
@@ -36,7 +38,8 @@ export interface ITagRepository {
   /**
    * Every one of the User's Tags, most recently used first: by the latest time it
    * was put on any Item, by the AI or the User, or, on no Items, when it was created.
-   * A Tag only the AI used is left out once it's on no Items.
+   * A Tag only the AI used is left out once it's on no Items: one left there by
+   * its Items' deletion lingers until the User's next Tag is created.
    */
   listForUser(userId: string): Promise<Tag[]>;
 

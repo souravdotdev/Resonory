@@ -78,6 +78,11 @@ async function rejectionsOn(itemId: string) {
   return db.select().from(rejectedItemTags).where(eq(rejectedItemTags.itemId, itemId));
 }
 
+async function namesOf(userId: string): Promise<string[]> {
+  const rows = await db.select({ name: tags.name }).from(tags).where(eq(tags.userId, userId));
+  return rows.map((row) => row.name);
+}
+
 async function tagCount(userId: string): Promise<number> {
   const [{ owned } = { owned: 0 }] = await db
     .select({ owned: count() })
@@ -156,6 +161,47 @@ describe("DrizzleTagRepository against Postgres", () => {
       expect(fulfilled).toHaveLength(10);
       expect(rejected).toHaveLength(10);
       expect(rejected.every((error) => error instanceof UserTagLimitError)).toBe(true);
+      expect(await tagCount(userId)).toBe(MAX_TAGS_PER_USER);
+    });
+
+    it("deletes the User's Tags only the AI used that are on no Items when it creates one", async () => {
+      const userId = await aUser();
+      const otherUserId = await aUser();
+      const itemId = await anItem(userId);
+      await aLink(userId, itemId, await anAiTag(userId, "on-an-item"));
+      await aTag(userId, "the-users");
+      // Left on no Items without being taken off: their Items were deleted.
+      for (const [owner, name] of [
+        [userId, "orphaned"],
+        [otherUserId, "another-users"],
+      ] as const) {
+        const deletedItemId = await anItem(owner);
+        await aLink(owner, deletedItemId, await anAiTag(owner, name));
+        await db.delete(items).where(eq(items.id, deletedItemId));
+      }
+
+      await repository.findOrCreate(userId, "memory");
+
+      expect((await namesOf(userId)).sort()).toEqual(["memory", "on-an-item", "the-users"]);
+      // Another User's are left for their own next write.
+      expect(await namesOf(otherUserId)).toEqual(["another-users"]);
+    });
+
+    it("doesn't count a Tag only the AI used that's on no Items towards the 1,000", async () => {
+      const userId = await aUser();
+      await db.insert(tags).values(
+        Array.from({ length: MAX_TAGS_PER_USER - 1 }, (_, index) => ({
+          userId,
+          name: `seeded-${index}`,
+        })),
+      );
+      const deletedItemId = await anItem(userId);
+      await aLink(userId, deletedItemId, await anAiTag(userId, "orphaned"));
+      await db.delete(items).where(eq(items.id, deletedItemId));
+
+      const tag = await repository.findOrCreate(userId, "memory");
+
+      expect(tag.name).toBe("memory");
       expect(await tagCount(userId)).toBe(MAX_TAGS_PER_USER);
     });
   });

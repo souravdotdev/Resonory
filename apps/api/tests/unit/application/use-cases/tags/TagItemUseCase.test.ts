@@ -324,6 +324,19 @@ describe("TagItemUseCase", () => {
       expect(store.tags).toHaveLength(1000);
     });
 
+    it("doesn't count a Tag only the AI used that's on no Items towards the 1,000, deleting it", async () => {
+      const store = scene();
+      await giveUserTags(store, 999);
+      // Left on no Items without being taken off, as deleting its Item leaves it.
+      store.aiMadeTag(USER_ID, "orphaned");
+
+      const result = await store.useCase.execute({ userId: USER_ID, itemId: ITEM_ID, name: "new" });
+
+      expect(result.map((tag) => tag.name)).toEqual(["new"]);
+      expect(store.tags).toHaveLength(1000);
+      expect(store.tags.map((tag) => tag.name)).not.toContain("orphaned");
+    });
+
     it("doesn't count another User's Tags towards this User's 1,000", async () => {
       const store = scene();
       for (let n = 1; n <= 1000; n++) {
