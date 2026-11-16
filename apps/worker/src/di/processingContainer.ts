@@ -31,15 +31,16 @@ import { supabaseStorageEnv } from "@/infrastructure/storage/supabaseEnv";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
 
 /**
- * The processing worker's production container: the only place its concrete classes are
- * built and bound to their tokens, with no AI client (see `taggingContainer.ts`). Infrastructure lives for the process's
- * life; use cases are built fresh for each job.
+ * The processing worker's production container: the shared bindings plus the
+ * page fetcher, parsers, Process Item and Fail Item use cases and a producer onto
+ * the Item tagging queue, with no AI client (see `taggingContainer.ts`).
+ * Infrastructure lives for the process's life; use cases are built fresh for each job.
  */
-export function createContainer(): Container {
+export function createProcessingContainer(): Container {
   const container = new Container({ defaultScope: "Singleton" });
 
   // Built first, so it can be passed into thumbnailStore() below.
-  const logger = bindCommon(container, "worker");
+  const logger = bindCommon(container, "item-processing-worker");
 
   // The Item tagging queue, produced onto: once an Item is Ready, Processing queues its AI tagging.
   container

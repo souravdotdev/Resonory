@@ -17,10 +17,10 @@ vi.mock("@/infrastructure/queue/itemTaggingQueue", () => ({
 async function productionContainer() {
   vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
   vi.resetModules();
-  const { createContainer } = await import("@/di/container");
+  const { createProcessingContainer } = await import("@/di/processingContainer");
   // The fresh module graph has its own token Symbols.
   const { WORKER_TOKENS: tokens } = await import("@/di/tokens");
-  return { container: createContainer(), tokens };
+  return { container: createProcessingContainer(), tokens };
 }
 
 // The Thumbnail store is bound only with Supabase Storage configured.
@@ -108,7 +108,7 @@ describe("thumbnailStore", () => {
       vi.stubEnv(set, set === "SUPABASE_URL" ? "https://project.supabase.co" : "service-role-key");
       vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
       vi.resetModules();
-      const { thumbnailStore } = await import("@/di/container");
+      const { thumbnailStore } = await import("@/di/processingContainer");
       const logger = createRecordingLogger();
 
       const store = thumbnailStore(logger);

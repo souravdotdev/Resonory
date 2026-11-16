@@ -6,7 +6,7 @@ import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueuePr
 
 /**
  * The part of a BullMQ `Queue` the worker uses: this provider adds to it, and
- * shutdown (`src/index.ts`) closes it. The container binds the production
+ * shutdown (`src/itemProcessing.ts`) closes it. The container binds the production
  * `itemTaggingQueue` to it, which checks the real queue fits.
  */
 export interface ItemTaggingQueue {

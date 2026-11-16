@@ -1,10 +1,10 @@
 /**
  * The worker container's runtime names, separate from the API's `TOKENS`.
  * Interfaces don't exist at runtime, so each dependency is looked up by a
- * unique Symbol; `di/container.ts` binds them.
+ * unique Symbol; each worker's container (`di/processingContainer.ts`, `di/taggingContainer.ts`) binds the ones it uses.
  */
 export const WORKER_TOKENS = {
-  /** The shared Pino logger (`@resonory/logger`), named `"worker"`. */
+  /** The shared Pino logger (`@resonory/logger`), named after the worker process (`"item-processing-worker"` or `"item-tagging-worker"`). */
   Logger: Symbol("Logger"),
   /** The Drizzle database over the shared Postgres client. */
   Database: Symbol("Database"),

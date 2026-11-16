@@ -1,28 +1,29 @@
 // Before anything that declares a decorated class.
 import "reflect-metadata";
 import type { Redis } from "ioredis";
-import { ITEMS_QUEUE } from "@resonory/shared/schemas/queue";
+import { ITEM_PROCESSING_QUEUE } from "@resonory/shared/schemas/queue";
 import type { Logger } from "@resonory/logger";
-import { createContainer } from "@/di/container";
+import { createProcessingContainer } from "@/di/processingContainer";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { ItemTaggingQueue } from "@/infrastructure/queue/BullMqQueueProvider";
-import { createItemsWorker } from "@/interface/itemsWorker";
+import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
 
-// The worker consumes the Items queue until it's told to stop. Postgres
+// The processing worker consumes the Item processing queue until it's told to stop,
+// separately from the tagging worker. Postgres
 // connects lazily, on the first query a job makes.
-const container = createContainer();
+const container = createProcessingContainer();
 const logger = container.get<Logger>(WORKER_TOKENS.Logger);
 const redis = container.get<Redis>(WORKER_TOKENS.RedisConnection);
 // The Item tagging queue, produced onto: Processing queues AI tagging jobs there.
 const itemTaggingQueue = container.get<ItemTaggingQueue>(WORKER_TOKENS.ItemTaggingQueue);
 
 await redis.ping();
-const itemsWorker = createItemsWorker(container, redis);
-logger.info({ queue: ITEMS_QUEUE }, "connected; consuming the queue");
+const processingWorker = createItemProcessingWorker(container, redis);
+logger.info({ queue: ITEM_PROCESSING_QUEUE }, "connected; consuming the queue");
 
 async function shutdown(signal: NodeJS.Signals) {
   logger.info({ signal }, "signal received; finishing the current job and closing");
-  await itemsWorker.close();
+  await processingWorker.close();
   await itemTaggingQueue.close();
   await redis.quit();
   process.exit(0);
