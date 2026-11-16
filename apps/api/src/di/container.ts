@@ -24,8 +24,11 @@ import {
 import { createAuth, type Auth } from "@/infrastructure/auth/createAuth";
 import type { Database } from "@/infrastructure/database/Database";
 import { db } from "@/infrastructure/database/db";
-import { BullMqQueueProvider, type ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
-import { itemsQueue } from "@/infrastructure/queue/itemsQueue";
+import {
+  BullMqQueueProvider,
+  type ItemProcessingQueue,
+} from "@/infrastructure/queue/BullMqQueueProvider";
+import { itemProcessingQueue } from "@/infrastructure/queue/itemProcessingQueue";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
 import { DrizzleTagRepository } from "@/infrastructure/repositories/DrizzleTagRepository";
 import { DrizzleUserRepository } from "@/infrastructure/repositories/DrizzleUserRepository";
@@ -51,7 +54,9 @@ export function createContainer(): Container {
   container.bind<Database>(TOKENS.Database).toConstantValue(db);
   container.bind<Logger>(TOKENS.Logger).toConstantValue(createLogger({ name: "api" }));
   container.bind<RateLimitRedis>(TOKENS.RateLimitRedis).toConstantValue(rateLimitRedis);
-  container.bind<ItemsQueue>(TOKENS.ItemsQueue).toConstantValue(itemsQueue);
+  container
+    .bind<ItemProcessingQueue>(TOKENS.ItemProcessingQueue)
+    .toConstantValue(itemProcessingQueue);
 
   container
     .bind<IUserRepository>(TOKENS.UserRepository)

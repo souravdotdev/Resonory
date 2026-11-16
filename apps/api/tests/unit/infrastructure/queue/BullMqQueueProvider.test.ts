@@ -1,14 +1,17 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
 import { PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
-import { BullMqQueueProvider, type ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
+import {
+  BullMqQueueProvider,
+  type ItemProcessingQueue,
+} from "@/infrastructure/queue/BullMqQueueProvider";
 
 const job = {
   itemId: "3b241101-e2bb-4255-8caf-4136c566a962",
   userId: "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
 };
 
-const queueRecording = () => ({ add: vi.fn(async () => ({})) }) satisfies ItemsQueue;
+const queueRecording = () => ({ add: vi.fn(async () => ({})) }) satisfies ItemProcessingQueue;
 
 describe("BullMqQueueProvider", () => {
   it("adds a Process Item job with the Item's and User's ids", async () => {
