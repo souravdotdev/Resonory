@@ -5,9 +5,10 @@ import { WORKER_TOKENS } from "@/di/tokens";
 import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueueProvider";
 
 /**
- * The part of a BullMQ `Queue` the worker uses: this provider adds to it, and
- * shutdown (`src/itemProcessing.ts`) closes it. The container binds the production
- * `itemTaggingQueue` to it, which checks the real queue fits.
+ * The part of the BullMQ Item tagging `Queue` the processing worker uses: the
+ * provider adds Tag Item jobs to it, and the worker's shutdown
+ * (`src/itemProcessing.ts`) closes it. The processing container binds the
+ * production `itemTaggingQueue` to it, which checks the real queue fits.
  */
 export interface ItemTaggingQueue {
   add(name: string, data: TagItemJob, opts: JobsOptions): Promise<unknown>;

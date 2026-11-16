@@ -6,7 +6,7 @@ const job = {
   userId: "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
 };
 
-describe("the Items queue", () => {
+describe("the Item processing queue", () => {
   it("is named items, and its Processing job process-item", () => {
     expect(ITEM_PROCESSING_QUEUE).toBe("item-processing");
     expect(PROCESS_ITEM_JOB).toBe("process-item");
