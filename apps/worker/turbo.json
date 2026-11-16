@@ -10,7 +10,11 @@
         "SUPABASE_SERVICE_ROLE_KEY",
         "AI_TAGGING_API_KEY",
         "AI_TAGGING_BASE_URL",
-        "AI_TAGGING_MODEL"
+        "AI_TAGGING_MODEL",
+        "ITEM_TAGGING_CONCURRENCY",
+        "ITEM_TAGGING_RATE_LIMIT_MAX",
+        "ITEM_TAGGING_RATE_LIMIT_WINDOW_MS",
+        "ITEM_TAGGING_LOCK_DURATION_MS"
       ],
       "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"]
     },
@@ -22,7 +26,11 @@
         "SUPABASE_SERVICE_ROLE_KEY",
         "AI_TAGGING_API_KEY",
         "AI_TAGGING_BASE_URL",
-        "AI_TAGGING_MODEL"
+        "AI_TAGGING_MODEL",
+        "ITEM_TAGGING_CONCURRENCY",
+        "ITEM_TAGGING_RATE_LIMIT_MAX",
+        "ITEM_TAGGING_RATE_LIMIT_WINDOW_MS",
+        "ITEM_TAGGING_LOCK_DURATION_MS"
       ],
       "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"]
     }
