@@ -32,7 +32,7 @@ apps/api/src/
   infrastructure/
     auth/               createAuth.ts, signInHook.ts, googleProfile.ts, BetterAuthSessionProvider.ts
     database/           Database.ts (the handle type), db.ts (the runtime Drizzle instance)
-    queue/              BullMqQueueProvider.ts, itemsQueue.ts (the BullMQ Items queue)
+    queue/              BullMqQueueProvider.ts, itemProcessingQueue.ts (the BullMQ Item processing queue)
     repositories/       DrizzleUserRepository.ts, DrizzleItemRepository.ts, DrizzleTagRepository.ts
     storage/            SupabaseThumbnailUrlProvider.ts (signs Thumbnail links)
     mappers/            userMapper.ts, itemMapper.ts, tagMapper.ts (row -> entity)
@@ -85,11 +85,11 @@ To fix it, define a port in the domain and put the tool code in an infrastructur
 
 ## Tokens, the container and scopes
 
-Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemsQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
+Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemProcessingQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
 
 `di/container.ts` exports `createContainer()`, an InversifyJS `Container`. It is the only place in application code that creates an application class. It binds:
 
-- **Constants** (`toConstantValue`): the validated `Env`, the `Database` (`db` from `infrastructure/database/db.ts`), the rate-limit Redis and the BullMQ Items queue (`itemsQueue`).
+- **Constants** (`toConstantValue`): the validated `Env`, the `Database` (`db` from `infrastructure/database/db.ts`), the rate-limit Redis and the BullMQ Item processing queue (`itemProcessingQueue`).
 - **The Better Auth instance** (`toDynamicValue(...).inSingletonScope()`): built once, by `createAuth(database, config, { admitSignIn })` from the bound `Env` and `Database`. Its session-create hook gets `admitSignIn` as `{ execute }`, which asks the container for a fresh `AdmitSignInUseCase` on every sign-in. The binding ends `satisfies { api: SessionApi }`, so tsc checks that the instance still fits what `BetterAuthSessionProvider` needs.
 - **Adapters and controllers as singletons** (`.to(Class).inSingletonScope()`): `DrizzleUserRepository`, `DrizzleItemRepository`, `DrizzleTagRepository`, `BetterAuthSessionProvider`, `BullMqQueueProvider`, `MeController`, `ItemsController`, `TagsController`. One instance lives for the life of the process.
 - **Thumbnail signing, only when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set**: `ThumbnailStorage` (a Supabase `StorageClient`, `toDynamicValue(...).inSingletonScope()`, ending `satisfies ThumbnailStorage`) and `SupabaseThumbnailUrlProvider` as a singleton. Unset, neither token is bound.
@@ -97,7 +97,7 @@ Interfaces don't exist at runtime, so the container looks each dependency up by 
 
 Setup rules that keep this working:
 
-- `import "reflect-metadata"` comes first in `src/index.ts` and `di/container.ts`, and a test that imports a decorated class imports `reflect-metadata` first.
+- `import "reflect-metadata"` comes first in `src/index.ts` and `di/container.ts` (in the worker, in each entry point and container file), and a test that imports a decorated class imports `reflect-metadata` first.
 - `tsconfig.json` sets `experimentalDecorators` but deliberately not `emitDecoratorMetadata`: esbuild (tsup, tsx) can't emit it. So every constructor parameter must name its token with `@inject(TOKENS.X)`. A parameter without one won't resolve.
 - Adding a use case takes three edits: the class, its token, and its binding. A missing binding fails when something resolves it, not at compile time. `tests/unit/di/container.test.ts` resolves every `TOKENS` entry through the real `createContainer()`, which catches it.
 
@@ -126,7 +126,7 @@ Tests live in `apps/api/tests/unit/`, mirroring `src/`, and import through the `
 - **The HTTP seam** covers everything a client can observe. `tests/unit/app.test.ts` builds the real app with `buildApp(testContainer())` and drives it with Fastify `inject`. `testContainer()` binds the real use cases and controller, a fake `ISessionProvider`, a fake `Auth` handler and a literal `Env`. It binds `RateLimitRedis` to `IN_MEMORY_RATE_LIMITS`. Tests check statuses, bodies and headers: 401 envelopes, `GET /me` output, CORS, security headers, 404 and generic 500 envelopes, and the Tag routes over the shared tagging fake (their 200 bodies, 400 for an invalid Tag name or id, 403 `forbidden` for an API key, 404 for another User's Item or Tag, 409 at the Tag limits). A test that needs an extra route (for example one that throws a domain error) adds it to the built app before calling `inject`. `tests/unit/interface/routes/auth.routes.test.ts` uses the same seam for the `/api/auth/*` mount.
 - **The use-case seam** covers business behaviour without the container: `new XUseCase(fake).execute(input)`. For example, `new ResolveSignedInUserUseCase(sessionsReturning(null))` rejects with `UnauthorizedError`. `AdmitSignInUseCase` is tested against a fake `IUserRepository`, checking the changes it records and the error it throws.
 
-Pure domain rules (`signInDecision`, `tagName`), mappers, output DTOs, infrastructure adapters (`createAuth` over a mocked database, `BetterAuthSessionProvider`, `googleProfile`, `signInHook`) and env validation are tested directly against their own inputs and outputs. `tests/unit/di/container.test.ts` resolves every token through the real `createContainer()`, with a stubbed environment, a stand-in rate-limit Redis and a stand-in BullMQ Items queue (ioredis connects on construction; the Postgres client only on its first query, which the test never makes). No unit test needs a database or Redis.
+Pure domain rules (`signInDecision`, `tagName`), mappers, output DTOs, infrastructure adapters (`createAuth` over a mocked database, `BetterAuthSessionProvider`, `googleProfile`, `signInHook`) and env validation are tested directly against their own inputs and outputs. `tests/unit/di/container.test.ts` resolves every token through the real `createContainer()`, with a stubbed environment, a stand-in rate-limit Redis and a stand-in BullMQ Item processing queue (ioredis connects on construction; the Postgres client only on its first query, which the test never makes). No unit test needs a database or Redis.
 
 Below both seams, a fake can't stand in for what Postgres guarantees (unique constraints, the composite foreign keys, row locks under concurrency), so that is tested against a real, throwaway database in `tests/integration/`, through the real repository (today `DrizzleTagRepository`). These run only with `pnpm test:integration`, never with `pnpm test`. See [Testing](./testing.md#integration-tests-apps-api).
 
@@ -142,12 +142,15 @@ Don't create empty layer folders ahead of time. A folder appears with its first 
 
 ## The worker
 
-`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and `createContainer()` (`src/di/container.ts`), `reflect-metadata` loaded first in `index.ts`, `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/` (and Postgres-backed ones in `tests/integration/`), and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis, htmlparser2, linkedom, Readability, sharp, Supabase, `openai` and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
+`apps/worker` has the API's tooling: its own `WORKER_TOKENS` (`src/di/tokens.ts`) and one container per worker (`createProcessingContainer()` in `src/di/processingContainer.ts`, `createTaggingContainer()` in `src/di/taggingContainer.ts`, over the shared `src/di/commonBindings.ts`), `reflect-metadata` loaded first in each entry point (`itemProcessing.ts`, `itemTagging.ts`), `experimentalDecorators` and the `@/` alias in its `tsconfig.json` (mirrored in `vitest.config.ts`), tests in `tests/unit/` (and Postgres-backed ones in `tests/integration/`), and the same lint guard in its `eslint.config.js` (Drizzle, BullMQ, Postgres, Redis, htmlparser2, linkedom, Readability, sharp, Supabase, `openai` and `@resonory/db` are refused in `src/domain/` and `src/application/`). It fills in the same four layers; only the front door differs: a job arrives instead of an HTTP request, and a processor replaces the controller.
 
 ```
 apps/worker/src/
-  index.ts              reflect-metadata first; createContainer(), ping Redis, createItemsWorker
-  di/                   tokens.ts (WORKER_TOKENS), container.ts
+  itemProcessing.ts     the processing worker's entry point: reflect-metadata first; createProcessingContainer(), then startWorker with createItemProcessingWorker
+  itemTagging.ts        the tagging worker's entry point: reflect-metadata first; createTaggingContainer(), then startWorker with createItemTaggingWorker
+  startWorker.ts        the boot and shutdown both entry points share: ping Redis, start the worker, close worker, extras, Redis on SIGINT/SIGTERM
+  di/                   tokens.ts (WORKER_TOKENS), commonBindings.ts (logger, Redis, repositories),
+                        processingContainer.ts, taggingContainer.ts
   domain/
     entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; CachedPreview, a URL's
                         shared preview; ReadyItem, what Processing learned: the CachedPreview plus
@@ -196,29 +199,31 @@ apps/worker/src/
                         SUPABASE_SERVICE_ROLE_KEY; unset, no store is bound)
     repositories/       DrizzleItemRepository.ts, DrizzleTagRepository.ts (applyAsAi: Item lock, then
                         User lock, one transaction), ownedBy.ts (the Item-scoped `where` both share)
-    queue/              BullMqQueueProvider.ts, itemsQueue.ts (the Items queue, produced onto)
+    queue/              BullMqQueueProvider.ts, itemTaggingQueue.ts (the Item tagging queue, produced onto)
     ai/                 OpenAiCompatibleTagSuggester.ts (the `openai` client, JSON mode), aiTaggingEnv.ts
                         (the optional AI_TAGGING_* trio; no key, no suggester is bound)
   interface/
-    itemsJobs.ts        the job-name map: each name's processor and final-failure step
-    itemsWorker.ts      createItemsWorker (the BullMQ Worker) and runItemsJob (the job switch)
-    itemsJobFailed.ts   onItemsJobFailed (the Worker's `failed` handler)
+    itemProcessingWorker.ts  createItemProcessingWorker (the BullMQ Worker on the Item processing queue) and
+                        its `failed` handler (the final failure marks the Item Failed)
+    itemTaggingWorker.ts     createItemTaggingWorker (the BullMQ Worker on the Item tagging queue) and
+                        its `failed` handler (the final failure only logs)
+    onJobFailed.ts           handleFailedJob, the `failed` handler skeleton both workers share (logging, final-failure detection)
     processors/         processItem.processor.ts, processItemFailed.processor.ts,
                         tagItem.processor.ts, tagItemFailed.processor.ts (only logs: the Item stays Ready)
 ```
 
 | Part           | In the API                    | In the worker                                                   |
 | -------------- | ----------------------------- | --------------------------------------------------------------- |
-| Front door     | route + controller            | a job switch on `job.name` (`runItemsJob`) + a processor        |
+| Front door     | route + controller            | a BullMQ Worker per queue + a processor                         |
 | Input check    | the route's zod schema        | `XPayloadSchema.safeParse(job.data)` in the processor           |
 | Business logic | use case                      | use case                                                        |
 | Tokens         | `TOKENS` in `apps/api/src/di` | the worker's own `WORKER_TOKENS` and container                  |
 | Queue names    | n/a                           | constants from a shared queue entry point, no typed-out strings |
 
 - **The API enqueues through a port.** `SaveItemUseCase` depends on `IQueueProvider` in the domain, and `BullMqQueueProvider` in infrastructure implements it. The port takes its own `ProcessItemRequest`; the adapter maps it to the shared job payload. The use case never imports `bullmq`; the lint guard blocks it. The worker enqueues the same way: `ProcessItemUseCase` queues AI tagging through its own `IQueueProvider` (`enqueueTagItem`), implemented by its own `BullMqQueueProvider`.
-- **One worker per queue, routing by job name.** `interface/itemsWorker.ts` creates the BullMQ `Worker` for the Items queue. `interface/itemsJobs.ts` maps each job name to `{ process, onFinalFailure, finalFailureError, slimmed }`. The job switch `runItemsJob(container, job)` runs the name's `process`; an unknown name throws `UnrecoverableError`, so it is not retried. The `failed` handler, `onItemsJobFailed`, logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs the name's `onFinalFailure` (`processItemFailed`, which runs a use case like any processor; `tagItemFailed` only logs).
+- **One worker per queue, one job type per queue.** `interface/itemProcessingWorker.ts` creates the BullMQ `Worker` for the Item processing queue and `interface/itemTaggingWorker.ts` the one for the Item tagging queue; each is started by its own entry point as its own process, with its own composition root. A queue carries one job name, so there is no job-name switch or unknown-name guard. Each file also holds its worker's `failed` handler, which logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs that queue's final-failure step: `processItemFailed` for Processing (a use case like any processor, marking the Item Failed), `tagItemFailed` for tagging (it only logs). A failure in one worker touches nothing the other owns (see [Items ADR 0005](./contexts/items/adr/0005-processing-and-ai-tagging-have-their-own-queues-and-worker-processes.md)).
 - **A processor is a thin controller.** It lives in `interface/processors/`. It parses `job.data` with the payload's zod schema (an invalid payload throws `UnrecoverableError`), maps it to the use case's input, and calls `container.get<XUseCase>(WORKER_TOKENS.XUseCase).execute(input)`. Errors from the use case pass through, so BullMQ retries.
-- **The worker has its own `di/tokens.ts` and `di/container.ts`.** It never shares or mixes the API's `TOKENS`. Its port symbols are named after their interfaces too (`WORKER_TOKENS.ItemRepository = Symbol("IItemRepository")`). Adapters (`DrizzleItemRepository`, `SafeUrlFetcher`, `GuardedOEmbedProvider`) are `@injectable()` singletons bound to their port's token with `.to(...).inSingletonScope()`, and depend on other ports by token only, never on a concrete class; use cases are transient. One `SafeUrlFetcher` implements two ports: it is bound to `WORKER_TOKENS.UrlFetcher` (`IUrlFetcher`), and `WORKER_TOKENS.JsonFetcher` (`IJsonFetcher`, which `GuardedOEmbedProvider` injects) is `.toService(WORKER_TOKENS.UrlFetcher)`, the same instance, so the page fetch and the oEmbed call share one guard; `WORKER_TOKENS.ImageFetcher` (`IImageFetcher`) is bound the same way, so the Thumbnail download shares it too. `WORKER_TOKENS.ThumbnailStore` is bound to a constant `SupabaseThumbnailStore` over `@supabase/storage-js`'s `StorageClient` (as in the API), and left unbound when Supabase Storage isn't configured, so `ProcessItemUseCase` (whose store is `@optional()`) gets none and downloads no image. `WORKER_TOKENS.TagSuggester` works the same way: bound to a constant `OpenAiCompatibleTagSuggester` only when `AI_TAGGING_API_KEY` is set, and `TagItemUseCase`'s suggester is `@optional()`. `SafeUrlFetcher`'s options parameter is `@unmanaged()`, so the container builds it with the defaults and tests construct it directly with their own. Use-case results sit in `application/dto/items/`, as in the API. The worker's `Item` entity is its own (the domain can't import the API's); `tests/unit/domain/schema-agreement.test.ts` keeps its Item types and statuses equal to the database enums, and `tests/unit/domain/tag-rules-agreement.test.ts` its copy of the Tag name rule and limits equal to the API's.
-- **Two test seams, as in the API.** The processor seam drives `runItemsJob` with a fake job and a test container whose use case is a stand-in; use cases are tested with `new XUseCase(fake)`.
+- **The worker has its own `di/tokens.ts` and one container per worker process.** The processing container (`di/processingContainer.ts`) builds the page fetcher, parsers, Process Item and Fail Item use cases and a producer onto the Item tagging queue, with no AI client; the tagging container (`di/taggingContainer.ts`) builds the database access, the Tag Item use case and the tag suggester, with no fetcher. What they share (logger, Redis, repositories) lives in `di/commonBindings.ts`, so each worker boots with only the dependencies it uses.
+- **Two test seams, as in the API.** The processor seam drives a worker factory (`createItemProcessingWorker`, `createItemTaggingWorker`) with fake jobs and a test container whose use case is a stand-in; use cases are tested with `new XUseCase(fake)`.
 
-Payload schemas and queue names go in `@resonory/shared/schemas/queue` (today `ITEMS_QUEUE`, `PROCESS_ITEM_JOB`, `ProcessItemJobSchema`, `TAG_ITEM_JOB`, `TagItemJobSchema`). See [Queue](./queue.md).
+Payload schemas and queue names go in `@resonory/shared/schemas/queue` (today `ITEM_PROCESSING_QUEUE`, `PROCESS_ITEM_JOB`, `ProcessItemJobSchema`, `ITEM_TAGGING_QUEUE`, `TAG_ITEM_JOB`, `TagItemJobSchema`, each queue's name beside the job it carries). See [Queue](./queue.md).

@@ -108,9 +108,9 @@ Good to know:
 pnpm dev
 ```
 
-Runs `dev` in every app in parallel via Turborepo (`apps/web` on Next.js's default port, `apps/api` on `PORT` from its env, `apps/worker` with no HTTP server, loading `apps/worker/.env` and consuming the Items queue). Turborepo's terminal UI (`"ui": "tui"` in `turbo.json`) shows all three side by side.
+Runs `dev` in every app in parallel via Turborepo (`apps/web` on Next.js's default port, `apps/api` on `PORT` from its env, `apps/worker` with no HTTP server, loading `apps/worker/.env` and running both workers: the processing worker on the Item processing queue and the tagging worker on the Item tagging queue). Turborepo's terminal UI (`"ui": "tui"` in `turbo.json`) shows all three side by side.
 
-To run just one app: `pnpm --filter web dev` (or `api`, `worker`).
+To run just one app: `pnpm --filter web dev` (or `api`, `worker`). `pnpm --filter worker dev` starts both workers; to run only one, use `pnpm --filter worker dev:processing` or `pnpm --filter worker dev:tagging` (Items still become Ready without the tagging worker, and get no AI Tags until it runs). For production, `pnpm --filter worker build`, then `start` (both) or `start:processing` and `start:tagging` as separate processes (see [Queue → Running the workers](./queue.md#running-the-workers)).
 
 ## Other common commands
 
@@ -130,7 +130,7 @@ All of these (except `format`/`format:check`, which run Prettier directly rather
 
 These same checks (plus commit-message linting) also run automatically in CI on every push and PR — see [Code Quality](./code-quality.md#continuous-integration).
 
-`apps/api`/`apps/worker`'s `start` script (`node dist/index.js`) now actually works — `pnpm build` bundles them with `tsup` rather than emitting raw `tsc` output, specifically to solve two compounding problems plain `tsc` couldn't: Node's ESM resolver needs explicit `.js` extensions on relative imports (which the source doesn't have), and every `@resonory/*` workspace package is plain TypeScript that was never compiled — plain `node` can't execute it at all, only bundler-based tools (`tsx` in dev, `tsup` in production) can. See [Architecture](./architecture.md#monorepo-layout) for the full explanation.
+`apps/api`'s `start` script (`node dist/index.js`) and `apps/worker`'s `start:processing` and `start:tagging` scripts (`node dist/itemProcessing.js` and `node dist/itemTagging.js`) now actually work — `pnpm build` bundles them with `tsup` rather than emitting raw `tsc` output, specifically to solve two compounding problems plain `tsc` couldn't: Node's ESM resolver needs explicit `.js` extensions on relative imports (which the source doesn't have), and every `@resonory/*` workspace package is plain TypeScript that was never compiled — plain `node` can't execute it at all, only bundler-based tools (`tsx` in dev, `tsup` in production) can. See [Architecture](./architecture.md#monorepo-layout) for the full explanation.
 
 ## Smoke-testing the API
 

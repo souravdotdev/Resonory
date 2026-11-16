@@ -85,7 +85,7 @@ application/
   use-cases/items/TagItemUseCase.ts
 infrastructure/
   ai/OpenAiCompatibleTagSuggester.ts, ai/aiTaggingEnv.ts
-  queue/BullMqQueueProvider.ts, queue/itemsQueue.ts
+  queue/BullMqQueueProvider.ts, queue/itemTaggingQueue.ts
   repositories/DrizzleTagRepository.ts   applyAsAi
 interface/
   processors/tagItem.processor.ts, processors/tagItemFailed.processor.ts

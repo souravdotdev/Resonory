@@ -7,24 +7,16 @@ import { createRecordingLogger } from "../testLogger";
 // is a stand-in. The Postgres client connects lazily, on its first query, which
 // no test here makes.
 vi.mock("@resonory/db/redis", () => ({ redisConnection: { stub: "redis connection" } }));
-// The BullMQ queue the worker produces onto would connect to Redis at import, too.
-vi.mock("@/infrastructure/queue/itemsQueue", () => ({ itemsQueue: { stub: "items queue" } }));
 
 // importing the db client validates DATABASE_URL, so it's stubbed before a fresh
 // copy of the container is imported.
-async function productionContainer() {
+async function taggingContainer() {
   vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
   vi.resetModules();
-  const { createContainer } = await import("@/di/container");
+  const { createTaggingContainer } = await import("@/di/taggingContainer");
   // The fresh module graph has its own token Symbols.
   const { WORKER_TOKENS: tokens } = await import("@/di/tokens");
-  return { container: createContainer(), tokens };
-}
-
-// The Thumbnail store is bound only with Supabase Storage configured.
-function stubSupabaseStorage() {
-  vi.stubEnv("SUPABASE_URL", "https://project.supabase.co");
-  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key");
+  return { container: createTaggingContainer(), tokens };
 }
 
 // The Tag suggester is bound only with an AI tagging key.
@@ -42,57 +34,39 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the worker's production container", () => {
-  it.each(Object.keys(WORKER_TOKENS) as (keyof typeof WORKER_TOKENS)[])(
-    "resolves WORKER_TOKENS.%s",
-    async (name) => {
-      stubSupabaseStorage();
-      stubAiTagging();
-      const { container, tokens } = await productionContainer();
+// What the tagging worker holds: no page fetcher, parsers or queue producer.
+const TAGGING_TOKENS = [
+  "Logger",
+  "Database",
+  "RedisConnection",
+  "ItemRepository",
+  "TagRepository",
+  "TagSuggester",
+  "TagItemUseCase",
+] as const satisfies readonly (keyof typeof WORKER_TOKENS)[];
 
-      expect(container.get(tokens[name])).toBeDefined();
-    },
-  );
+describe("the tagging worker's production container", () => {
+  it.each(TAGGING_TOKENS)("resolves WORKER_TOKENS.%s", async (name) => {
+    stubAiTagging();
+    const { container, tokens } = await taggingContainer();
 
-  it("keeps Thumbnails in Supabase Storage when it is configured", async () => {
-    stubSupabaseStorage();
-    const { container, tokens } = await productionContainer();
-    const { SupabaseThumbnailStore } =
-      await import("@/infrastructure/storage/SupabaseThumbnailStore");
-
-    expect(container.get(tokens.ThumbnailStore)).toBeInstanceOf(SupabaseThumbnailStore);
+    expect(container.get(tokens[name])).toBeDefined();
   });
 
-  it.each([
-    ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
-    ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"],
-  ])("starts without Thumbnails when %s is missing", async (missing, set) => {
-    vi.stubEnv(missing, "");
-    vi.stubEnv(set, set === "SUPABASE_URL" ? "https://project.supabase.co" : "service-role-key");
-    const { container, tokens } = await productionContainer();
+  it.each(
+    (Object.keys(WORKER_TOKENS) as (keyof typeof WORKER_TOKENS)[]).filter(
+      (name) => !(TAGGING_TOKENS as readonly string[]).includes(name),
+    ),
+  )("binds no WORKER_TOKENS.%s", async (name) => {
+    stubAiTagging();
+    const { container, tokens } = await taggingContainer();
 
-    // ProcessItemUseCase then gets no store, and downloads no image.
-    expect(container.isBound(tokens.ThumbnailStore)).toBe(false);
-    expect(container.get(tokens.ProcessItemUseCase)).toBeDefined();
+    expect(container.isBound(tokens[name])).toBe(false);
   });
 
-  // As in the API: a URL that is set must be an http(s) one, even without the key.
-  it.each([
-    ["project.supabase.co", "service-role-key"],
-    ["ftp://project.supabase.co", "service-role-key"],
-    ["ftp://project.supabase.co", ""],
-  ])("refuses to start when SUPABASE_URL is %s", async (url, key) => {
-    vi.stubEnv("SUPABASE_URL", url);
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", key);
-
-    await expect(productionContainer()).rejects.toThrow("SUPABASE_URL");
-  });
-});
-
-describe("the worker's production container, AI tagging", () => {
   it("asks an OpenAI-compatible model when AI_TAGGING_API_KEY is set", async () => {
     stubAiTagging();
-    const { container, tokens } = await productionContainer();
+    const { container, tokens } = await taggingContainer();
     const { OpenAiCompatibleTagSuggester } =
       await import("@/infrastructure/ai/OpenAiCompatibleTagSuggester");
 
@@ -101,7 +75,7 @@ describe("the worker's production container, AI tagging", () => {
 
   it("starts without AI tagging when AI_TAGGING_API_KEY is empty", async () => {
     vi.stubEnv("AI_TAGGING_API_KEY", "");
-    const { container, tokens } = await productionContainer();
+    const { container, tokens } = await taggingContainer();
 
     // TagItemUseCase then gets no suggester, and skips every Item.
     expect(container.isBound(tokens.TagSuggester)).toBe(false);
@@ -114,7 +88,7 @@ describe("the worker's production container, AI tagging", () => {
       stubAiTagging();
       vi.stubEnv("AI_TAGGING_BASE_URL", url);
 
-      await expect(productionContainer()).rejects.toThrow("AI_TAGGING_BASE_URL");
+      await expect(taggingContainer()).rejects.toThrow("AI_TAGGING_BASE_URL");
     },
   );
 });
@@ -157,7 +131,7 @@ describe("tagSuggester", () => {
     vi.stubEnv("AI_TAGGING_API_KEY", "");
     vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
     vi.resetModules();
-    const { tagSuggester } = await import("@/di/container");
+    const { tagSuggester } = await import("@/di/taggingContainer");
     const logger = createRecordingLogger();
 
     expect(tagSuggester(logger)).toBeNull();
@@ -170,33 +144,4 @@ describe("tagSuggester", () => {
       },
     ]);
   });
-});
-
-describe("thumbnailStore", () => {
-  it.each([
-    ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
-    ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"],
-  ])(
-    "warns, with no Item id bound, that Thumbnails are off when %s is missing",
-    async (missing, set) => {
-      vi.stubEnv(missing, "");
-      vi.stubEnv(set, set === "SUPABASE_URL" ? "https://project.supabase.co" : "service-role-key");
-      vi.stubEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/resonory");
-      vi.resetModules();
-      const { thumbnailStore } = await import("@/di/container");
-      const logger = createRecordingLogger();
-
-      const store = thumbnailStore(logger);
-
-      expect(store).toBeNull();
-      expect(logger.logs).toEqual([
-        {
-          level: "warn",
-          bindings: {},
-          fields: {},
-          msg: "Supabase Storage isn't configured; Items get no Thumbnails",
-        },
-      ]);
-    },
-  );
 });

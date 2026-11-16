@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-/** The BullMQ queue Items wait on for Processing. The API produces onto it; the worker consumes it. */
-export const ITEMS_QUEUE = "items";
+/** The BullMQ queue Items wait on for Processing: the Item processing queue. The API produces onto it; the processing worker consumes it. */
+export const ITEM_PROCESSING_QUEUE = "item-processing";
 
 /** The job that runs an Item's Processing. */
 export const PROCESS_ITEM_JOB = "process-item";

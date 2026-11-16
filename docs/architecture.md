@@ -13,12 +13,12 @@ apps/
               src/interface/       Fastify routes, controllers and middleware
               src/infrastructure/  adapters: Better Auth, Drizzle repositories, row mappers
               src/di/              tokens.ts and container.ts (the InversifyJS container)
-  worker/   Background-job process consuming the Items queue, the same layers as the API
+  worker/   Background-job processes (one per queue: Item processing, Item tagging), the same layers as the API
               src/domain/          the Item entity, the Item repository port, the URL rules
               src/application/     ProcessItemUseCase, FailItemUseCase
-              src/interface/       itemsWorker.ts (BullMQ Worker + job switch), itemsJobFailed.ts (failed handler), processors/
+              src/interface/       itemProcessingWorker.ts, itemTaggingWorker.ts (a BullMQ Worker and its failed handler each), processors/
               src/infrastructure/  adapters: the Drizzle database and Item repository
-              src/di/              tokens.ts (WORKER_TOKENS) and container.ts
+              src/di/              tokens.ts (WORKER_TOKENS), commonBindings.ts, processingContainer.ts, taggingContainer.ts
   extension/ WXT-based Chrome MV3 browser extension skeleton:
               entrypoints/      WXT's file-based entrypoints; background.ts, content.ts and
                                 popup/ each exist as minimal stubs (log on load / placeholder
@@ -71,11 +71,11 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 
 **Backend API** (`apps/api`): Fastify, `@fastify/cors`, `@fastify/helmet`, `@fastify/rate-limit`, Zod (validation via `fastify-type-provider-zod`), Better Auth, `tsx` (dev runtime), `tsup` (build)
 
-**Worker** (`apps/worker`): BullMQ (consumes the Items queue), InversifyJS + `reflect-metadata`, `tsx` (dev runtime), `tsup` (build)
+**Worker** (`apps/worker`): BullMQ (two workers, consuming the Item processing and Item tagging queues), InversifyJS + `reflect-metadata`, `tsx` (dev runtime), `tsup` (build)
 
 **Browser extension** (`apps/extension`): [WXT](https://wxt.dev) (Chrome Manifest V3, file-based entrypoints, hot-reloading dev server)
 
-**Dependency injection** (`apps/api`, `apps/worker`): InversifyJS + `reflect-metadata`, one container per app in `src/di/container.ts` — see [Clean Architecture](./clean-architecture.md)
+**Dependency injection** (`apps/api`, `apps/worker`): InversifyJS + `reflect-metadata`, one container in the API (`src/di/container.ts`) and one per worker process in the worker (`src/di/processingContainer.ts`, `src/di/taggingContainer.ts`) — see [Clean Architecture](./clean-architecture.md)
 
 **Database** (schema and migrations in `packages/db`, queries in `apps/api`'s infrastructure layer): Drizzle ORM, drizzle-kit (migrations/studio CLI), `postgres` (postgres.js driver), PostgreSQL 16 (Docker)
 

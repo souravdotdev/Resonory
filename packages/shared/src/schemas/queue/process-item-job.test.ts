@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ITEMS_QUEUE, PROCESS_ITEM_JOB, ProcessItemJobSchema } from "./index";
+import { ITEM_PROCESSING_QUEUE, PROCESS_ITEM_JOB, ProcessItemJobSchema } from "./index";
 
 const job = {
   itemId: "3b241101-e2bb-4255-8caf-4136c566a962",
   userId: "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
 };
 
-describe("the Items queue", () => {
-  it("is named items, and its Processing job process-item", () => {
-    expect(ITEMS_QUEUE).toBe("items");
+describe("the Item processing queue", () => {
+  it("is named item-processing, and its Processing job process-item", () => {
+    expect(ITEM_PROCESSING_QUEUE).toBe("item-processing");
     expect(PROCESS_ITEM_JOB).toBe("process-item");
   });
 });

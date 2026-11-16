@@ -23,8 +23,8 @@ export const TOKENS = {
   MeController: Symbol("MeController"),
   /** Where Items are stored (`IItemRepository`). */
   ItemRepository: Symbol("IItemRepository"),
-  /** The BullMQ Items queue the queue provider adds jobs to (`ItemsQueue`). */
-  ItemsQueue: Symbol("ItemsQueue"),
+  /** The BullMQ Item processing queue the queue provider adds jobs to (`ItemProcessingQueue`). */
+  ItemProcessingQueue: Symbol("ItemProcessingQueue"),
   /** Hands background work to the worker (`IQueueProvider`). */
   QueueProvider: Symbol("IQueueProvider"),
   /** Supabase's Storage client (`ThumbnailStorage`); bound only when Supabase Storage is configured. */

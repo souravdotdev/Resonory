@@ -22,7 +22,7 @@ export async function processItem(container: Container, data: unknown): Promise<
   const logger = container.get<Logger>(WORKER_TOKENS.Logger).child({ itemId: payload.data.itemId });
 
   // See the comment where WORKER_TOKENS.ProcessItemUseCase is bound in
-  // `di/container.ts` for how a future logging ProcessItemUseCase would
+  // `di/processingContainer.ts` for how a future logging ProcessItemUseCase would
   // receive this job-scoped `logger`.
   const useCase = container.get<ProcessItemUseCase>(WORKER_TOKENS.ProcessItemUseCase);
   const result = await useCase.execute(payload.data);

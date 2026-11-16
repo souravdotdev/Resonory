@@ -68,7 +68,7 @@ Optional Thumbnail storage, read by the same rules as the worker. With either on
 | `AI_TAGGING_BASE_URL`       | Optional. An OpenAI-compatible API's base URL; defaults to Groq's                             | unset (`https://api.groq.com/openai/v1`)                          |
 | `AI_TAGGING_MODEL`          | Optional. The model to ask; defaults to a Groq model that answers in JSON mode                | unset (`openai/gpt-oss-20b`)                                      |
 
-`DATABASE_URL` and `REDIS_URL` are required: the worker connects to Redis when it boots and refuses to start without either URL. It consumes the Items queue (see [Queue](./queue.md)). No `PORT` — the worker doesn't expose an HTTP server. `apps/worker/.env.example` lists all seven.
+`DATABASE_URL` and `REDIS_URL` are required: the worker connects to Redis when it boots and refuses to start without either URL. It runs as two processes that share this `.env`, one consuming the Item processing queue and one the Item tagging queue (see [Queue](./queue.md#running-the-workers)); each needs only its own variables. The processing worker reads the Supabase pair and boots without any AI configuration; the tagging worker reads the AI tagging trio and never fetches a page, so it needs no Supabase variables. No `PORT` — the worker doesn't expose an HTTP server. `apps/worker/.env.example` lists all seven.
 
 The Supabase pair is optional, read by the same rules as the API: with either one unset (or empty), the worker still starts (it logs that Supabase Storage isn't configured), downloads no images, and every Item goes Ready without a Thumbnail. The bucket must exist before Thumbnails can be kept; the worker never creates it (see [Getting Started](./getting-started.md#thumbnail-storage)).
 

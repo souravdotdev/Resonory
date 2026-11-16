@@ -10,9 +10,9 @@ import type { IQueueProvider, ProcessItemRequest } from "@/domain/providers/IQue
 
 /**
  * The part of a BullMQ `Queue` this provider uses. The container binds the
- * production `itemsQueue` to it, which checks the real queue fits.
+ * production `itemProcessingQueue` to it, which checks the real queue fits.
  */
-export interface ItemsQueue {
+export interface ItemProcessingQueue {
   add(name: string, data: ProcessItemJob, opts: JobsOptions): Promise<unknown>;
 }
 
@@ -25,10 +25,10 @@ const PROCESS_ITEM_OPTIONS: JobsOptions = {
   removeOnFail: 5000,
 };
 
-/** Enqueues background work as BullMQ jobs on the Items queue. */
+/** Enqueues background work as BullMQ jobs on the Item processing queue. */
 @injectable()
 export class BullMqQueueProvider implements IQueueProvider {
-  constructor(@inject(TOKENS.ItemsQueue) private readonly queue: ItemsQueue) {}
+  constructor(@inject(TOKENS.ItemProcessingQueue) private readonly queue: ItemProcessingQueue) {}
 
   async enqueueProcessItem(request: ProcessItemRequest): Promise<void> {
     // Mapped to the shared job payload and parsed here, so a payload the worker
