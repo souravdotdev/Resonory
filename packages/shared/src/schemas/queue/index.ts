@@ -1,5 +1,5 @@
 export {
-  ITEMS_QUEUE,
+  ITEM_PROCESSING_QUEUE,
   PROCESS_ITEM_JOB,
   ProcessItemJobSchema,
   type ProcessItemJob,

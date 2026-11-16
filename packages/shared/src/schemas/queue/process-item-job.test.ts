@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ITEMS_QUEUE, PROCESS_ITEM_JOB, ProcessItemJobSchema } from "./index";
+import { ITEM_PROCESSING_QUEUE, PROCESS_ITEM_JOB, ProcessItemJobSchema } from "./index";
 
 const job = {
   itemId: "3b241101-e2bb-4255-8caf-4136c566a962",
@@ -8,7 +8,7 @@ const job = {
 
 describe("the Items queue", () => {
   it("is named items, and its Processing job process-item", () => {
-    expect(ITEMS_QUEUE).toBe("items");
+    expect(ITEM_PROCESSING_QUEUE).toBe("item-processing");
     expect(PROCESS_ITEM_JOB).toBe("process-item");
   });
 });
