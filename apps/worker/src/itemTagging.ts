@@ -5,7 +5,7 @@ import { ITEM_TAGGING_QUEUE } from "@resonory/shared/schemas/queue";
 import type { Logger } from "@resonory/logger";
 import { createTaggingContainer } from "@/di/taggingContainer";
 import { WORKER_TOKENS } from "@/di/tokens";
-import { workerLimitsEnv } from "@/infrastructure/queue/workerLimitsEnv";
+import { describeWorkerLimits, workerLimitsEnv } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemTaggingWorker } from "@/interface/itemTaggingWorker";
 import { startWorker } from "@/startWorker";
 
@@ -18,16 +18,7 @@ const container = createTaggingContainer();
 const logger = container.get<Logger>(WORKER_TOKENS.Logger);
 const redis = container.get<Redis>(WORKER_TOKENS.RedisConnection);
 
-logger.info(
-  {
-    concurrency: limits.concurrency,
-    rateLimit: limits.limiter
-      ? { max: limits.limiter.max, windowMs: limits.limiter.duration }
-      : "none",
-    lockDurationMs: limits.lockDuration ?? "BullMQ default",
-  },
-  "worker settings",
-);
+logger.info(describeWorkerLimits(limits), "worker settings");
 
 await startWorker({
   logger,

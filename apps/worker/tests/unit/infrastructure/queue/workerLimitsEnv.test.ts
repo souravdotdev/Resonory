@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workerLimitsEnv } from "@/infrastructure/queue/workerLimitsEnv";
+import { describeWorkerLimits, workerLimitsEnv } from "@/infrastructure/queue/workerLimitsEnv";
 
 const TAGGING = "ITEM_TAGGING";
 const PROCESSING = "ITEM_PROCESSING";
@@ -46,20 +46,22 @@ describe("workerLimitsEnv", () => {
     ).toEqual({ concurrency: 1, limiter: undefined, lockDuration: undefined });
   });
 
-  it.each(["CONCURRENCY", "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW_MS", "LOCK_DURATION_MS"])(
-    "rejects %s when it is zero, negative, fractional or not a number, naming the variable",
-    (name) => {
-      for (const bad of ["0", "-1", "1.5", "abc", "10s", " "]) {
-        // A rate limit needs both halves, so the other half is always present.
-        const env: Record<string, string> = {
-          ITEM_TAGGING_RATE_LIMIT_MAX: "30",
-          ITEM_TAGGING_RATE_LIMIT_WINDOW_MS: "60000",
-          [`ITEM_TAGGING_${name}`]: bad,
-        };
-        expect(() => workerLimitsEnv(env, TAGGING), `${name}=${bad}`).toThrow(
-          new RegExp(`Invalid environment variables in the worker[\\s\\S]*ITEM_TAGGING_${name}`),
-        );
-      }
+  const NAMES = ["CONCURRENCY", "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW_MS", "LOCK_DURATION_MS"];
+  const BAD_VALUES = ["0", "-1", "1.5", "abc", "10s", " "];
+  const badSettings = NAMES.flatMap((name) => BAD_VALUES.map((bad) => [name, bad] as const));
+
+  it.each(badSettings)(
+    "rejects %s=%j (not a positive whole number), naming the variable",
+    (name, bad) => {
+      // A rate limit needs both halves, so the other half is always present.
+      const env: Record<string, string> = {
+        ITEM_TAGGING_RATE_LIMIT_MAX: "30",
+        ITEM_TAGGING_RATE_LIMIT_WINDOW_MS: "60000",
+        [`ITEM_TAGGING_${name}`]: bad,
+      };
+      expect(() => workerLimitsEnv(env, TAGGING)).toThrow(
+        new RegExp(`Invalid environment variables in the worker[\\s\\S]*ITEM_TAGGING_${name}`),
+      );
     },
   );
 
@@ -98,5 +100,27 @@ describe("workerLimitsEnv", () => {
 
   it("ignores another prefix's invalid values", () => {
     expect(workerLimitsEnv({ ITEM_PROCESSING_CONCURRENCY: "0" }, TAGGING).concurrency).toBe(1);
+  });
+
+  describe("describeWorkerLimits", () => {
+    it("says so when nothing beyond the concurrency is set", () => {
+      expect(
+        describeWorkerLimits({ concurrency: 1, limiter: undefined, lockDuration: undefined }),
+      ).toEqual({ concurrency: 1, limiter: "none", lockDuration: "BullMQ default" });
+    });
+
+    it("lists every setting that is set, under the names WorkerLimits uses", () => {
+      expect(
+        describeWorkerLimits({
+          concurrency: 4,
+          limiter: { max: 30, duration: 60000 },
+          lockDuration: 120000,
+        }),
+      ).toEqual({
+        concurrency: 4,
+        limiter: { max: 30, duration: 60000 },
+        lockDuration: 120000,
+      });
+    });
   });
 });

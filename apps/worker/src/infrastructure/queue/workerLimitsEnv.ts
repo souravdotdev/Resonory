@@ -10,6 +10,15 @@ export interface WorkerLimits {
   lockDuration: number | undefined;
 }
 
+/** `limits` as a boot log field: the `WorkerLimits` names, with a word for each unset setting. */
+export function describeWorkerLimits(limits: WorkerLimits) {
+  return {
+    concurrency: limits.concurrency,
+    limiter: limits.limiter ?? "none",
+    lockDuration: limits.lockDuration ?? "BullMQ default",
+  };
+}
+
 /** Today's behaviour: one job at a time. */
 const DEFAULT_CONCURRENCY = 1;
 
