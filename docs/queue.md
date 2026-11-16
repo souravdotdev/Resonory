@@ -178,6 +178,18 @@ The two workers are two processes from one codebase (`apps/worker`), each with i
 
 The single `items` queue is retired, with no compatibility consumer: nothing reads it any more. Before deploying the new API and workers, drain it (stop the old API, wait for the old worker to finish what is in it) or flush it, or its jobs are stranded. Do this together with the migrate-first step in [Database](./database.md#migration-workflow).
 
+A flush loses the waiting `process-item` jobs, and an Item whose job was lost stays Processing for good. After deploying, find them with this query. A Process Item job gets three attempts over about a minute, so an Item still Processing after ten minutes has no job working on it:
+
+```sql
+SELECT id, user_id, source_url, created_at
+FROM items
+WHERE status = 'processing'
+  AND created_at < now() - interval '10 minutes'
+ORDER BY created_at;
+```
+
+There is no retry endpoint yet, so for each one either have its User save the link again, or end it the way the worker would after a final failure: Failed, and a Link when it has no Item type yet (the Failure paragraph above).
+
 ## Not yet built
 
 The worker follows the same layering as the API (see [Clean Architecture](./clean-architecture.md#the-worker)). PDF Text is not implemented; see product plan section 6 for the intended scope. Why an Item failed is logged by the worker with the Item id, not stored (see [Database](./database.md#schema)).
