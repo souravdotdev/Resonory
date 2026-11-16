@@ -3,12 +3,10 @@ import type { Container } from "inversify";
 import { describeError, type Logger } from "@resonory/logger";
 import { ITEM_PROCESSING_QUEUE } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
+import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { handleFailedJob, type FailedJob } from "@/interface/onJobFailed";
 import { processItem, slimProcessItemData } from "@/interface/processors/processItem.processor";
 import { processItemFailed } from "@/interface/processors/processItemFailed.processor";
-
-/** How many Process Item jobs run at once: BullMQ's default of one, until Processing is tuned. */
-const ITEM_PROCESSING_CONCURRENCY = 1;
 
 /** What the processing worker reads from a BullMQ job, and how it rewrites the job's data. */
 interface ProcessItemJob {
@@ -57,13 +55,15 @@ function onItemProcessingJobFailed(
 
 /**
  * The BullMQ worker that consumes the Item processing queue, on the given Redis
- * connection. It carries Process Item jobs only, so there is no job-name switch.
+ * connection, with the given concurrency, and the limiter and lock duration only
+ * when set (BullMQ's defaults otherwise). It carries Process Item jobs only, so there is no job-name switch.
  * A job that succeeds keeps only the data worth keeping (`slimFinishedJob`); a
  * failed attempt goes to `onItemProcessingJobFailed`.
  */
 export function createItemProcessingWorker(
   container: Container,
   connection: ConnectionOptions,
+  { concurrency, limiter, lockDuration }: WorkerLimits,
 ): Worker {
   const worker = new Worker(
     ITEM_PROCESSING_QUEUE,
@@ -71,7 +71,12 @@ export function createItemProcessingWorker(
       await processItem(container, job.data);
       await slimFinishedJob(container, job);
     },
-    { connection, concurrency: ITEM_PROCESSING_CONCURRENCY },
+    {
+      connection,
+      concurrency,
+      ...(limiter ? { limiter } : {}),
+      ...(lockDuration !== undefined ? { lockDuration } : {}),
+    },
   );
   worker.on("failed", (job, error) => void onItemProcessingJobFailed(container, job, error));
   return worker;

@@ -8,6 +8,7 @@ import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseC
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { NO_METADATA } from "@/domain/entities/Item";
+import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
 import { createRecordingLogger } from "../testLogger";
 
@@ -35,6 +36,8 @@ interface FailedJob extends ProcessJob {
 }
 type FailedListener = (job: FailedJob | undefined, error: Error) => void;
 
+const NO_LIMITS: WorkerLimits = { concurrency: 1, limiter: undefined, lockDuration: undefined };
+
 // The processing worker as the factory builds it, over Process Item and Fail Item use case stand-ins.
 function processingWorker(
   result: ProcessItemResult = {
@@ -44,6 +47,7 @@ function processingWorker(
     thumbnailKey: null,
     text: null,
   },
+  limits: WorkerLimits = NO_LIMITS,
 ) {
   const processUseCase = { execute: vi.fn(async () => result) };
   const failUseCase = {
@@ -63,7 +67,7 @@ function processingWorker(
   vi.mocked(Worker).mockImplementation(function () {
     return { on: (event: string, listener: FailedListener) => void listeners.set(event, listener) };
   } as never);
-  createItemProcessingWorker(container, { host: "redis" });
+  createItemProcessingWorker(container, { host: "redis" }, limits);
 
   const [queue, processor, options] = vi.mocked(Worker).mock.calls[0]!;
   return {
@@ -107,7 +111,35 @@ describe("the processing worker", () => {
     const worker = processingWorker();
 
     expect(worker.queue).toBe(ITEM_PROCESSING_QUEUE);
+  });
+
+  it("runs one job at a time, with no limiter and BullMQ's lock duration, when nothing is tuned", () => {
+    const worker = processingWorker();
+
     expect(worker.options).toEqual({ connection: { host: "redis" }, concurrency: 1 });
+    expect(worker.options).not.toHaveProperty("limiter");
+    expect(worker.options).not.toHaveProperty("lockDuration");
+  });
+
+  it("runs as many jobs at once as its concurrency says", () => {
+    const worker = processingWorker(undefined, { ...NO_LIMITS, concurrency: 5 });
+
+    expect(worker.options).toMatchObject({ concurrency: 5 });
+  });
+
+  it("starts at most max jobs per window when it has a rate limit", () => {
+    const worker = processingWorker(undefined, {
+      ...NO_LIMITS,
+      limiter: { max: 10, duration: 1000 },
+    });
+
+    expect(worker.options).toMatchObject({ limiter: { max: 10, duration: 1000 } });
+  });
+
+  it("holds a job's lock for its lock duration", () => {
+    const worker = processingWorker(undefined, { ...NO_LIMITS, lockDuration: 120000 });
+
+    expect(worker.options).toMatchObject({ lockDuration: 120000 });
   });
 
   it("runs a valid Process Item job's Processing with its Item and User", async () => {
