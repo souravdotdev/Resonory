@@ -106,7 +106,9 @@ describe("the tagging worker", () => {
   ])("fails a job with %s without retrying it", async (_case, data) => {
     const worker = taggingWorker();
 
-    await expect(worker.run(tagJob(data))).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(worker.run({ name: TAG_ITEM_JOB, data })).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
     expect(worker.useCase.execute).not.toHaveBeenCalled();
   });
 
