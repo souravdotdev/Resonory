@@ -7,6 +7,7 @@ import { createProcessingContainer } from "@/di/processingContainer";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { ItemTaggingQueue } from "@/infrastructure/queue/BullMqQueueProvider";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
+import { startWorker } from "@/startWorker";
 
 // The processing worker consumes the Item processing queue until it's told to stop,
 // separately from the tagging worker. Postgres
@@ -17,17 +18,10 @@ const redis = container.get<Redis>(WORKER_TOKENS.RedisConnection);
 // The Item tagging queue, produced onto: Processing queues AI tagging jobs there.
 const itemTaggingQueue = container.get<ItemTaggingQueue>(WORKER_TOKENS.ItemTaggingQueue);
 
-await redis.ping();
-const processingWorker = createItemProcessingWorker(container, redis);
-logger.info({ queue: ITEM_PROCESSING_QUEUE }, "connected; consuming the queue");
-
-async function shutdown(signal: NodeJS.Signals) {
-  logger.info({ signal }, "signal received; finishing the current job and closing");
-  await processingWorker.close();
-  await itemTaggingQueue.close();
-  await redis.quit();
-  process.exit(0);
-}
-
-process.once("SIGINT", shutdown);
-process.once("SIGTERM", shutdown);
+await startWorker({
+  logger,
+  redis,
+  queue: ITEM_PROCESSING_QUEUE,
+  createWorker: () => createItemProcessingWorker(container, redis),
+  alsoClose: [itemTaggingQueue],
+});

@@ -146,8 +146,9 @@ Don't create empty layer folders ahead of time. A folder appears with its first 
 
 ```
 apps/worker/src/
-  itemProcessing.ts     the processing worker's entry point: reflect-metadata first; createProcessingContainer(), ping Redis, createItemProcessingWorker
-  itemTagging.ts        the tagging worker's entry point: reflect-metadata first; createTaggingContainer(), ping Redis, createItemTaggingWorker
+  itemProcessing.ts     the processing worker's entry point: reflect-metadata first; createProcessingContainer(), then startWorker with createItemProcessingWorker
+  itemTagging.ts        the tagging worker's entry point: reflect-metadata first; createTaggingContainer(), then startWorker with createItemTaggingWorker
+  startWorker.ts        the boot and shutdown both entry points share: ping Redis, start the worker, close worker, extras, Redis on SIGINT/SIGTERM
   di/                   tokens.ts (WORKER_TOKENS), commonBindings.ts (logger, Redis, repositories),
                         processingContainer.ts, taggingContainer.ts
   domain/
@@ -206,6 +207,7 @@ apps/worker/src/
                         its `failed` handler (the final failure marks the Item Failed)
     itemTaggingWorker.ts     createItemTaggingWorker (the BullMQ Worker on the Item tagging queue) and
                         its `failed` handler (the final failure only logs)
+    onJobFailed.ts           handleFailedJob, the `failed` handler skeleton both workers share (logging, final-failure detection)
     processors/         processItem.processor.ts, processItemFailed.processor.ts,
                         tagItem.processor.ts, tagItemFailed.processor.ts (only logs: the Item stays Ready)
 ```
