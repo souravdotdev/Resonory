@@ -16,7 +16,7 @@ The Item still gets created and still gets a **type**, if a URL rule can type it
 User pastes URL (apps/web)
   → POST /items { url }
   → SaveItemUseCase: creates Item (processing), enqueues { itemId, userId }
-  → [async, later] worker picks up the job
+  → [async, later] the processing worker picks up the job
   → ProcessItemUseCase: IUrlFetcher.fetchPage(sourceUrl)   ← server-side HTTP fetch
   → SafeUrlFetcher: guarded fetch, no cookies, no session, not a real browser
   → (blocked site) → challenge/403 page, no real title/description/thumbnail
@@ -35,7 +35,7 @@ User is already looking at the real, rendered page, in their own browser
       directly off the live DOM — no network request happens here
   → POST /items { url, html }, authenticated via x-api-key (not a cookie)
   → SaveItemUseCase: creates Item (processing), enqueues { itemId, userId, html }
-  → [async, later] worker picks up the job
+  → [async, later] the processing worker picks up the job
   → ProcessItemUseCase: ref.html !== undefined → skip fetchPage entirely
   → pageFromContent(sourceUrl, html): builds the same FetchedPage shape
       a successful fetch would have produced

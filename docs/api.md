@@ -13,7 +13,7 @@ Every request and response between `apps/web` and `apps/api` is defined once, as
 - `@resonory/shared/schemas/common`: shared shapes, such as the error envelope (`ErrorResponseSchema`).
 - `@resonory/shared/schemas/auth`: the signed-in User (`MeResponseSchema`).
 - `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
-- `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Items queue name, the Process Item job name and its payload (see [Queue](./queue.md)).
+- `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Item processing and Item tagging queue names, the job names and their payloads (see [Queue](./queue.md)).
 
 Naming: zod schemas end in `Schema` and their inferred TypeScript types drop the suffix (for example `CreateItemSchema` / `CreateItemInput`, `ItemCardSchema` / `ItemCard`). A plain `Item` is always the domain entity in `apps/api/src/domain/entities`, never a wire shape.
 
@@ -154,7 +154,7 @@ The signed-in User, in `MeResponseSchema` (`@resonory/shared/schemas/auth`). Pro
 Saves a pasted URL as an Item for the signed-in User and answers straight away with its Item card, still Processing and with no Item type. Protected by the auth middleware — a Session cookie or (issue #143) an `x-api-key` header, resolved identically (see [Security](./security.md#authentication)). Served by `itemsRoutes` → `ItemsController` → `SaveItemUseCase`, which:
 
 1. stores the Item through the `IItemRepository` port (`DrizzleItemRepository`): status `processing`, type null, the Source URL exactly as pasted after trimming. Source URLs aren't unique, so saving the same one twice creates two Items;
-2. enqueues its Processing through the `IQueueProvider` port (`BullMqQueueProvider`): a Process Item job with `{ itemId, userId, html, captions }` on the Items queue (see [Queue](./queue.md#captured-content-the-browser-extension-path));
+2. enqueues its Processing through the `IQueueProvider` port (`BullMqQueueProvider`): a Process Item job with `{ itemId, userId, html, captions }` on the Item processing queue (see [Queue](./queue.md#captured-content-the-browser-extension-path));
 3. returns the Item card (`CreateItemResponseSchema`, the same shape as `ItemCardSchema`).
 
 ```

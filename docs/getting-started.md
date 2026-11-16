@@ -108,9 +108,9 @@ Good to know:
 pnpm dev
 ```
 
-Runs `dev` in every app in parallel via Turborepo (`apps/web` on Next.js's default port, `apps/api` on `PORT` from its env, `apps/worker` with no HTTP server, loading `apps/worker/.env` and consuming the Items queue). Turborepo's terminal UI (`"ui": "tui"` in `turbo.json`) shows all three side by side.
+Runs `dev` in every app in parallel via Turborepo (`apps/web` on Next.js's default port, `apps/api` on `PORT` from its env, `apps/worker` with no HTTP server, loading `apps/worker/.env` and running both workers: the processing worker on the Item processing queue and the tagging worker on the Item tagging queue). Turborepo's terminal UI (`"ui": "tui"` in `turbo.json`) shows all three side by side.
 
-To run just one app: `pnpm --filter web dev` (or `api`, `worker`).
+To run just one app: `pnpm --filter web dev` (or `api`, `worker`). `pnpm --filter worker dev` starts both workers; to run only one, use `pnpm --filter worker dev:processing` or `pnpm --filter worker dev:tagging` (Items still become Ready without the tagging worker, and get no AI Tags until it runs). For production, `pnpm --filter worker build`, then `start` (both) or `start:processing` and `start:tagging` as separate processes (see [Queue → Running the workers](./queue.md#running-the-workers)).
 
 ## Other common commands
 

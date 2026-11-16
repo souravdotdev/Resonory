@@ -54,7 +54,7 @@ It watches `chrome.storage` for changes, so saving a key in the popup or the opt
 4. **Sends it.** It calls `POST <API_BASE_URL>/items` with `{ url, html }` (plus `captions` when step 3 found any) and an `x-api-key` header. `lib/createItemRequest.ts` builds the request as a pure function, so it's unit-tested without any `chrome.*` API.
 5. **Shows the result** on the icon's badge (`lib/badge.ts`): a green **✓** that clears after 3 seconds, or a red **!** that stays until the next click. The badge is the only feedback, so the extension needs no notifications permission.
 
-After that, everything is server-side. The API resolves the `x-api-key` header to a User through the same `getSession()` call it uses for Session cookies, creates the Item, and enqueues the job with the captured HTML. The worker uses that HTML instead of fetching the page. See [Content capture](./content-capture.md) for that half.
+After that, everything is server-side. The API resolves the `x-api-key` header to a User through the same `getSession()` call it uses for Session cookies, creates the Item, and enqueues the job with the captured HTML. The processing worker uses that HTML instead of fetching the page. See [Content capture](./content-capture.md) for that half.
 
 ## YouTube captions
 
