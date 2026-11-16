@@ -100,6 +100,16 @@ _Avoid_: Success, done, processed
 An Item whose processing gave up. The User can retry it.
 _Avoid_: Error, broken
 
+### Queues
+
+**Item processing queue**:
+Where saved Items wait for Processing. Resonory works through it one Item at a time, separately from AI tagging.
+_Avoid_: Items queue, the queue, ingestion queue
+
+**Item tagging queue**:
+Where Ready Items wait for AI tagging. A backlog or failure here never holds up Processing or changes an Item's state.
+_Avoid_: Items queue, the queue, AI queue
+
 ### Resurfacing
 
 **Resurfacing**:
