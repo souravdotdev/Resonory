@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=.env src/index.ts",
+    "dev": "sh -c 'trap \"kill 0\" EXIT; pnpm run dev:items & pnpm run dev:tagging & wait'",
+    "dev:items": "tsx watch --env-file=.env src/index.ts",
+    "dev:tagging": "tsx watch --env-file=.env src/itemTagging.ts",
     "build": "tsup",
     "start": "node dist/index.js",
+    "start:tagging": "node dist/itemTagging.js",
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
     "test": "vitest run",

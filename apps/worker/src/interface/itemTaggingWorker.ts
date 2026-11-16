@@ -6,6 +6,9 @@ import { WORKER_TOKENS } from "@/di/tokens";
 import { tagItem } from "@/interface/processors/tagItem.processor";
 import { tagItemFailed } from "@/interface/processors/tagItemFailed.processor";
 
+/** How many Tag Item jobs run at once: BullMQ's default of one, until tagging is tuned. */
+const ITEM_TAGGING_CONCURRENCY = 1;
+
 /** What the `failed` handler reads from a BullMQ job. */
 interface FailedTagItemJob {
   id?: string;
@@ -72,6 +75,7 @@ export function createItemTaggingWorker(
 ): Worker {
   const worker = new Worker(ITEM_TAGGING_QUEUE, (job) => tagItem(container, job.data), {
     connection,
+    concurrency: ITEM_TAGGING_CONCURRENCY,
   });
   worker.on("failed", (job, error) => void onItemTaggingJobFailed(container, job, error));
   return worker;

@@ -85,7 +85,7 @@ describe("the tagging worker", () => {
     const worker = taggingWorker();
 
     expect(worker.queue).toBe(ITEM_TAGGING_QUEUE);
-    expect(worker.options).toEqual({ connection: { host: "redis" } });
+    expect(worker.options).toEqual({ connection: { host: "redis" }, concurrency: 1 });
   });
 
   it("tags the Item of a valid Tag Item job, scoped to its User", async () => {
