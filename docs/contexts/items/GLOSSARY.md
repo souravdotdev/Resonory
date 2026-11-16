@@ -103,7 +103,7 @@ _Avoid_: Error, broken
 ### Queues
 
 **Item processing queue**:
-Where saved Items wait for Processing. Resonory works through it one Item at a time, separately from AI tagging.
+Where saved Items wait for Processing, kept apart from AI tagging.
 _Avoid_: Items queue, the queue, ingestion queue
 
 **Item tagging queue**:

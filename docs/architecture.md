@@ -75,7 +75,7 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 
 **Browser extension** (`apps/extension`): [WXT](https://wxt.dev) (Chrome Manifest V3, file-based entrypoints, hot-reloading dev server)
 
-**Dependency injection** (`apps/api`, `apps/worker`): InversifyJS + `reflect-metadata`, one container per app in `src/di/container.ts` — see [Clean Architecture](./clean-architecture.md)
+**Dependency injection** (`apps/api`, `apps/worker`): InversifyJS + `reflect-metadata`, one container in the API (`src/di/container.ts`) and one per worker process in the worker (`src/di/processingContainer.ts`, `src/di/taggingContainer.ts`) — see [Clean Architecture](./clean-architecture.md)
 
 **Database** (schema and migrations in `packages/db`, queries in `apps/api`'s infrastructure layer): Drizzle ORM, drizzle-kit (migrations/studio CLI), `postgres` (postgres.js driver), PostgreSQL 16 (Docker)
 
