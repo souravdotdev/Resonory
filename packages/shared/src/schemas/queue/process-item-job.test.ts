@@ -7,7 +7,7 @@ const job = {
 };
 
 describe("the Item processing queue", () => {
-  it("is named items, and its Processing job process-item", () => {
+  it("is named item-processing, and its Processing job process-item", () => {
     expect(ITEM_PROCESSING_QUEUE).toBe("item-processing");
     expect(PROCESS_ITEM_JOB).toBe("process-item");
   });
