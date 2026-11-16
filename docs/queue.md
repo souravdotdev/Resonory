@@ -167,12 +167,12 @@ Once an Item is Ready, the worker puts 0–3 Tags on it with Tag source `ai` (is
 
 The two workers are two processes from one codebase (`apps/worker`), each with its own entry point (`src/itemProcessing.ts`, `src/itemTagging.ts`), bundled together by `tsup`. Each loads `apps/worker/.env` and needs `DATABASE_URL` and `REDIS_URL`; the processing worker also reads the optional Supabase pair, the tagging worker the optional AI tagging trio (see [Environment Variables](./environment-variables.md#appsworkerenv)). Either can be started, restarted or stopped without touching the other: with the tagging worker down or misconfigured, Items still become Ready, and their Tag Item jobs wait on the Item tagging queue until it is back.
 
-| Where              | Both workers                                                    | One worker                                                                     |
-| ------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Locally            | `pnpm dev` (every app) or `pnpm --filter worker dev`            | `pnpm --filter worker dev:processing` / `pnpm --filter worker dev:tagging`     |
-| Production (built) | `pnpm --filter worker build`, then `pnpm --filter worker start` | `pnpm --filter worker start:processing` / `pnpm --filter worker start:tagging` |
+| Where              | Both workers                                         | One worker                                                                                                        |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Locally            | `pnpm dev` (every app) or `pnpm --filter worker dev` | `pnpm --filter worker dev:processing` / `pnpm --filter worker dev:tagging`                                        |
+| Production (built) | two services, one per worker                         | `pnpm --filter worker build`, then `pnpm --filter worker start:processing` / `pnpm --filter worker start:tagging` |
 
-`dev` and `start` run both workers in one shell and stop both when it exits, which suits one machine. To get the isolation the split exists for, deploy `start:processing` and `start:tagging` as two separate processes (each restarted, scaled or stopped on its own); the repo has no deploy configuration, so how is up to the operator. Each worker closes cleanly on SIGINT or SIGTERM, finishing its current job first.
+`dev` runs both workers in one shell and stops both when it exits, which suits one machine and is for local use only. There is deliberately no combined `start`: a shell that runs both and waits would keep reporting healthy when one worker had crashed, and may not pass SIGTERM on to both, so neither would close cleanly. In production deploy `start:processing` and `start:tagging` as two separate services (each restarted, scaled or stopped on its own), so a supervisor sees each one's exit; the repo has no deploy configuration, so how is up to the operator. Each worker closes cleanly on SIGINT or SIGTERM, finishing its current job first.
 
 ### Before deploying: drain the old `items` queue
 

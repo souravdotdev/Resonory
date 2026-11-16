@@ -9,7 +9,7 @@ Processing (fetching a page, typing the Item, keeping a Thumbnail) and AI taggin
 
 ## Consequences
 
-- Two processes to deploy, run, monitor and restart instead of one. Locally `pnpm dev` starts both; in production each has its own start command (`start:processing`, `start:tagging`), and `start` runs both for a single host.
+- Two processes to deploy, run, monitor and restart instead of one. Locally `pnpm dev` starts both; in production each is its own service with its own start command (`start:processing`, `start:tagging`); there is no combined `start`, because a shell running both would hide one worker crashing and may not forward SIGTERM to both.
 - Each worker holds only what it uses: the processing worker boots without any AI configuration, the tagging worker without the page fetcher.
 - Failure behaviour is unchanged: a Process Item job out of attempts marks its Item Failed, a Tag Item job's final failure only logs.
 - The old `items` queue is retired with no compatibility consumer, as Resonory has no Users yet. Drain or flush it before deploying the new API and workers, or its jobs are stranded.

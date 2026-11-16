@@ -8,7 +8,6 @@
     "dev:processing": "tsx watch --env-file=.env src/itemProcessing.ts",
     "dev:tagging": "tsx watch --env-file=.env src/itemTagging.ts",
     "build": "tsup",
-    "start": "sh -c 'trap \"kill 0\" EXIT; pnpm run start:processing & pnpm run start:tagging & wait'",
     "start:processing": "node dist/itemProcessing.js",
     "start:tagging": "node dist/itemTagging.js",
     "lint": "eslint .",
