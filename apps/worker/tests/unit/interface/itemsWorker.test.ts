@@ -150,13 +150,12 @@ describe("the Items queue's job switch", () => {
     await expect(run).rejects.not.toBeInstanceOf(UnrecoverableError);
   });
 
-  it("runs a Tag Item job's AI tagging with its Item and User", async () => {
-    const { container } = testContainer();
-    const tagging = { execute: vi.fn(async () => ({ outcome: "unconfigured" as const })) };
-    container.bind(WORKER_TOKENS.TagItemUseCase).toConstantValue(tagging);
+  it("no longer runs a Tag Item job: the Item tagging queue carries it, so it fails without a retry", async () => {
+    const { container, useCase } = testContainer();
 
-    await runItemsJob(container, itemsJob(TAG_ITEM_JOB, { itemId: ITEM_ID, userId: USER_ID }));
-
-    expect(tagging.execute).toHaveBeenCalledWith({ itemId: ITEM_ID, userId: USER_ID });
+    await expect(
+      runItemsJob(container, itemsJob(TAG_ITEM_JOB, { itemId: ITEM_ID, userId: USER_ID })),
+    ).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(useCase.execute).not.toHaveBeenCalled();
   });
 });
