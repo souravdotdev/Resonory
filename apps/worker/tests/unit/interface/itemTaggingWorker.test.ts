@@ -8,6 +8,7 @@ import type { TagItemUseCase } from "@/application/use-cases/items/TagItemUseCas
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemTaggingWorker } from "@/interface/itemTaggingWorker";
+import { NO_LIMITS } from "../../support/noLimits";
 import { createRecordingLogger } from "../testLogger";
 
 // BullMQ's Worker would connect to Redis; a stand-in records how the factory builds it.
@@ -32,8 +33,6 @@ interface FailedJob extends TagJob {
   finishedOn?: number;
 }
 type FailedListener = (job: FailedJob | undefined, error: Error) => void;
-
-const NO_LIMITS: WorkerLimits = { concurrency: 1, limiter: undefined, lockDuration: undefined };
 
 // The tagging worker as the factory builds it, over a Tag Item use case stand-in.
 function taggingWorker(

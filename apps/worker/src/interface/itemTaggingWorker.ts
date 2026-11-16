@@ -3,6 +3,7 @@ import type { Container } from "inversify";
 import { ITEM_TAGGING_QUEUE } from "@resonory/shared/schemas/queue";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { handleFailedJob, type FailedJob } from "@/interface/onJobFailed";
+import { workerOptions } from "@/interface/workerOptions";
 import { tagItem } from "@/interface/processors/tagItem.processor";
 import { tagItemFailed } from "@/interface/processors/tagItemFailed.processor";
 
@@ -22,22 +23,20 @@ function onItemTaggingJobFailed(
 }
 
 /**
- * The BullMQ worker that consumes the Item tagging queue, on the given Redis
- * connection, with the given concurrency, and the limiter and lock duration only
- * when set (BullMQ's defaults otherwise). It carries Tag Item jobs only, so there is no job-name switch.
+ * The BullMQ worker that consumes the Item tagging queue (options: `workerOptions`).
+ * It carries Tag Item jobs only, so there is no job-name switch.
  * Their payload is only ids, so a finished job needs no slimming.
  */
 export function createItemTaggingWorker(
   container: Container,
   connection: ConnectionOptions,
-  { concurrency, limiter, lockDuration }: WorkerLimits,
+  limits: WorkerLimits,
 ): Worker {
-  const worker = new Worker(ITEM_TAGGING_QUEUE, (job) => tagItem(container, job.data), {
-    connection,
-    concurrency,
-    ...(limiter ? { limiter } : {}),
-    ...(lockDuration !== undefined ? { lockDuration } : {}),
-  });
+  const worker = new Worker(
+    ITEM_TAGGING_QUEUE,
+    (job) => tagItem(container, job.data),
+    workerOptions(connection, limits),
+  );
   worker.on("failed", (job, error) => void onItemTaggingJobFailed(container, job, error));
   return worker;
 }

@@ -5,6 +5,7 @@ import { ITEM_PROCESSING_QUEUE } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { handleFailedJob, type FailedJob } from "@/interface/onJobFailed";
+import { workerOptions } from "@/interface/workerOptions";
 import { processItem, slimProcessItemData } from "@/interface/processors/processItem.processor";
 import { processItemFailed } from "@/interface/processors/processItemFailed.processor";
 
@@ -54,16 +55,15 @@ function onItemProcessingJobFailed(
 }
 
 /**
- * The BullMQ worker that consumes the Item processing queue, on the given Redis
- * connection, with the given concurrency, and the limiter and lock duration only
- * when set (BullMQ's defaults otherwise). It carries Process Item jobs only, so there is no job-name switch.
+ * The BullMQ worker that consumes the Item processing queue (options: `workerOptions`).
+ * It carries Process Item jobs only, so there is no job-name switch.
  * A job that succeeds keeps only the data worth keeping (`slimFinishedJob`); a
  * failed attempt goes to `onItemProcessingJobFailed`.
  */
 export function createItemProcessingWorker(
   container: Container,
   connection: ConnectionOptions,
-  { concurrency, limiter, lockDuration }: WorkerLimits,
+  limits: WorkerLimits,
 ): Worker {
   const worker = new Worker(
     ITEM_PROCESSING_QUEUE,
@@ -71,12 +71,7 @@ export function createItemProcessingWorker(
       await processItem(container, job.data);
       await slimFinishedJob(container, job);
     },
-    {
-      connection,
-      concurrency,
-      ...(limiter ? { limiter } : {}),
-      ...(lockDuration !== undefined ? { lockDuration } : {}),
-    },
+    workerOptions(connection, limits),
   );
   worker.on("failed", (job, error) => void onItemProcessingJobFailed(container, job, error));
   return worker;

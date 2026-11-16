@@ -10,6 +10,7 @@ import { WORKER_TOKENS } from "@/di/tokens";
 import { NO_METADATA } from "@/domain/entities/Item";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
+import { NO_LIMITS } from "../../support/noLimits";
 import { createRecordingLogger } from "../testLogger";
 
 // BullMQ's Worker would connect to Redis; a stand-in records how the factory builds it.
@@ -35,8 +36,6 @@ interface FailedJob extends ProcessJob {
   finishedOn?: number;
 }
 type FailedListener = (job: FailedJob | undefined, error: Error) => void;
-
-const NO_LIMITS: WorkerLimits = { concurrency: 1, limiter: undefined, lockDuration: undefined };
 
 // The processing worker as the factory builds it, over Process Item and Fail Item use case stand-ins.
 function processingWorker(
