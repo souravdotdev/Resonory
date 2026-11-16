@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { TAG_ITEM_JOB, TagItemJobSchema } from "./index";
+import { ITEM_TAGGING_QUEUE, TAG_ITEM_JOB, TagItemJobSchema } from "./index";
 
 const job = {
   itemId: "3b241101-e2bb-4255-8caf-4136c566a962",
   userId: "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
 };
+
+describe("the Item tagging queue", () => {
+  it("is named item-tagging", () => {
+    expect(ITEM_TAGGING_QUEUE).toBe("item-tagging");
+  });
+});
 
 describe("the AI tagging job", () => {
   it("is named tag-item", () => {
