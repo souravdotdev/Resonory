@@ -174,6 +174,19 @@ The two workers are two processes from one codebase (`apps/worker`), each with i
 
 `dev` runs both workers in one shell and stops both when it exits, which suits one machine and is for local use only. There is deliberately no combined `start`: a shell that runs both and waits would keep reporting healthy when one worker had crashed, and may not pass SIGTERM on to both, so neither would close cleanly. In production deploy `start:processing` and `start:tagging` as two separate services (each restarted, scaled or stopped on its own), so a supervisor sees each one's exit; the repo has no deploy configuration, so how is up to the operator. Each worker closes cleanly on SIGINT or SIGTERM, finishing its current job first.
 
+### Connections to size before deploying
+
+Each process opens its own connections, so splitting the worker raised the total. Compare these with your database's and Redis's connection limits before deploying:
+
+| Process           | Postgres                                                 | Redis                                                                                                            |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| API               | one pool, up to 10 connections                           | one shared connection (the Item processing queue's producer)                                                     |
+| Processing worker | one pool, up to 10                                       | one shared connection (also the Item tagging queue's producer), plus the BullMQ Worker's own blocking connection |
+| Tagging worker    | one pool, up to 10                                       | one shared connection, plus the BullMQ Worker's own blocking connection                                          |
+| **Total**         | **up to 30**, three pools at postgres.js's default of 10 | **5**                                                                                                            |
+
+Neither pool size is set in the repo, so postgres.js's default of 10 applies; the table counts each process once, so every extra replica adds its own pool and connections.
+
 ### Before deploying: drain the old `items` queue
 
 The single `items` queue is retired, with no compatibility consumer: nothing reads it any more. Before deploying the new API and workers, drain it (stop the old API, wait for the old worker to finish what is in it) or flush it, or its jobs are stranded. Do this together with the migrate-first step in [Database](./database.md#migration-workflow).
