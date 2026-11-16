@@ -7,9 +7,9 @@ import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueuePr
 /**
  * The part of a BullMQ `Queue` the worker uses: this provider adds to it, and
  * shutdown (`src/index.ts`) closes it. The container binds the production
- * `itemsQueue` to it, which checks the real queue fits.
+ * `itemTaggingQueue` to it, which checks the real queue fits.
  */
-export interface ItemsQueue {
+export interface ItemTaggingQueue {
   add(name: string, data: TagItemJob, opts: JobsOptions): Promise<unknown>;
   close(): Promise<void>;
 }
@@ -24,10 +24,10 @@ const TAG_ITEM_OPTIONS: JobsOptions = {
   removeOnFail: 5000,
 };
 
-/** Enqueues the worker's own follow-up work as BullMQ jobs on the Items queue. */
+/** Enqueues the worker's own follow-up work as BullMQ jobs on the Item tagging queue. */
 @injectable()
 export class BullMqQueueProvider implements IQueueProvider {
-  constructor(@inject(WORKER_TOKENS.ItemsQueue) private readonly queue: ItemsQueue) {}
+  constructor(@inject(WORKER_TOKENS.ItemTaggingQueue) private readonly queue: ItemTaggingQueue) {}
 
   async enqueueTagItem(request: TagItemRequest): Promise<void> {
     // Parsed here, so a payload the Tag Item processor would refuse never reaches Redis.

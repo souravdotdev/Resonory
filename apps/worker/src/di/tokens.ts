@@ -30,9 +30,9 @@ export const WORKER_TOKENS = {
   PageHeadParser: Symbol("IPageHeadParser"),
   /** `ITextExtractor`: turns already-captured page content into its main-content text. */
   TextExtractor: Symbol("ITextExtractor"),
-  /** The BullMQ Items queue the worker produces onto and closes on shutdown, as `ItemsQueue`. */
-  ItemsQueue: Symbol("ItemsQueue"),
-  /** `IQueueProvider`: queues the worker's follow-up jobs (AI tagging) on the Items queue. */
+  /** The BullMQ Item tagging queue the processing worker produces onto and closes on shutdown, as `ItemTaggingQueue`. */
+  ItemTaggingQueue: Symbol("ItemTaggingQueue"),
+  /** `IQueueProvider`: queues the worker's follow-up jobs (AI tagging) on the Item tagging queue. */
   QueueProvider: Symbol("IQueueProvider"),
   /** `ITagRepository`: the Tags AI tagging reads and puts on Items. */
   TagRepository: Symbol("ITagRepository"),

@@ -1,7 +1,10 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
 import { TAG_ITEM_JOB } from "@resonory/shared/schemas/queue";
-import { BullMqQueueProvider, type ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
+import {
+  BullMqQueueProvider,
+  type ItemTaggingQueue,
+} from "@/infrastructure/queue/BullMqQueueProvider";
 
 const job = {
   itemId: "3b241101-e2bb-4255-8caf-4136c566a962",
@@ -9,7 +12,7 @@ const job = {
 };
 
 const queueRecording = () =>
-  ({ add: vi.fn(async () => ({})), close: vi.fn(async () => {}) }) satisfies ItemsQueue;
+  ({ add: vi.fn(async () => ({})), close: vi.fn(async () => {}) }) satisfies ItemTaggingQueue;
 
 describe("the worker's BullMqQueueProvider", () => {
   it("adds a Tag Item job with the Item's and User's ids", async () => {

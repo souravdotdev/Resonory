@@ -1,68 +1,50 @@
 import "reflect-metadata";
 import { StorageClient } from "@supabase/storage-js";
-import OpenAI from "openai";
-import type { Redis } from "ioredis";
 import { Container } from "inversify";
-import { redisConnection } from "@resonory/db/redis";
-import { createLogger, type Logger } from "@resonory/logger";
+import type { Logger } from "@resonory/logger";
 import { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
-import { TagItemUseCase } from "@/application/use-cases/items/TagItemUseCase";
+import { bindCommon } from "@/di/commonBindings";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IJsonFetcher } from "@/domain/providers/IJsonFetcher";
 import type { IOEmbedProvider } from "@/domain/providers/IOEmbedProvider";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
-import type { ITagSuggester } from "@/domain/providers/ITagSuggester";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
-import type { IItemRepository } from "@/domain/repositories/IItemRepository";
-import type { ITagRepository } from "@/domain/repositories/ITagRepository";
-import { aiTaggingEnv } from "@/infrastructure/ai/aiTaggingEnv";
-import { OpenAiCompatibleTagSuggester } from "@/infrastructure/ai/OpenAiCompatibleTagSuggester";
 import { RedisUrlPreviewCache } from "@/infrastructure/cache/RedisUrlPreviewCache";
-import type { Database } from "@/infrastructure/database/Database";
-import { db } from "@/infrastructure/database/db";
 import { GuardedOEmbedProvider } from "@/infrastructure/http/GuardedOEmbedProvider";
 import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
 import { ReadabilityTextExtractor } from "@/infrastructure/http/ReadabilityTextExtractor";
 import { SafeUrlFetcher } from "@/infrastructure/http/SafeUrlFetcher";
 import { SharpThumbnailResizer } from "@/infrastructure/images/SharpThumbnailResizer";
-import { BullMqQueueProvider, type ItemsQueue } from "@/infrastructure/queue/BullMqQueueProvider";
-import { itemsQueue } from "@/infrastructure/queue/itemsQueue";
-import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
-import { DrizzleTagRepository } from "@/infrastructure/repositories/DrizzleTagRepository";
+import {
+  BullMqQueueProvider,
+  type ItemTaggingQueue,
+} from "@/infrastructure/queue/BullMqQueueProvider";
+import { itemTaggingQueue } from "@/infrastructure/queue/itemTaggingQueue";
 import { supabaseStorageEnv } from "@/infrastructure/storage/supabaseEnv";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
 
 /**
- * The worker's production container: the only place its concrete classes are
- * built and bound to their tokens. Infrastructure lives for the process's
+ * The processing worker's production container: the only place its concrete classes are
+ * built and bound to their tokens, with no AI client (see `taggingContainer.ts`). Infrastructure lives for the process's
  * life; use cases are built fresh for each job.
  */
 export function createContainer(): Container {
   const container = new Container({ defaultScope: "Singleton" });
 
-  // Built first, so it can be passed into thumbnailStore() and tagSuggester() below.
-  const logger = createLogger({ name: "worker" });
-  container.bind<Logger>(WORKER_TOKENS.Logger).toConstantValue(logger);
+  // Built first, so it can be passed into thumbnailStore() below.
+  const logger = bindCommon(container, "worker");
 
-  container.bind<Database>(WORKER_TOKENS.Database).toConstantValue(db);
-  container.bind<Redis>(WORKER_TOKENS.RedisConnection).toConstantValue(redisConnection);
+  // The Item tagging queue, produced onto: once an Item is Ready, Processing queues its AI tagging.
   container
-    .bind<IItemRepository>(WORKER_TOKENS.ItemRepository)
-    .to(DrizzleItemRepository)
-    .inSingletonScope();
-  container
-    .bind<ITagRepository>(WORKER_TOKENS.TagRepository)
-    .to(DrizzleTagRepository)
-    .inSingletonScope();
-  // The same Items queue the worker consumes: Processing queues AI tagging onto it.
-  container.bind<ItemsQueue>(WORKER_TOKENS.ItemsQueue).toConstantValue(itemsQueue);
+    .bind<ItemTaggingQueue>(WORKER_TOKENS.ItemTaggingQueue)
+    .toConstantValue(itemTaggingQueue);
   container
     .bind<IQueueProvider>(WORKER_TOKENS.QueueProvider)
     .to(BullMqQueueProvider)
@@ -96,11 +78,6 @@ export function createContainer(): Container {
   // Without Supabase Storage there's no Thumbnail store, and Processing fetches no image.
   const store = thumbnailStore(logger);
   if (store) container.bind<IThumbnailStore>(WORKER_TOKENS.ThumbnailStore).toConstantValue(store);
-  // Without an AI tagging key there's no Tag suggester, and every Tag Item job skips its Item.
-  const suggester = tagSuggester(logger);
-  if (suggester)
-    container.bind<ITagSuggester>(WORKER_TOKENS.TagSuggester).toConstantValue(suggester);
-
   container
     .bind<ProcessItemUseCase>(WORKER_TOKENS.ProcessItemUseCase)
     .to(ProcessItemUseCase)
@@ -108,10 +85,6 @@ export function createContainer(): Container {
   container
     .bind<FailItemUseCase>(WORKER_TOKENS.FailItemUseCase)
     .to(FailItemUseCase)
-    .inTransientScope();
-  container
-    .bind<TagItemUseCase>(WORKER_TOKENS.TagItemUseCase)
-    .to(TagItemUseCase)
     .inTransientScope();
 
   // A future piece of job-processing business logic (e.g. a logging
@@ -149,26 +122,4 @@ export function thumbnailStore(logger: Pick<Logger, "warn">): IThumbnailStore | 
     Authorization: `Bearer ${env.serviceRoleKey}`,
   });
   return new SupabaseThumbnailStore(storage);
-}
-
-/**
- * An OpenAI-compatible model (Groq by default) when `AI_TAGGING_API_KEY` is
- * set; otherwise none, so the worker still runs, without AI tagging. Retries
- * are BullMQ's (the Tag Item job's backoff), not the client's.
- */
-export function tagSuggester(logger: Pick<Logger, "info">): ITagSuggester | null {
-  const env = aiTaggingEnv(process.env);
-  if (!env) {
-    logger.info("AI tagging isn't configured; Items get no AI Tags");
-    return null;
-  }
-  const client = new OpenAI({
-    apiKey: env.apiKey,
-    baseURL: env.baseUrl,
-    maxRetries: 0,
-    // The call holds the worker's one job slot, which Processing shares, so a hung
-    // model is cut off fast and BullMQ's retries (30 s, then 60 s later) cover the rest.
-    timeout: 10_000,
-  });
-  return new OpenAiCompatibleTagSuggester(client, env.model);
 }
