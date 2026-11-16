@@ -22,6 +22,7 @@ vi.mock("bullmq", async (importOriginal) => {
 const ITEM_ID = "00000000-0000-4000-8000-000000000001";
 const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 const FINISHED_ON = Date.parse("2026-04-01T00:00:00.000Z");
+const NO_LIMITS = { concurrency: 1, limiter: undefined, lockDuration: undefined };
 const GAVE_UP = "AI tagging gave up; the Item stays Ready without AI Tags";
 
 type FailedListener = (job: unknown, error: Error) => void;
@@ -45,7 +46,7 @@ function bothWorkers() {
     };
   } as never);
   createItemProcessingWorker(container, { host: "redis" });
-  createItemTaggingWorker(container, { host: "redis" });
+  createItemTaggingWorker(container, { host: "redis" }, NO_LIMITS);
 
   return {
     processUseCase,
