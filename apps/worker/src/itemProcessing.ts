@@ -3,7 +3,7 @@ import "reflect-metadata";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import { ITEM_PROCESSING_QUEUE } from "@resonory/shared/schemas/queue";
-import type { Logger } from "@resonory/logger";
+import { describeError, type Logger } from "@resonory/logger";
 import { createProcessingContainer } from "@/di/processingContainer";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
@@ -44,4 +44,12 @@ await startWorker({
 });
 
 // Idempotent: BullMQ keeps one schedule however many workers register it, and a restart refreshes it.
-await scheduleStuckItemSweep(itemProcessingQueue, sweep);
+// The worker is already consuming, so a failure here only costs the sweep: log it and carry on.
+try {
+  await scheduleStuckItemSweep(itemProcessingQueue, sweep);
+} catch (error) {
+  logger.error(
+    { err: describeError(error) },
+    "couldn't schedule the stuck Item sweep; the worker keeps processing without it",
+  );
+}
