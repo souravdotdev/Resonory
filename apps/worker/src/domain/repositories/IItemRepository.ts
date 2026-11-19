@@ -13,8 +13,11 @@ export interface IItemRepository {
   markReady(ref: ItemRef, ready: ReadyItem): Promise<void>;
   /** Marks the User's Item Failed with this Item type. */
   markFailed(ref: ItemRef, type: ItemType): Promise<void>;
-  /** Every User's Items still Processing that were saved before `cutoff`. */
-  findProcessingBefore(cutoff: Date): Promise<Item[]>;
+  /**
+   * Up to `limit` of every User's Items still Processing that were saved before
+   * `cutoff`, the oldest first.
+   */
+  findProcessingBefore(cutoff: Date, limit: number): Promise<Item[]>;
   /**
    * Marks the User's Item Failed with this Item type, but only while it is still
    * Processing. False when it wasn't changed: it finished in the meantime, or it

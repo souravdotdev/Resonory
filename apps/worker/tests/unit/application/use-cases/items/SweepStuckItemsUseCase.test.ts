@@ -1,6 +1,9 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
-import { SweepStuckItemsUseCase } from "@/application/use-cases/items/SweepStuckItemsUseCase";
+import {
+  MAX_ITEMS_PER_SWEEP,
+  SweepStuckItemsUseCase,
+} from "@/application/use-cases/items/SweepStuckItemsUseCase";
 import type { Item, ItemRef, ItemStatus, ItemType } from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 
@@ -38,8 +41,11 @@ function itemsInMemory(...rows: Row[]) {
     findTaggable: vi.fn(async () => null),
     markReady: vi.fn(async () => {}),
     markFailed: vi.fn(async () => {}),
-    findProcessingBefore: vi.fn(async (cutoff: Date) =>
-      rows.filter((row) => row.status === "processing" && row.savedAt < cutoff),
+    findProcessingBefore: vi.fn(async (cutoff: Date, limit: number) =>
+      rows
+        .filter((row) => row.status === "processing" && row.savedAt < cutoff)
+        .sort((a, b) => a.savedAt.getTime() - b.savedAt.getTime())
+        .slice(0, limit),
     ),
     markFailedIfProcessing: vi.fn(async (ref: ItemRef, type: ItemType) => {
       const row = find(ref);
@@ -87,7 +93,24 @@ describe("SweepStuckItemsUseCase", () => {
 
     await sweep(repository);
 
-    expect(repository.findProcessingBefore).toHaveBeenCalledWith(minutesAgo(10));
+    expect(repository.findProcessingBefore).toHaveBeenCalledWith(
+      minutesAgo(10),
+      MAX_ITEMS_PER_SWEEP,
+    );
+  });
+
+  it("ends at most the cap per sweep, and the next sweep ends the rest", async () => {
+    const rows = Array.from({ length: MAX_ITEMS_PER_SWEEP + 3 }, (_, n) =>
+      rowOf(n + 1, "processing", minutesAgo(11 + n)),
+    );
+    const repository = itemsInMemory(...rows);
+
+    const first = await sweep(repository);
+    const second = await sweep(repository);
+
+    expect(first.ended).toBe(MAX_ITEMS_PER_SWEEP);
+    expect(second.ended).toBe(3);
+    expect(rows.every((row) => row.status === "failed")).toBe(true);
   });
 
   it.each(["ready", "failed"] as const)("never touches a %s Item", async (status) => {
@@ -138,8 +161,9 @@ describe("SweepStuckItemsUseCase", () => {
   });
 
   it("goes on with the other Items when one can't be ended, and hands the error back", async () => {
-    const first = rowOf(1, "processing", minutesAgo(11));
-    const second = rowOf(2, "processing", minutesAgo(12));
+    // The oldest is ended first, so this one meets the error.
+    const first = rowOf(1, "processing", minutesAgo(12));
+    const second = rowOf(2, "processing", minutesAgo(11));
     const repository = itemsInMemory(first, second);
     const failure = new Error("Postgres answered 57014");
     vi.mocked(repository.markFailedIfProcessing).mockRejectedValueOnce(failure);

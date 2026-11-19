@@ -1,4 +1,4 @@
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, asc, eq, lt, sql } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { WORKER_TOKENS } from "@/di/tokens";
@@ -74,7 +74,7 @@ export class DrizzleItemRepository implements IItemRepository {
     await this.finish(ref, { status: "failed", type });
   }
 
-  async findProcessingBefore(cutoff: Date): Promise<Item[]> {
+  async findProcessingBefore(cutoff: Date, limit: number): Promise<Item[]> {
     return this.db
       .select({
         id: items.id,
@@ -84,7 +84,9 @@ export class DrizzleItemRepository implements IItemRepository {
         status: items.status,
       })
       .from(items)
-      .where(and(eq(items.status, "processing"), lt(items.createdAt, cutoff)));
+      .where(and(eq(items.status, "processing"), lt(items.createdAt, cutoff)))
+      .orderBy(asc(items.createdAt))
+      .limit(limit);
   }
 
   async markFailedIfProcessing(ref: ItemRef, type: ItemType): Promise<boolean> {
