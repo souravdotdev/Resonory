@@ -41,8 +41,9 @@ async function slimFinishedJob(container: Container, job: ProcessItemJob): Promi
 
 /**
  * The processing worker's `failed` handler (`handleFailedJob`). Once no attempt
- * is left, the job's Item becomes Failed, and then the job keeps only the data
- * worth keeping (`slimFinishedJob`). A payload that names no Item changes no Item.
+ * is left, a Process Item job's Item becomes Failed, and then the job keeps only
+ * the data worth keeping (`slimFinishedJob`). A payload that names no Item changes
+ * no Item, and a job that isn't a Process Item job never does.
  */
 function onItemProcessingJobFailed(
   container: Container,
@@ -50,7 +51,11 @@ function onItemProcessingJobFailed(
   error: Error,
 ): Promise<void> {
   return handleFailedJob(container, ITEM_PROCESSING_QUEUE, job, error, {
-    run: (failed) => processItemFailed(container, failed.data),
+    // Only a Process Item job names an Item. Any other job (the sweep, or one with an
+    // unknown name) has only the failure `handleFailedJob` already logged.
+    run: async (failed) => {
+      if (failed.name === PROCESS_ITEM_JOB) await processItemFailed(container, failed.data);
+    },
     errorMessage: "couldn't mark the Item Failed",
     afterwards: (failed) => slimFinishedJob(container, failed),
   });
@@ -61,8 +66,8 @@ function onItemProcessingJobFailed(
  * It carries Process Item jobs and the repeating stuck-Item sweep job, and
  * fails any other job name without a retry. A job that succeeds keeps only the
  * data worth keeping (`slimFinishedJob`); a failed attempt goes to
- * `onItemProcessingJobFailed`, which changes no Item for a sweep job (its data
- * names none).
+ * `onItemProcessingJobFailed`, which changes no Item for any job but a Process
+ * Item job, by its name.
  */
 export function createItemProcessingWorker(
   container: Container,

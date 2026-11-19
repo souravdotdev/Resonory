@@ -206,6 +206,44 @@ describe("the processing worker", () => {
     expect(worker.logger.logs[0]).toMatchObject({ level: "error", msg: "job failed" });
   });
 
+  it("goes by the job's name, not its data, to leave Items alone when a sweep job fails for good", async () => {
+    const worker = processingWorker();
+
+    // Data that would parse as a Process Item payload: only the name says it is a sweep.
+    worker.fail(
+      {
+        ...sweepJob({ itemId: ITEM_ID, userId: USER_ID }),
+        id: "7",
+        attemptsMade: 1,
+        opts: { attempts: 1 },
+        finishedOn: FINISHED_ON,
+      },
+      new Error("Postgres is down"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("changes no Item when a job with an unknown name fails for good", async () => {
+    const worker = processingWorker();
+
+    worker.fail(
+      {
+        ...processJob(),
+        name: "tag-item",
+        id: "8",
+        attemptsMade: 1,
+        opts: { attempts: 1 },
+        finishedOn: FINISHED_ON,
+      },
+      new UnrecoverableError("Unknown job name"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
+  });
+
   it("drops keys a Process Item payload doesn't have", async () => {
     const worker = processingWorker();
 
