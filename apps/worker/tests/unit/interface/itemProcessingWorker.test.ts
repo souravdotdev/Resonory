@@ -6,8 +6,10 @@ import { ITEM_PROCESSING_QUEUE, PROCESS_ITEM_JOB } from "@resonory/shared/schema
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
+import type { SweepStuckItemsUseCase } from "@/application/use-cases/items/SweepStuckItemsUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { NO_METADATA } from "@/domain/entities/Item";
+import { SWEEP_STUCK_ITEMS_JOB } from "@/infrastructure/queue/stuckItemSweepSchedule";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
 import { NO_LIMITS } from "../../support/noLimits";
@@ -52,8 +54,12 @@ function processingWorker(
   const failUseCase = {
     execute: vi.fn(async () => ({ outcome: "failed" as const, type: "link" as const })),
   };
+  const sweepUseCase = { execute: vi.fn(async () => ({ ended: 0, errors: [] })) };
   const logger = createRecordingLogger();
   const container = new Container();
+  container
+    .bind<Pick<SweepStuckItemsUseCase, "execute">>(WORKER_TOKENS.SweepStuckItemsUseCase)
+    .toConstantValue(sweepUseCase);
   container
     .bind<Pick<ProcessItemUseCase, "execute">>(WORKER_TOKENS.ProcessItemUseCase)
     .toConstantValue(processUseCase);
@@ -72,6 +78,7 @@ function processingWorker(
   return {
     processUseCase,
     failUseCase,
+    sweepUseCase,
     logger,
     queue,
     options,
@@ -83,6 +90,13 @@ function processingWorker(
 // A Process Item job as the worker hands it over, whose data rewrites are recorded.
 const processJob = (data: unknown = { itemId: ITEM_ID, userId: USER_ID }): ProcessJob => ({
   name: PROCESS_ITEM_JOB,
+  data,
+  updateData: vi.fn(async (_data: unknown) => {}),
+});
+
+// The repeating sweep job, as the scheduler adds it to the queue.
+const sweepJob = (data: unknown = { stuckAfterMs: 600_000 }): ProcessJob => ({
+  name: SWEEP_STUCK_ITEMS_JOB,
   data,
   updateData: vi.fn(async (_data: unknown) => {}),
 });
@@ -150,6 +164,46 @@ describe("the processing worker", () => {
       itemId: ITEM_ID,
       userId: USER_ID,
     });
+  });
+
+  it("runs the stuck-Item sweep, not Processing, for a sweep job", async () => {
+    const worker = processingWorker();
+
+    await worker.run(sweepJob());
+
+    expect(worker.sweepUseCase.execute).toHaveBeenCalledExactlyOnceWith({ stuckAfterMs: 600_000 });
+    expect(worker.processUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("runs no sweep for a Process Item job", async () => {
+    const worker = processingWorker();
+
+    await worker.run(processJob());
+
+    expect(worker.sweepUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("fails a job with a name it doesn't know without retrying it, running nothing", async () => {
+    const worker = processingWorker();
+
+    await expect(worker.run({ ...processJob(), name: "tag-item" })).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(worker.processUseCase.execute).not.toHaveBeenCalled();
+    expect(worker.sweepUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("changes no Item when a sweep job fails for good, only logging the failure", async () => {
+    const worker = processingWorker();
+
+    worker.fail(
+      { ...sweepJob(), id: "7", attemptsMade: 1, opts: { attempts: 1 }, finishedOn: FINISHED_ON },
+      new Error("Postgres is down"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
+    expect(worker.logger.logs[0]).toMatchObject({ level: "error", msg: "job failed" });
   });
 
   it("drops keys a Process Item payload doesn't have", async () => {

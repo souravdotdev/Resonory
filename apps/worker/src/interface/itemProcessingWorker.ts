@@ -1,13 +1,15 @@
-import { Worker, type ConnectionOptions } from "bullmq";
+import { UnrecoverableError, Worker, type ConnectionOptions } from "bullmq";
 import type { Container } from "inversify";
 import { describeError, type Logger } from "@resonory/logger";
-import { ITEM_PROCESSING_QUEUE } from "@resonory/shared/schemas/queue";
+import { ITEM_PROCESSING_QUEUE, PROCESS_ITEM_JOB } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
+import { SWEEP_STUCK_ITEMS_JOB } from "@/infrastructure/queue/stuckItemSweepSchedule";
 import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { handleFailedJob, type FailedJob } from "@/interface/onJobFailed";
 import { workerOptions } from "@/interface/workerOptions";
 import { processItem, slimProcessItemData } from "@/interface/processors/processItem.processor";
 import { processItemFailed } from "@/interface/processors/processItemFailed.processor";
+import { sweepStuckItems } from "@/interface/processors/sweepStuckItems.processor";
 
 /** What the processing worker reads from a BullMQ job, and how it rewrites the job's data. */
 interface ProcessItemJob {
@@ -56,9 +58,11 @@ function onItemProcessingJobFailed(
 
 /**
  * The BullMQ worker that consumes the Item processing queue (options: `workerOptions`).
- * It carries Process Item jobs only, so there is no job-name switch.
- * A job that succeeds keeps only the data worth keeping (`slimFinishedJob`); a
- * failed attempt goes to `onItemProcessingJobFailed`.
+ * It carries Process Item jobs and the repeating stuck-Item sweep job, and
+ * fails any other job name without a retry. A job that succeeds keeps only the
+ * data worth keeping (`slimFinishedJob`); a failed attempt goes to
+ * `onItemProcessingJobFailed`, which changes no Item for a sweep job (its data
+ * names none).
  */
 export function createItemProcessingWorker(
   container: Container,
@@ -68,7 +72,18 @@ export function createItemProcessingWorker(
   const worker = new Worker(
     ITEM_PROCESSING_QUEUE,
     async (job) => {
-      await processItem(container, job.data);
+      switch (job.name) {
+        case PROCESS_ITEM_JOB:
+          await processItem(container, job.data);
+          break;
+        case SWEEP_STUCK_ITEMS_JOB:
+          await sweepStuckItems(container, job.data);
+          break;
+        default:
+          throw new UnrecoverableError(
+            `Unknown job name on the Item processing queue: ${job.name}`,
+          );
+      }
       await slimFinishedJob(container, job);
     },
     workerOptions(connection, limits),
