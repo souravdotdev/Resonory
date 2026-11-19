@@ -85,6 +85,13 @@
       "when": 1794752892335,
       "tag": "0011_add_tag_origin_with_existing_tags_as_users",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795099496020,
+      "tag": "0012_add_items_processing_created_at_index",
+      "breakpoints": true
     }
   ]
 }
