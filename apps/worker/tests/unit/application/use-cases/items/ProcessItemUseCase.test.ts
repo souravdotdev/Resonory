@@ -755,6 +755,66 @@ describe("ProcessItemUseCase, missing Items", () => {
   });
 });
 
+describe("ProcessItemUseCase, Items that are already Ready", () => {
+  it("leaves a Ready Item alone: no fetch, no write, no Tag Item job", async () => {
+    const { repository, item } = itemsInMemory("https://example.com/page");
+    item.status = "ready";
+    item.type = "article";
+    const fetcher = fetcherAnswering(htmlPage({ "og:title": "A new title" }));
+    const queue = queueRecording();
+    const useCase = useCaseFor(
+      repository,
+      fetcher,
+      oEmbedsFailing(),
+      {},
+      cacheMissing(),
+      undefined,
+      undefined,
+      queue,
+    );
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({ outcome: "already_ready" });
+    expect(fetcher.fetchPage).not.toHaveBeenCalled();
+    expect(repository.markReady).not.toHaveBeenCalled();
+    expect(queue.enqueueTagItem).not.toHaveBeenCalled();
+  });
+
+  it("still runs a Failed Item to Ready", async () => {
+    const { repository, item } = itemsInMemory("https://example.com/page");
+    item.status = "failed";
+    item.type = "link";
+    const queue = queueRecording();
+    const useCase = useCaseFor(
+      repository,
+      fetcherAnswering(htmlPage({ "og:title": "Found at last" })),
+      oEmbedsFailing(),
+      {},
+      cacheMissing(),
+      undefined,
+      undefined,
+      queue,
+    );
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toMatchObject({ outcome: "ready" });
+    expect(item.status).toBe("ready");
+    expect(queue.enqueueTagItem).toHaveBeenCalledOnce();
+  });
+
+  it("still runs a Processing Item to Ready", async () => {
+    const { repository, item } = itemsInMemory("https://example.com/page");
+    const useCase = useCaseFor(repository, fetcherAnswering(htmlPage()));
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toMatchObject({ outcome: "ready" });
+    expect(item.status).toBe("ready");
+  });
+});
+
 describe("ProcessItemUseCase, Thumbnail", () => {
   const PHOTO_URL = "https://cdn.example.com/photos/sunset.png";
   const KEY = keyFor(PHOTO_URL);
@@ -795,7 +855,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
   });
 
   it("overwrites the Thumbnail when the same Item is processed again", async () => {
-    const { repository } = itemsInMemory("https://example.com/sunset");
+    const { repository, item } = itemsInMemory("https://example.com/sunset");
     const { store, objects } = thumbnailsInMemory();
     const useCase = useCaseFor(repository, photo(), undefined, {
       images: imagesAnswering(),
@@ -804,6 +864,8 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     });
 
     await useCase.execute(REF);
+    // A Ready Item is left alone, so this is an Item that is still Processing again.
+    item.status = "processing";
     await useCase.execute(REF);
 
     expect(store.put).toHaveBeenCalledTimes(2);

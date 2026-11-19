@@ -156,6 +156,21 @@ describe("a Process Item job", () => {
     ]);
   });
 
+  it("logs, under a stable key, that an already Ready Item has nothing to process", async () => {
+    const { container, logger } = testContainer(async () => ({ outcome: "already_ready" }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: { event: "item_already_ready" },
+        msg: "Item is already Ready; nothing to process",
+      },
+    ]);
+  });
+
   it("throws without logging, rather than process, an invalid payload", async () => {
     const { container, logger } = testContainer(async () => ({ outcome: "missing" }));
 
