@@ -1,0 +1,1 @@
+CREATE INDEX "items_processing_created_at_idx" ON "items" USING btree ("created_at") WHERE "items"."status" = 'processing';

@@ -1,9 +1,11 @@
 import "reflect-metadata";
 import { StorageClient } from "@supabase/storage-js";
+import type { Queue } from "bullmq";
 import { Container } from "inversify";
 import type { Logger } from "@resonory/logger";
 import { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
+import { SweepStuckItemsUseCase } from "@/application/use-cases/items/SweepStuckItemsUseCase";
 import { bindCommon } from "@/di/commonBindings";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
@@ -26,13 +28,14 @@ import {
   BullMqQueueProvider,
   type ItemTaggingQueue,
 } from "@/infrastructure/queue/BullMqQueueProvider";
+import { itemProcessingQueue } from "@/infrastructure/queue/itemProcessingQueue";
 import { itemTaggingQueue } from "@/infrastructure/queue/itemTaggingQueue";
 import { supabaseStorageEnv } from "@/infrastructure/storage/supabaseEnv";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
 
 /**
  * The processing worker's production container: the shared bindings plus the
- * page fetcher, parsers, Process Item and Fail Item use cases and a producer onto
+ * page fetcher, parsers, Process Item, Fail Item and Sweep Stuck Items use cases and a producer onto
  * the Item tagging queue, with no AI client (see `taggingContainer.ts`).
  * Infrastructure lives for the process's life; use cases are built fresh for each job.
  */
@@ -42,6 +45,10 @@ export function createProcessingContainer(): Container {
   // Built first, so it can be passed into thumbnailStore() below.
   const logger = bindCommon(container, "item-processing-worker");
 
+  // The Item processing queue, held to register the repeating sweep job on it.
+  container
+    .bind<Pick<Queue, "upsertJobScheduler" | "close">>(WORKER_TOKENS.ItemProcessingQueue)
+    .toConstantValue(itemProcessingQueue);
   // The Item tagging queue, produced onto: once an Item is Ready, Processing queues its AI tagging.
   container
     .bind<ItemTaggingQueue>(WORKER_TOKENS.ItemTaggingQueue)
@@ -86,6 +93,10 @@ export function createProcessingContainer(): Container {
   container
     .bind<FailItemUseCase>(WORKER_TOKENS.FailItemUseCase)
     .to(FailItemUseCase)
+    .inTransientScope();
+  container
+    .bind<SweepStuckItemsUseCase>(WORKER_TOKENS.SweepStuckItemsUseCase)
+    .to(SweepStuckItemsUseCase)
     .inTransientScope();
 
   // A future piece of job-processing business logic (e.g. a logging

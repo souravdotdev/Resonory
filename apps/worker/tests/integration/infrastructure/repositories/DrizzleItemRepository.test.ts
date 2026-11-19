@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { items, users } from "@resonory/db/schema";
 import { TAGGING_TEXT_LENGTH } from "@/domain/entities/Item";
@@ -86,6 +87,122 @@ describe("the worker's DrizzleItemRepository against Postgres", () => {
 
       expect(await repository.findTaggable({ itemId, userId: await aUser() })).toBeNull();
       expect(await repository.findTaggable({ itemId: randomUUID(), userId })).toBeNull();
+    });
+  });
+  describe("findProcessingBefore", () => {
+    const MINUTE = 60_000;
+    const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * MINUTE);
+
+    it("finds every User's Items still Processing that were saved before the cutoff, oldest first", async () => {
+      const [first, second] = [await aUser(), await aUser()];
+      const newest = await anItem(first, {
+        status: "processing",
+        type: null,
+        createdAt: minutesAgo(21),
+      });
+      const oldest = await anItem(second, {
+        status: "processing",
+        type: null,
+        createdAt: minutesAgo(40),
+      });
+      // Not stuck: too recent, or already finished.
+      await anItem(first, { status: "processing", type: null, createdAt: minutesAgo(2) });
+      await anItem(first, { status: "ready", type: "article", createdAt: minutesAgo(30) });
+      await anItem(first, { status: "failed", type: "link", createdAt: minutesAgo(30) });
+
+      const found = (await repository.findProcessingBefore(minutesAgo(20), 500)).filter(
+        (item) => item.userId === first || item.userId === second,
+      );
+
+      expect(found.map((item) => item.id)).toEqual([oldest, newest]);
+      expect(found[0]).toEqual({
+        id: oldest,
+        userId: second,
+        sourceUrl: "https://example.com/post",
+        type: null,
+        status: "processing",
+      });
+    });
+
+    it("finds at most `limit` Items, the oldest first, so the rest wait for the next sweep", async () => {
+      // Older than anything another test saves, so these are the oldest in the table.
+      const userId = await aUser();
+      const [oldest, older, old] = [
+        await anItem(userId, { status: "processing", type: null, createdAt: minutesAgo(9000) }),
+        await anItem(userId, { status: "processing", type: null, createdAt: minutesAgo(8000) }),
+        await anItem(userId, { status: "processing", type: null, createdAt: minutesAgo(7000) }),
+      ];
+
+      const found = await repository.findProcessingBefore(minutesAgo(6000), 2);
+
+      expect(found.map((item) => item.id)).toEqual([oldest, older]);
+      expect(found.map((item) => item.id)).not.toContain(old);
+    });
+  });
+
+  describe("the sweep's index", () => {
+    it("is a partial index on created_at, holding only Items still Processing", async () => {
+      const rows = await db.execute<{ indexdef: string }>(
+        sql`SELECT indexdef FROM pg_indexes WHERE tablename = 'items' AND indexname = 'items_processing_created_at_idx'`,
+      );
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.indexdef).toMatch(/\(created_at\) WHERE \(status = 'processing'/);
+    });
+  });
+
+  describe("markFailedIfProcessing", () => {
+    it("marks a Processing Item Failed with the given Item type", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId, { status: "processing", type: null });
+
+      const changed = await repository.markFailedIfProcessing({ itemId, userId }, "link");
+
+      expect(changed).toBe(true);
+      const [row] = await db.select().from(items).where(eq(items.id, itemId));
+      expect(row).toMatchObject({ status: "failed", type: "link" });
+    });
+
+    it("keeps an Item type the Item already has", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId, { status: "processing", type: "video" });
+
+      await repository.markFailedIfProcessing({ itemId, userId }, "video");
+
+      const [row] = await db.select().from(items).where(eq(items.id, itemId));
+      expect(row).toMatchObject({ status: "failed", type: "video" });
+    });
+
+    it.each(["ready", "failed"] as const)(
+      "leaves a %s Item untouched and says so",
+      async (status) => {
+        const userId = await aUser();
+        const itemId = await anItem(userId, {
+          status,
+          type: "article",
+          title: "Already finished",
+        });
+
+        const changed = await repository.markFailedIfProcessing({ itemId, userId }, "link");
+
+        expect(changed).toBe(false);
+        const [row] = await db.select().from(items).where(eq(items.id, itemId));
+        expect(row).toMatchObject({ status, type: "article", title: "Already finished" });
+      },
+    );
+
+    it("never touches another User's Item, or one that doesn't exist", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId, { status: "processing", type: null });
+
+      expect(
+        await repository.markFailedIfProcessing({ itemId, userId: await aUser() }, "link"),
+      ).toBe(false);
+      expect(
+        await repository.markFailedIfProcessing({ itemId: randomUUID(), userId }, "link"),
+      ).toBe(false);
+      const [row] = await db.select().from(items).where(eq(items.id, itemId));
+      expect(row).toMatchObject({ status: "processing", type: null });
     });
   });
 });

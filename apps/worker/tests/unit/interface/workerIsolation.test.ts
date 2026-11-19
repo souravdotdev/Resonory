@@ -9,6 +9,7 @@ import {
   TAG_ITEM_JOB,
 } from "@resonory/shared/schemas/queue";
 import { WORKER_TOKENS } from "@/di/tokens";
+import { workerLimitsEnv } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
 import { createItemTaggingWorker } from "@/interface/itemTaggingWorker";
 import { createRecordingLogger } from "../testLogger";
@@ -27,7 +28,7 @@ const GAVE_UP = "AI tagging gave up; the Item stays Ready without AI Tags";
 type FailedListener = (job: unknown, error: Error) => void;
 
 // Both worker factories over one container, each use case a stand-in.
-function bothWorkers() {
+function bothWorkers(env: NodeJS.ProcessEnv = {}) {
   const processUseCase = { execute: vi.fn(async () => ({})) };
   const failUseCase = { execute: vi.fn(async () => ({})) };
   const tagUseCase = { execute: vi.fn(async () => ({})) };
@@ -44,8 +45,8 @@ function bothWorkers() {
       on: (_event: string, listener: FailedListener) => void failedListeners.set(queue, listener),
     };
   } as never);
-  createItemProcessingWorker(container, { host: "redis" });
-  createItemTaggingWorker(container, { host: "redis" });
+  createItemProcessingWorker(container, { host: "redis" }, workerLimitsEnv(env, "ITEM_PROCESSING"));
+  createItemTaggingWorker(container, { host: "redis" }, workerLimitsEnv(env, "ITEM_TAGGING"));
 
   return {
     processUseCase,
@@ -53,6 +54,8 @@ function bothWorkers() {
     tagUseCase,
     logger,
     queues: vi.mocked(Worker).mock.calls.map(([queue]) => queue),
+    // What each queue's worker was built with.
+    optionsOf: (queue: string) => vi.mocked(Worker).mock.calls.find(([name]) => name === queue)![2],
     // One job on the given queue failing for good.
     failForGood: (queue: string, name: string) =>
       failedListeners.get(queue)!(
@@ -75,6 +78,44 @@ beforeEach(() => {
 });
 
 describe("the two workers", () => {
+  it("are tuned independently: ITEM_TAGGING_* settings leave the processing worker as it was", () => {
+    const { optionsOf } = bothWorkers({
+      ITEM_TAGGING_CONCURRENCY: "4",
+      ITEM_TAGGING_RATE_LIMIT_MAX: "30",
+      ITEM_TAGGING_RATE_LIMIT_WINDOW_MS: "60000",
+      ITEM_TAGGING_LOCK_DURATION_MS: "90000",
+    });
+
+    expect(optionsOf(ITEM_PROCESSING_QUEUE)).toEqual({
+      connection: { host: "redis" },
+      concurrency: 1,
+    });
+    expect(optionsOf(ITEM_TAGGING_QUEUE)).toMatchObject({
+      concurrency: 4,
+      limiter: { max: 30, duration: 60000 },
+      lockDuration: 90000,
+    });
+  });
+
+  it("are tuned independently: ITEM_PROCESSING_* settings leave the tagging worker as it was", () => {
+    const { optionsOf } = bothWorkers({
+      ITEM_PROCESSING_CONCURRENCY: "3",
+      ITEM_PROCESSING_RATE_LIMIT_MAX: "10",
+      ITEM_PROCESSING_RATE_LIMIT_WINDOW_MS: "1000",
+      ITEM_PROCESSING_LOCK_DURATION_MS: "60000",
+    });
+
+    expect(optionsOf(ITEM_TAGGING_QUEUE)).toEqual({
+      connection: { host: "redis" },
+      concurrency: 1,
+    });
+    expect(optionsOf(ITEM_PROCESSING_QUEUE)).toMatchObject({
+      concurrency: 3,
+      limiter: { max: 10, duration: 1000 },
+      lockDuration: 60000,
+    });
+  });
+
   it("each listen on their own queue, and on no other", () => {
     const { queues } = bothWorkers();
 

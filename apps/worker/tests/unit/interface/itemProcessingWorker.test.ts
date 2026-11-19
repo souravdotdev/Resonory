@@ -6,9 +6,13 @@ import { ITEM_PROCESSING_QUEUE, PROCESS_ITEM_JOB } from "@resonory/shared/schema
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import type { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import type { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
+import type { SweepStuckItemsUseCase } from "@/application/use-cases/items/SweepStuckItemsUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
 import { NO_METADATA } from "@/domain/entities/Item";
+import { SWEEP_STUCK_ITEMS_JOB } from "@/infrastructure/queue/stuckItemSweepSchedule";
+import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemProcessingWorker } from "@/interface/itemProcessingWorker";
+import { NO_LIMITS } from "../../support/noLimits";
 import { createRecordingLogger } from "../testLogger";
 
 // BullMQ's Worker would connect to Redis; a stand-in records how the factory builds it.
@@ -44,13 +48,18 @@ function processingWorker(
     thumbnailKey: null,
     text: null,
   },
+  limits: WorkerLimits = NO_LIMITS,
 ) {
   const processUseCase = { execute: vi.fn(async () => result) };
   const failUseCase = {
     execute: vi.fn(async () => ({ outcome: "failed" as const, type: "link" as const })),
   };
+  const sweepUseCase = { execute: vi.fn(async () => ({ ended: 0, errors: [] })) };
   const logger = createRecordingLogger();
   const container = new Container();
+  container
+    .bind<Pick<SweepStuckItemsUseCase, "execute">>(WORKER_TOKENS.SweepStuckItemsUseCase)
+    .toConstantValue(sweepUseCase);
   container
     .bind<Pick<ProcessItemUseCase, "execute">>(WORKER_TOKENS.ProcessItemUseCase)
     .toConstantValue(processUseCase);
@@ -63,12 +72,13 @@ function processingWorker(
   vi.mocked(Worker).mockImplementation(function () {
     return { on: (event: string, listener: FailedListener) => void listeners.set(event, listener) };
   } as never);
-  createItemProcessingWorker(container, { host: "redis" });
+  createItemProcessingWorker(container, { host: "redis" }, limits);
 
   const [queue, processor, options] = vi.mocked(Worker).mock.calls[0]!;
   return {
     processUseCase,
     failUseCase,
+    sweepUseCase,
     logger,
     queue,
     options,
@@ -80,6 +90,13 @@ function processingWorker(
 // A Process Item job as the worker hands it over, whose data rewrites are recorded.
 const processJob = (data: unknown = { itemId: ITEM_ID, userId: USER_ID }): ProcessJob => ({
   name: PROCESS_ITEM_JOB,
+  data,
+  updateData: vi.fn(async (_data: unknown) => {}),
+});
+
+// The repeating sweep job, as the scheduler adds it to the queue.
+const sweepJob = (data: unknown = { stuckAfterMs: 600_000 }): ProcessJob => ({
+  name: SWEEP_STUCK_ITEMS_JOB,
   data,
   updateData: vi.fn(async (_data: unknown) => {}),
 });
@@ -107,7 +124,35 @@ describe("the processing worker", () => {
     const worker = processingWorker();
 
     expect(worker.queue).toBe(ITEM_PROCESSING_QUEUE);
+  });
+
+  it("runs one job at a time, with no limiter and BullMQ's lock duration, when nothing is tuned", () => {
+    const worker = processingWorker();
+
     expect(worker.options).toEqual({ connection: { host: "redis" }, concurrency: 1 });
+    expect(worker.options).not.toHaveProperty("limiter");
+    expect(worker.options).not.toHaveProperty("lockDuration");
+  });
+
+  it("runs as many jobs at once as its concurrency says", () => {
+    const worker = processingWorker(undefined, { ...NO_LIMITS, concurrency: 5 });
+
+    expect(worker.options).toMatchObject({ concurrency: 5 });
+  });
+
+  it("starts at most max jobs per window when it has a rate limit", () => {
+    const worker = processingWorker(undefined, {
+      ...NO_LIMITS,
+      limiter: { max: 10, duration: 1000 },
+    });
+
+    expect(worker.options).toMatchObject({ limiter: { max: 10, duration: 1000 } });
+  });
+
+  it("holds a job's lock for its lock duration", () => {
+    const worker = processingWorker(undefined, { ...NO_LIMITS, lockDuration: 120000 });
+
+    expect(worker.options).toMatchObject({ lockDuration: 120000 });
   });
 
   it("runs a valid Process Item job's Processing with its Item and User", async () => {
@@ -119,6 +164,84 @@ describe("the processing worker", () => {
       itemId: ITEM_ID,
       userId: USER_ID,
     });
+  });
+
+  it("runs the stuck-Item sweep, not Processing, for a sweep job", async () => {
+    const worker = processingWorker();
+
+    await worker.run(sweepJob());
+
+    expect(worker.sweepUseCase.execute).toHaveBeenCalledExactlyOnceWith({ stuckAfterMs: 600_000 });
+    expect(worker.processUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("runs no sweep for a Process Item job", async () => {
+    const worker = processingWorker();
+
+    await worker.run(processJob());
+
+    expect(worker.sweepUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("fails a job with a name it doesn't know without retrying it, running nothing", async () => {
+    const worker = processingWorker();
+
+    await expect(worker.run({ ...processJob(), name: "tag-item" })).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(worker.processUseCase.execute).not.toHaveBeenCalled();
+    expect(worker.sweepUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("changes no Item when a sweep job fails for good, only logging the failure", async () => {
+    const worker = processingWorker();
+
+    worker.fail(
+      { ...sweepJob(), id: "7", attemptsMade: 1, opts: { attempts: 1 }, finishedOn: FINISHED_ON },
+      new Error("Postgres is down"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
+    expect(worker.logger.logs[0]).toMatchObject({ level: "error", msg: "job failed" });
+  });
+
+  it("goes by the job's name, not its data, to leave Items alone when a sweep job fails for good", async () => {
+    const worker = processingWorker();
+
+    // Data that would parse as a Process Item payload: only the name says it is a sweep.
+    worker.fail(
+      {
+        ...sweepJob({ itemId: ITEM_ID, userId: USER_ID }),
+        id: "7",
+        attemptsMade: 1,
+        opts: { attempts: 1 },
+        finishedOn: FINISHED_ON,
+      },
+      new Error("Postgres is down"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("changes no Item when a job with an unknown name fails for good", async () => {
+    const worker = processingWorker();
+
+    worker.fail(
+      {
+        ...processJob(),
+        name: "tag-item",
+        id: "8",
+        attemptsMade: 1,
+        opts: { attempts: 1 },
+        finishedOn: FINISHED_ON,
+      },
+      new UnrecoverableError("Unknown job name"),
+    );
+    await vi.waitFor(() => expect(worker.logger.logs).not.toHaveLength(0));
+
+    expect(worker.failUseCase.execute).not.toHaveBeenCalled();
   });
 
   it("drops keys a Process Item payload doesn't have", async () => {

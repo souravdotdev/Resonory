@@ -178,11 +178,11 @@ apps/worker/src/
                         itemTypeFromJsonLd.ts, itemTypeFromOpenGraph.ts, itemTypeFromTwitterCard.ts,
                         oEmbed.ts (which endpoint to ask, oEmbed types), pageMetadata.ts,
                         parsedUrl.ts, collapseWhitespace.ts, itemText.ts (an Item's Text: normalised,
-                        capped), tagName.ts and tagLimits.ts (copies of the API's), aiTagNames.ts
+                        capped), failedItemType.ts (the Item type a Failed Item keeps: its own, or a Link), tagName.ts and tagLimits.ts (copies of the API's), aiTagNames.ts
                         (cleans the model's answer) (pure functions)
   application/
-    use-cases/items/    ProcessItemUseCase, FailItemUseCase, TagItemUseCase
-    dto/items/          ProcessItemResult.ts, FailItemResult.ts, TagItemResult.ts
+    use-cases/items/    ProcessItemUseCase, FailItemUseCase, SweepStuckItemsUseCase, TagItemUseCase
+    dto/items/          ProcessItemResult.ts, FailItemResult.ts, SweepStuckItemsResult.ts, TagItemResult.ts
   infrastructure/
     database/           Database.ts, db.ts
     http/               SafeUrlFetcher.ts, publicAddress.ts (the guarded fetch), readBody.ts (bounded body
@@ -200,6 +200,13 @@ apps/worker/src/
     repositories/       DrizzleItemRepository.ts, DrizzleTagRepository.ts (applyAsAi: Item lock, then
                         User lock, one transaction), ownedBy.ts (the Item-scoped `where` both share)
     queue/              BullMqQueueProvider.ts, itemTaggingQueue.ts (the Item tagging queue, produced onto)
+                        workerLimitsEnv.ts (WorkerLimits, and workerLimitsEnv: each queue's
+                        <PREFIX>_CONCURRENCY / _RATE_LIMIT_* / _LOCK_DURATION_MS; describeWorkerLimits,
+                        the boot log field), itemProcessingQueue.ts (the Item processing queue, held to
+                        register the sweep), stuckItemSweepEnv.ts (ITEM_PROCESSING_STUCK_AFTER_MS /
+                        _SWEEP_INTERVAL_MS) and stuckItemSweepSchedule.ts (the sweep job's name and data,
+                        and scheduleStuckItemSweep), envSettings.ts (the positive-integer parsing both env
+                        readers share)
     ai/                 OpenAiCompatibleTagSuggester.ts (the `openai` client, JSON mode), aiTaggingEnv.ts
                         (the optional AI_TAGGING_* trio; no key, no suggester is bound)
   interface/
@@ -207,8 +214,10 @@ apps/worker/src/
                         its `failed` handler (the final failure marks the Item Failed)
     itemTaggingWorker.ts     createItemTaggingWorker (the BullMQ Worker on the Item tagging queue) and
                         its `failed` handler (the final failure only logs)
+    workerOptions.ts         workerOptions, the BullMQ `Worker` options both factories build from `WorkerLimits`
     onJobFailed.ts           handleFailedJob, the `failed` handler skeleton both workers share (logging, final-failure detection)
     processors/         processItem.processor.ts, processItemFailed.processor.ts,
+                        sweepStuckItems.processor.ts (the repeating sweep job),
                         tagItem.processor.ts, tagItemFailed.processor.ts (only logs: the Item stays Ready)
 ```
 
@@ -221,7 +230,8 @@ apps/worker/src/
 | Queue names    | n/a                           | constants from a shared queue entry point, no typed-out strings |
 
 - **The API enqueues through a port.** `SaveItemUseCase` depends on `IQueueProvider` in the domain, and `BullMqQueueProvider` in infrastructure implements it. The port takes its own `ProcessItemRequest`; the adapter maps it to the shared job payload. The use case never imports `bullmq`; the lint guard blocks it. The worker enqueues the same way: `ProcessItemUseCase` queues AI tagging through its own `IQueueProvider` (`enqueueTagItem`), implemented by its own `BullMqQueueProvider`.
-- **One worker per queue, one job type per queue.** `interface/itemProcessingWorker.ts` creates the BullMQ `Worker` for the Item processing queue and `interface/itemTaggingWorker.ts` the one for the Item tagging queue; each is started by its own entry point as its own process, with its own composition root. A queue carries one job name, so there is no job-name switch or unknown-name guard. Each file also holds its worker's `failed` handler, which logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs that queue's final-failure step: `processItemFailed` for Processing (a use case like any processor, marking the Item Failed), `tagItemFailed` for tagging (it only logs). A failure in one worker touches nothing the other owns (see [Items ADR 0005](./contexts/items/adr/0005-processing-and-ai-tagging-have-their-own-queues-and-worker-processes.md)).
+- **One worker per queue.** `interface/itemProcessingWorker.ts` creates the BullMQ `Worker` for the Item processing queue and `interface/itemTaggingWorker.ts` the one for the Item tagging queue; each is started by its own entry point as its own process, with its own composition root. The Item tagging queue carries one job name, so its worker has no job-name switch. The Item processing queue also carries the repeating stuck-Item sweep job (`sweep-stuck-items`), so its worker switches on the job name (Process Item, sweep) and throws `UnrecoverableError` for a name it doesn't know. Each file also holds its worker's `failed` handler, which logs each failed attempt and, once BullMQ has no attempt left (`job.finishedOn` is set: the last retry, or a stall), runs that queue's final-failure step: `processItemFailed` for Processing (a use case like any processor, marking the Item Failed; the handler runs it for a Process Item job only, by the job's name, so a failed sweep job or an unknown job only logs), `tagItemFailed` for tagging (it only logs). A failure in one worker touches nothing the other owns (see [Items ADR 0005](./contexts/items/adr/0005-processing-and-ai-tagging-have-their-own-queues-and-worker-processes.md)).
+- **Each worker's limits come from its own environment prefix.** `infrastructure/queue/workerLimitsEnv.ts` reads `ITEM_PROCESSING_*` and `ITEM_TAGGING_*` once in the entry point, and the `interface/` factories take the plain `WorkerLimits` shape (a type-only import from `infrastructure/queue/workerLimitsEnv`). That import direction is allowed: `interface/` and `infrastructure/` are the same outer tier, and only the type crosses, so a factory never reads `process.env`.
 - **A processor is a thin controller.** It lives in `interface/processors/`. It parses `job.data` with the payload's zod schema (an invalid payload throws `UnrecoverableError`), maps it to the use case's input, and calls `container.get<XUseCase>(WORKER_TOKENS.XUseCase).execute(input)`. Errors from the use case pass through, so BullMQ retries.
 - **The worker has its own `di/tokens.ts` and one container per worker process.** The processing container (`di/processingContainer.ts`) builds the page fetcher, parsers, Process Item and Fail Item use cases and a producer onto the Item tagging queue, with no AI client; the tagging container (`di/taggingContainer.ts`) builds the database access, the Tag Item use case and the tag suggester, with no fetcher. What they share (logger, Redis, repositories) lives in `di/commonBindings.ts`, so each worker boots with only the dependencies it uses.
 - **Two test seams, as in the API.** The processor seam drives a worker factory (`createItemProcessingWorker`, `createItemTaggingWorker`) with fake jobs and a test container whose use case is a stand-in; use cases are tested with `new XUseCase(fake)`.

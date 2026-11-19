@@ -79,6 +79,10 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * not) has none either, even one that carries captions. Missing Text never
  * fails Processing.
  *
+ * An Item that is already Ready is left alone: nothing is fetched or written
+ * and no Tag Item job is queued. A Processing or Failed Item runs as usual,
+ * so a Failed Item that a late job finishes becomes Ready.
+ *
  * Once the Item is Ready, its AI tagging is queued as a job of its own
  * (`tag-item`), on every path that reaches Ready, so a slow or failing model
  * never holds Ready up. A Failed Item retried to Ready is queued again. If the
@@ -107,6 +111,8 @@ export class ProcessItemUseCase {
   async execute(ref: ItemRef): Promise<ProcessItemResult> {
     const item = await this.items.findById(ref);
     if (!item) return { outcome: "missing" };
+    // A job that runs again for a finished Item (a re-run after a stall) has nothing left to do.
+    if (item.status === "ready") return { outcome: "already_ready" };
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
     // Before the cache short-circuit below: Text is this Item's own, never cached.

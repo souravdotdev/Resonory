@@ -51,6 +51,9 @@ export async function processItem(container: Container, data: unknown): Promise<
       },
       "Item is Ready",
     );
+  } else if (result.outcome === "already_ready") {
+    // `event` is a stable key to count how often a job finds its Item already Ready.
+    logger.info({ event: "item_already_ready" }, "Item is already Ready; nothing to process");
   } else {
     logger.info({}, "Item no longer exists; nothing to process");
   }

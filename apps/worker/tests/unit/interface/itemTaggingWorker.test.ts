@@ -6,7 +6,9 @@ import { ITEM_TAGGING_QUEUE, TAG_ITEM_JOB } from "@resonory/shared/schemas/queue
 import type { TagItemResult } from "@/application/dto/items/TagItemResult";
 import type { TagItemUseCase } from "@/application/use-cases/items/TagItemUseCase";
 import { WORKER_TOKENS } from "@/di/tokens";
+import type { WorkerLimits } from "@/infrastructure/queue/workerLimitsEnv";
 import { createItemTaggingWorker } from "@/interface/itemTaggingWorker";
+import { NO_LIMITS } from "../../support/noLimits";
 import { createRecordingLogger } from "../testLogger";
 
 // BullMQ's Worker would connect to Redis; a stand-in records how the factory builds it.
@@ -35,6 +37,7 @@ type FailedListener = (job: FailedJob | undefined, error: Error) => void;
 // The tagging worker as the factory builds it, over a Tag Item use case stand-in.
 function taggingWorker(
   result: TagItemResult = { outcome: "tagged", suggested: ["a"], applied: ["a"] },
+  limits: WorkerLimits = NO_LIMITS,
 ) {
   const useCase = { execute: vi.fn(async () => result) };
   const logger = createRecordingLogger();
@@ -48,7 +51,7 @@ function taggingWorker(
   vi.mocked(Worker).mockImplementation(function () {
     return { on: (event: string, listener: FailedListener) => void listeners.set(event, listener) };
   } as never);
-  createItemTaggingWorker(container, { host: "redis" });
+  createItemTaggingWorker(container, { host: "redis" }, limits);
 
   const [queue, processor, options] = vi.mocked(Worker).mock.calls[0]!;
   return {
@@ -85,7 +88,35 @@ describe("the tagging worker", () => {
     const worker = taggingWorker();
 
     expect(worker.queue).toBe(ITEM_TAGGING_QUEUE);
+  });
+
+  it("runs one job at a time, with no limiter and BullMQ's lock duration, when nothing is tuned", () => {
+    const worker = taggingWorker();
+
     expect(worker.options).toEqual({ connection: { host: "redis" }, concurrency: 1 });
+    expect(worker.options).not.toHaveProperty("limiter");
+    expect(worker.options).not.toHaveProperty("lockDuration");
+  });
+
+  it("runs as many jobs at once as its concurrency says", () => {
+    const worker = taggingWorker(undefined, { ...NO_LIMITS, concurrency: 5 });
+
+    expect(worker.options).toMatchObject({ concurrency: 5 });
+  });
+
+  it("starts at most max jobs per window when it has a rate limit", () => {
+    const worker = taggingWorker(undefined, {
+      ...NO_LIMITS,
+      limiter: { max: 30, duration: 60000 },
+    });
+
+    expect(worker.options).toMatchObject({ limiter: { max: 30, duration: 60000 } });
+  });
+
+  it("holds a job's lock for its lock duration", () => {
+    const worker = taggingWorker(undefined, { ...NO_LIMITS, lockDuration: 120000 });
+
+    expect(worker.options).toMatchObject({ lockDuration: 120000 });
   });
 
   it("tags the Item of a valid Tag Item job, scoped to its User", async () => {
