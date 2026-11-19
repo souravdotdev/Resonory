@@ -4,6 +4,7 @@ import { Container } from "inversify";
 import type { Logger } from "@resonory/logger";
 import { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
+import { SweepStuckItemsUseCase } from "@/application/use-cases/items/SweepStuckItemsUseCase";
 import { bindCommon } from "@/di/commonBindings";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
@@ -32,7 +33,7 @@ import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbna
 
 /**
  * The processing worker's production container: the shared bindings plus the
- * page fetcher, parsers, Process Item and Fail Item use cases and a producer onto
+ * page fetcher, parsers, Process Item, Fail Item and Sweep Stuck Items use cases and a producer onto
  * the Item tagging queue, with no AI client (see `taggingContainer.ts`).
  * Infrastructure lives for the process's life; use cases are built fresh for each job.
  */
@@ -86,6 +87,10 @@ export function createProcessingContainer(): Container {
   container
     .bind<FailItemUseCase>(WORKER_TOKENS.FailItemUseCase)
     .to(FailItemUseCase)
+    .inTransientScope();
+  container
+    .bind<SweepStuckItemsUseCase>(WORKER_TOKENS.SweepStuckItemsUseCase)
+    .to(SweepStuckItemsUseCase)
     .inTransientScope();
 
   // A future piece of job-processing business logic (e.g. a logging

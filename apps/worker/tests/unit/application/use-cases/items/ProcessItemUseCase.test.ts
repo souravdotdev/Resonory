@@ -59,6 +59,8 @@ function itemsInMemory(sourceUrl: string) {
     }),
     markFailed: vi.fn(async () => {}),
     findTaggable: vi.fn(async () => null),
+    findProcessingBefore: vi.fn(async () => []),
+    markFailedIfProcessing: vi.fn(async () => false),
   };
   return { repository, item };
 }

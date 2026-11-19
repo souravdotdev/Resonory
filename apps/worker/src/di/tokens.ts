@@ -42,6 +42,8 @@ export const WORKER_TOKENS = {
   ProcessItemUseCase: Symbol("ProcessItemUseCase"),
   /** `FailItemUseCase`: what a Process Item job's last failed attempt runs. */
   FailItemUseCase: Symbol("FailItemUseCase"),
+  /** `SweepStuckItemsUseCase`: what the processing worker's repeating sweep job runs. */
+  SweepStuckItemsUseCase: Symbol("SweepStuckItemsUseCase"),
   /** `TagItemUseCase`: what a Tag Item job runs. */
   TagItemUseCase: Symbol("TagItemUseCase"),
 } as const;

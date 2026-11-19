@@ -27,6 +27,8 @@ function itemsHolding(item: TaggableItem | null = ARTICLE) {
     findTaggable: vi.fn(async (ref: ItemRef) => (item && owns(ref) ? { ...item } : null)),
     markReady: vi.fn(async () => {}),
     markFailed: vi.fn(async () => {}),
+    findProcessingBefore: vi.fn(async () => []),
+    markFailedIfProcessing: vi.fn(async () => false),
   } satisfies IItemRepository;
 }
 

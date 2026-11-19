@@ -27,6 +27,8 @@ function itemsInMemory(type: ItemType | null = null) {
         item.type = failedType;
       }
     }),
+    findProcessingBefore: vi.fn(async () => []),
+    markFailedIfProcessing: vi.fn(async () => false),
     findTaggable: vi.fn(async () => null),
   };
   return { repository, item };
