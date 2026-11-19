@@ -202,7 +202,11 @@ apps/worker/src/
     queue/              BullMqQueueProvider.ts, itemTaggingQueue.ts (the Item tagging queue, produced onto)
                         workerLimitsEnv.ts (WorkerLimits, and workerLimitsEnv: each queue's
                         <PREFIX>_CONCURRENCY / _RATE_LIMIT_* / _LOCK_DURATION_MS; describeWorkerLimits,
-                        the boot log field)
+                        the boot log field), itemProcessingQueue.ts (the Item processing queue, held to
+                        register the sweep), stuckItemSweepEnv.ts (ITEM_PROCESSING_STUCK_AFTER_MS /
+                        _SWEEP_INTERVAL_MS) and stuckItemSweepSchedule.ts (the sweep job's name and data,
+                        and scheduleStuckItemSweep), envSettings.ts (the positive-integer parsing both env
+                        readers share)
     ai/                 OpenAiCompatibleTagSuggester.ts (the `openai` client, JSON mode), aiTaggingEnv.ts
                         (the optional AI_TAGGING_* trio; no key, no suggester is bound)
   interface/
@@ -213,6 +217,7 @@ apps/worker/src/
     workerOptions.ts         workerOptions, the BullMQ `Worker` options both factories build from `WorkerLimits`
     onJobFailed.ts           handleFailedJob, the `failed` handler skeleton both workers share (logging, final-failure detection)
     processors/         processItem.processor.ts, processItemFailed.processor.ts,
+                        sweepStuckItems.processor.ts (the repeating sweep job),
                         tagItem.processor.ts, tagItemFailed.processor.ts (only logs: the Item stays Ready)
 ```
 
