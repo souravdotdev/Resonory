@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  parseWorkerEnv,
+  positiveInteger,
+  unsetWhenEmpty,
+} from "@/infrastructure/queue/envSettings";
 
 /** What a worker's BullMQ `Worker` is built with, beyond its queue and connection. */
 export interface WorkerLimits {
@@ -21,17 +26,6 @@ export function describeWorkerLimits(limits: WorkerLimits) {
 
 /** Today's behaviour: one job at a time. */
 const DEFAULT_CONCURRENCY = 1;
-
-// An optional setting whose empty value (`ITEM_TAGGING_CONCURRENCY=` in a .env file) counts as unset.
-const unsetWhenEmpty = <T extends z.ZodType>(value: T) =>
-  z.preprocess((raw) => (raw === "" ? undefined : raw), value.optional());
-
-// A positive whole number in plain digits ("1.5", "10s", "0x10" and " " are mistakes).
-const positiveInteger = z
-  .string()
-  .regex(/^\d+$/, "must be a positive whole number")
-  .transform(Number)
-  .refine((value) => Number.isSafeInteger(value) && value > 0, "must be a positive whole number");
 
 /**
  * A queue's worker settings from the environment, for its `prefix` (for example
@@ -74,18 +68,12 @@ export function workerLimitsEnv(env: NodeJS.ProcessEnv, prefix: string): WorkerL
       }
     });
 
-  const parsed = schema.safeParse(env);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
-      .join("\n");
-    throw new Error(`Invalid environment variables in the worker:\n${issues}`);
-  }
-  const max = parsed.data[names.max];
-  const window = parsed.data[names.window];
+  const parsed = parseWorkerEnv(schema, env);
+  const max = parsed[names.max];
+  const window = parsed[names.window];
   return {
-    concurrency: parsed.data[names.concurrency] ?? DEFAULT_CONCURRENCY,
+    concurrency: parsed[names.concurrency] ?? DEFAULT_CONCURRENCY,
     limiter: max !== undefined && window !== undefined ? { max, duration: window } : undefined,
-    lockDuration: parsed.data[names.lockDuration],
+    lockDuration: parsed[names.lockDuration],
   };
 }
