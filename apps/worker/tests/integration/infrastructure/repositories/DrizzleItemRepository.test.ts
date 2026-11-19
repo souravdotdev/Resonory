@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { items, users } from "@resonory/db/schema";
 import { TAGGING_TEXT_LENGTH } from "@/domain/entities/Item";
@@ -137,6 +137,17 @@ describe("the worker's DrizzleItemRepository against Postgres", () => {
 
       expect(found.map((item) => item.id)).toEqual([oldest, older]);
       expect(found.map((item) => item.id)).not.toContain(old);
+    });
+  });
+
+  describe("the sweep's index", () => {
+    it("is a partial index on created_at, holding only Items still Processing", async () => {
+      const rows = await db.execute<{ indexdef: string }>(
+        sql`SELECT indexdef FROM pg_indexes WHERE tablename = 'items' AND indexname = 'items_processing_created_at_idx'`,
+      );
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.indexdef).toMatch(/\(created_at\) WHERE \(status = 'processing'/);
     });
   });
 
