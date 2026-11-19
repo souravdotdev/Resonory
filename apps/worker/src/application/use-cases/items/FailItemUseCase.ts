@@ -3,6 +3,7 @@ import type { FailItemResult } from "@/application/dto/items/FailItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
 import type { ItemRef } from "@/domain/entities/Item";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
+import { failedItemType } from "@/domain/rules/failedItemType";
 
 /**
  * Gives up an Item's Processing after its last attempt: marks it Failed. An
@@ -17,7 +18,7 @@ export class FailItemUseCase {
     const item = await this.items.findById(ref);
     if (!item) return { outcome: "missing" };
 
-    const type = item.type ?? "link";
+    const type = failedItemType(item.type);
     await this.items.markFailed(ref, type);
     return { outcome: "failed", type };
   }
