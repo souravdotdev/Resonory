@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { StorageClient } from "@supabase/storage-js";
+import type { Queue } from "bullmq";
 import { Container } from "inversify";
 import type { Logger } from "@resonory/logger";
 import { FailItemUseCase } from "@/application/use-cases/items/FailItemUseCase";
@@ -27,6 +28,7 @@ import {
   BullMqQueueProvider,
   type ItemTaggingQueue,
 } from "@/infrastructure/queue/BullMqQueueProvider";
+import { itemProcessingQueue } from "@/infrastructure/queue/itemProcessingQueue";
 import { itemTaggingQueue } from "@/infrastructure/queue/itemTaggingQueue";
 import { supabaseStorageEnv } from "@/infrastructure/storage/supabaseEnv";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
@@ -43,6 +45,10 @@ export function createProcessingContainer(): Container {
   // Built first, so it can be passed into thumbnailStore() below.
   const logger = bindCommon(container, "item-processing-worker");
 
+  // The Item processing queue, held to register the repeating sweep job on it.
+  container
+    .bind<Pick<Queue, "upsertJobScheduler" | "close">>(WORKER_TOKENS.ItemProcessingQueue)
+    .toConstantValue(itemProcessingQueue);
   // The Item tagging queue, produced onto: once an Item is Ready, Processing queues its AI tagging.
   container
     .bind<ItemTaggingQueue>(WORKER_TOKENS.ItemTaggingQueue)

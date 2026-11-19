@@ -32,6 +32,8 @@ export const WORKER_TOKENS = {
   TextExtractor: Symbol("ITextExtractor"),
   /** The BullMQ Item tagging queue the processing worker produces onto and closes on shutdown, as `ItemTaggingQueue`. */
   ItemTaggingQueue: Symbol("ItemTaggingQueue"),
+  /** The BullMQ Item processing queue the processing worker registers its sweep job on and closes on shutdown. */
+  ItemProcessingQueue: Symbol("ItemProcessingQueue"),
   /** `IQueueProvider`: queues the worker's follow-up jobs (AI tagging) on the Item tagging queue. */
   QueueProvider: Symbol("IQueueProvider"),
   /** `ITagRepository`: the Tags AI tagging reads and puts on Items. */
