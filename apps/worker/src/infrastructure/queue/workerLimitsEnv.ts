@@ -24,6 +24,9 @@ export function describeWorkerLimits(limits: WorkerLimits) {
   };
 }
 
+/** BullMQ's own lock duration (ms), which a worker keeps when `<prefix>_LOCK_DURATION_MS` is unset. */
+export const BULLMQ_DEFAULT_LOCK_DURATION_MS = 30_000;
+
 /** Today's behaviour: one job at a time. */
 const DEFAULT_CONCURRENCY = 1;
 

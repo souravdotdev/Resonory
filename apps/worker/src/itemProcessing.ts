@@ -7,6 +7,7 @@ import { describeError, type Logger } from "@resonory/logger";
 import { createProcessingContainer } from "@/di/processingContainer";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
+  assertStuckAfterOutlastsLock,
   describeStuckItemSweep,
   stuckItemSweepEnv,
 } from "@/infrastructure/queue/stuckItemSweepEnv";
@@ -22,6 +23,8 @@ import { startWorker } from "@/startWorker";
 // An invalid ITEM_PROCESSING_* value stops the worker here, before it connects to anything.
 const limits = workerLimitsEnv(process.env, "ITEM_PROCESSING");
 const sweep = stuckItemSweepEnv(process.env);
+// A threshold the lock duration could outlast would have the sweep fail Items still being worked on.
+assertStuckAfterOutlastsLock(sweep, limits);
 const container = createProcessingContainer();
 const logger = container.get<Logger>(WORKER_TOKENS.Logger);
 const redis = container.get<Redis>(WORKER_TOKENS.RedisConnection);

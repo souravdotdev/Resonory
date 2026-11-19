@@ -4,6 +4,10 @@ import {
   positiveInteger,
   unsetWhenEmpty,
 } from "@/infrastructure/queue/envSettings";
+import {
+  BULLMQ_DEFAULT_LOCK_DURATION_MS,
+  type WorkerLimits,
+} from "@/infrastructure/queue/workerLimitsEnv";
 
 /** How the processing worker finds Items stuck in Processing. */
 export interface StuckItemSweepSettings {
@@ -45,4 +49,27 @@ export function stuckItemSweepEnv(env: NodeJS.ProcessEnv): StuckItemSweepSetting
 /** `settings` as a boot log field. */
 export function describeStuckItemSweep({ stuckAfterMs, intervalMs }: StuckItemSweepSettings) {
   return { stuckAfterMs, sweepIntervalMs: intervalMs };
+}
+
+/**
+ * The two waits between a Process Item job's three attempts (5 s, then 10 s),
+ * as the API's queue provider sets them. A job being retried is still alive, so
+ * the sweep must wait for them too.
+ */
+const RETRY_BACKOFF_MS = 5_000 + 10_000;
+
+/**
+ * Refuses a threshold at or below the lock duration plus the retry backoff: the
+ * sweep would then fail an Item whose job is still running or being retried. Throws
+ * like an invalid variable, naming both, so a bad pair stops the worker at startup.
+ */
+export function assertStuckAfterOutlastsLock(
+  { stuckAfterMs }: StuckItemSweepSettings,
+  { lockDuration }: Pick<WorkerLimits, "lockDuration">,
+): void {
+  const lock = lockDuration ?? BULLMQ_DEFAULT_LOCK_DURATION_MS;
+  if (stuckAfterMs > lock + RETRY_BACKOFF_MS) return;
+  throw new Error(
+    `Invalid environment variables in the worker:\n  - ${STUCK_AFTER}: ${stuckAfterMs} must be greater than ITEM_PROCESSING_LOCK_DURATION_MS (${lock}) plus the ${RETRY_BACKOFF_MS} ms of retry backoff`,
+  );
 }
