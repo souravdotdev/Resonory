@@ -178,11 +178,11 @@ apps/worker/src/
                         itemTypeFromJsonLd.ts, itemTypeFromOpenGraph.ts, itemTypeFromTwitterCard.ts,
                         oEmbed.ts (which endpoint to ask, oEmbed types), pageMetadata.ts,
                         parsedUrl.ts, collapseWhitespace.ts, itemText.ts (an Item's Text: normalised,
-                        capped), tagName.ts and tagLimits.ts (copies of the API's), aiTagNames.ts
+                        capped), failedItemType.ts (the Item type a Failed Item keeps: its own, or a Link), tagName.ts and tagLimits.ts (copies of the API's), aiTagNames.ts
                         (cleans the model's answer) (pure functions)
   application/
-    use-cases/items/    ProcessItemUseCase, FailItemUseCase, TagItemUseCase
-    dto/items/          ProcessItemResult.ts, FailItemResult.ts, TagItemResult.ts
+    use-cases/items/    ProcessItemUseCase, FailItemUseCase, SweepStuckItemsUseCase, TagItemUseCase
+    dto/items/          ProcessItemResult.ts, FailItemResult.ts, SweepStuckItemsResult.ts, TagItemResult.ts
   infrastructure/
     database/           Database.ts, db.ts
     http/               SafeUrlFetcher.ts, publicAddress.ts (the guarded fetch), readBody.ts (bounded body
