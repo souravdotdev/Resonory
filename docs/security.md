@@ -10,6 +10,8 @@ Originally registered with `{ origin: true }`, which reflects _any_ requesting o
 
 ## Authentication
 
+Diagram: [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 Two independent ways to prove who's asking, both resolved by the identical `getSession({ headers })` call (`BetterAuthSessionProvider` → `ResolveSignedInUserUseCase`) — there is no separate code path for either, so every session-authenticated route (`POST /items`, `GET /me`, …) accepts both for free:
 
 - **Session cookie.** The web app's normal signed-in state, set after `/api/auth/sign-in/social` (Google) completes. See [`POST /items`](./api.md#post-items) and [CORS](#cors) above for how it crosses origins.

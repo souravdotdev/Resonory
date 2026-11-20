@@ -4,6 +4,8 @@ How `apps/extension` works: a Chrome extension (built with [WXT](https://wxt.dev
 
 ## In one picture
 
+Diagram: [Extension capture](./diagrams/extension-capture.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 ```mermaid
 sequenceDiagram
     actor User
