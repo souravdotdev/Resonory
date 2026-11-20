@@ -19,3 +19,13 @@ Reference docs for the `resonory` monorepo, covering what's been set up and why.
 - [Testing](./testing.md) — Vitest setup, what's tested and why, and the fakes-over-mocking-libraries convention
 
 Each file stands on its own — start with whichever is relevant, or read [Architecture](./architecture.md) first for the full-picture view.
+
+## Diagrams
+
+Every diagram in `docs/diagrams/` follows these conventions:
+
+- **Current state only.** A diagram shows the code as it is today. A partly built flow shows only its built part; nothing planned is drawn.
+- **Colors by context.** Auth is blue, Items is green and Waitlist is purple. Apps and packages that span several contexts are white, infrastructure and external services are neutral grey, and notes and decisions are yellow. System-level diagrams carry a small legend.
+- **Gaps and failures are red.** A gap, meaning something called that doesn't exist, is a red dashed arrow. An error or failure path is a solid red arrow.
+- **Glossary terms.** Labels use the terms from the [glossaries](../GLOSSARY-MAP.md); code names appear only as secondary text.
+- **Editable files.** Each diagram is an Excalidraw scene (`.excalidraw`). Open it in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension, edit it, and save it back under the same kebab-case name.
