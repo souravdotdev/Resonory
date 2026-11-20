@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Database ER](./diagrams/database-er.excalidraw): every table with its keys, unique constraints and domain columns, the four enums, and how the tables link
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
