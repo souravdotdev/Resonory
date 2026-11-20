@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Item lifecycle](./diagrams/item-lifecycle.excalidraw): how the processing worker moves an Item between Processing, Ready and Failed, including retries, the stuck-Item sweep and late jobs
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
