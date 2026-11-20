@@ -4,6 +4,8 @@ Diagram: [System context](./diagrams/system-context.excalidraw) (open in [excali
 
 ## Monorepo layout
 
+Diagram: [Workspace dependencies](./diagrams/workspace-dependencies.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 Managed with [pnpm workspaces](https://pnpm.io/workspaces) + [Turborepo](https://turborepo.com). Two top-level groups:
 
 ```

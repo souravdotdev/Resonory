@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Workspace dependencies](./diagrams/workspace-dependencies.excalidraw): which apps depend on which `@resonory/*` packages, at runtime and dev-only
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
