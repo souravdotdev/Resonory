@@ -153,9 +153,9 @@
       "id": "googleLife",
       "type": "arrow",
       "x": 130,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 258,
+      "height": 252,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -168,7 +168,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 267601732,
-      "version": 1,
+      "version": 2,
       "versionNonce": 774553846,
       "isDeleted": false,
       "boundElements": [],
@@ -182,7 +182,7 @@
         ],
         [
           0,
-          258
+          252
         ]
       ],
       "lastCommittedPoint": null,
@@ -278,9 +278,9 @@
       "id": "browserLife",
       "type": "arrow",
       "x": 350,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 901,
+      "height": 895,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -293,7 +293,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1161830769,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1668782883,
       "isDeleted": false,
       "boundElements": [],
@@ -307,7 +307,7 @@
         ],
         [
           0,
-          901
+          895
         ]
       ],
       "lastCommittedPoint": null,
@@ -402,10 +402,10 @@
     {
       "id": "baLife",
       "type": "arrow",
-      "x": 570,
-      "y": 166,
-      "width": 0,
-      "height": 713,
+      "x": 579.5,
+      "y": 172,
+      "width": 9.5,
+      "height": 707,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -418,7 +418,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 2056059806,
-      "version": 1,
+      "version": 2,
       "versionNonce": 415528273,
       "isDeleted": false,
       "boundElements": [],
@@ -431,8 +431,8 @@
           0
         ],
         [
-          0,
-          713
+          -9.5,
+          707
         ]
       ],
       "lastCommittedPoint": null,
@@ -528,9 +528,9 @@
       "id": "hookLife",
       "type": "arrow",
       "x": 790,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 574,
+      "height": 568,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -543,7 +543,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 802805196,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1309757310,
       "isDeleted": false,
       "boundElements": [],
@@ -557,7 +557,7 @@
         ],
         [
           0,
-          574
+          568
         ]
       ],
       "lastCommittedPoint": null,
@@ -653,9 +653,9 @@
       "id": "mwLife",
       "type": "arrow",
       "x": 1010,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 999,
+      "height": 993,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -668,7 +668,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1697034233,
-      "version": 1,
+      "version": 2,
       "versionNonce": 56502700,
       "isDeleted": false,
       "boundElements": [],
@@ -682,7 +682,7 @@
         ],
         [
           0,
-          999
+          993
         ]
       ],
       "lastCommittedPoint": null,
@@ -778,9 +778,9 @@
       "id": "pgLife",
       "type": "arrow",
       "x": 1230,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 835,
+      "height": 829,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -793,7 +793,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 443779623,
-      "version": 1,
+      "version": 2,
       "versionNonce": 950731737,
       "isDeleted": false,
       "boundElements": [],
@@ -807,7 +807,7 @@
         ],
         [
           0,
-          835
+          829
         ]
       ],
       "lastCommittedPoint": null,
@@ -903,9 +903,9 @@
       "id": "keyLife",
       "type": "arrow",
       "x": 1450,
-      "y": 166,
+      "y": 172,
       "width": 0,
-      "height": 999,
+      "height": 993,
       "angle": 0,
       "strokeColor": "#b0b0b0",
       "backgroundColor": "transparent",
@@ -918,7 +918,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1338008660,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1844960774,
       "isDeleted": false,
       "boundElements": [],
@@ -932,7 +932,7 @@
         ],
         [
           0,
-          999
+          993
         ]
       ],
       "lastCommittedPoint": null,

@@ -226,9 +226,9 @@
     {
       "id": "items-auth",
       "type": "arrow",
-      "x": 460,
+      "x": 466,
       "y": 280,
-      "width": 280,
+      "width": 268,
       "height": 0,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -242,7 +242,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 147926541,
-      "version": 1,
+      "version": 2,
       "versionNonce": 654878655,
       "isDeleted": false,
       "boundElements": [
@@ -260,7 +260,7 @@
           0
         ],
         [
-          280,
+          268,
           0
         ]
       ],

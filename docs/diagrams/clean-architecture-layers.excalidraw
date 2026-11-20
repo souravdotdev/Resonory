@@ -407,9 +407,9 @@
       "id": "api-root-wires",
       "type": "arrow",
       "x": 310,
-      "y": 220,
+      "y": 226,
       "width": 0,
-      "height": 40,
+      "height": 28,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -422,7 +422,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 922480387,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1429432501,
       "isDeleted": false,
       "boundElements": [],
@@ -436,7 +436,7 @@
         ],
         [
           0,
-          40
+          28
         ]
       ],
       "lastCommittedPoint": null,
@@ -687,9 +687,9 @@
       "id": "api-iface-app",
       "type": "arrow",
       "x": 177.5,
-      "y": 385,
+      "y": 391,
       "width": 5,
-      "height": 90,
+      "height": 78,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -702,7 +702,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1577359042,
-      "version": 1,
+      "version": 2,
       "versionNonce": 2084311156,
       "isDeleted": false,
       "boundElements": [],
@@ -716,7 +716,7 @@
         ],
         [
           5,
-          90
+          78
         ]
       ],
       "lastCommittedPoint": null,
@@ -746,9 +746,9 @@
       "id": "api-infra-app",
       "type": "arrow",
       "x": 442.5,
-      "y": 385,
+      "y": 391,
       "width": 5,
-      "height": 90,
+      "height": 78,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -761,7 +761,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 443779623,
-      "version": 1,
+      "version": 2,
       "versionNonce": 950731737,
       "isDeleted": false,
       "boundElements": [],
@@ -775,7 +775,7 @@
         ],
         [
           -5,
-          90
+          78
         ]
       ],
       "lastCommittedPoint": null,
@@ -805,9 +805,9 @@
       "id": "api-app-dom",
       "type": "arrow",
       "x": 310,
-      "y": 565,
+      "y": 571,
       "width": 0,
-      "height": 50,
+      "height": 38,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -820,7 +820,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1457683851,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1964635965,
       "isDeleted": false,
       "boundElements": [],
@@ -834,7 +834,7 @@
         ],
         [
           0,
-          50
+          38
         ]
       ],
       "lastCommittedPoint": null,
@@ -1340,9 +1340,9 @@
       "id": "worker-proc-wires",
       "type": "arrow",
       "x": 750,
-      "y": 220,
+      "y": 226,
       "width": 0.39999999999997726,
-      "height": 40,
+      "height": 28,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -1355,7 +1355,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 619957514,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1126909628,
       "isDeleted": false,
       "boundElements": [],
@@ -1369,7 +1369,7 @@
         ],
         [
           -0.39999999999997726,
-          40
+          28
         ]
       ],
       "lastCommittedPoint": null,
@@ -1399,9 +1399,9 @@
       "id": "worker-tag-wires",
       "type": "arrow",
       "x": 1030,
-      "y": 220,
+      "y": 226,
       "width": 0.40000000000009095,
-      "height": 40,
+      "height": 28,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -1414,7 +1414,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1633861742,
-      "version": 1,
+      "version": 2,
       "versionNonce": 2140813856,
       "isDeleted": false,
       "boundElements": [],
@@ -1428,7 +1428,7 @@
         ],
         [
           0.40000000000009095,
-          40
+          28
         ]
       ],
       "lastCommittedPoint": null,
@@ -1679,9 +1679,9 @@
       "id": "worker-iface-app",
       "type": "arrow",
       "x": 757.5,
-      "y": 385,
+      "y": 391,
       "width": 5,
-      "height": 90,
+      "height": 78,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -1694,7 +1694,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 141256750,
-      "version": 1,
+      "version": 2,
       "versionNonce": 648208864,
       "isDeleted": false,
       "boundElements": [],
@@ -1708,7 +1708,7 @@
         ],
         [
           5,
-          90
+          78
         ]
       ],
       "lastCommittedPoint": null,
@@ -1737,10 +1737,10 @@
     {
       "id": "worker-infra-app",
       "type": "arrow",
-      "x": 1022.5,
-      "y": 385,
-      "width": 5,
-      "height": 90,
+      "x": 1024,
+      "y": 391,
+      "width": 6.5,
+      "height": 78,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -1753,7 +1753,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 1155160978,
-      "version": 1,
+      "version": 2,
       "versionNonce": 1662113092,
       "isDeleted": false,
       "boundElements": [],
@@ -1766,8 +1766,8 @@
           0
         ],
         [
-          -5,
-          90
+          -6.5,
+          78
         ]
       ],
       "lastCommittedPoint": null,
@@ -1797,9 +1797,9 @@
       "id": "worker-app-dom",
       "type": "arrow",
       "x": 890,
-      "y": 565,
+      "y": 571,
       "width": 0,
-      "height": 50,
+      "height": 38,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -1812,7 +1812,7 @@
       "frameId": null,
       "roundness": null,
       "seed": 21581559,
-      "version": 1,
+      "version": 2,
       "versionNonce": 528533673,
       "isDeleted": false,
       "boundElements": [],
@@ -1826,7 +1826,7 @@
         ],
         [
           0,
-          50
+          38
         ]
       ],
       "lastCommittedPoint": null,
