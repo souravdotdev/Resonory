@@ -24,6 +24,8 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
 - [Database ER](./diagrams/database-er.excalidraw): every table with its keys, unique constraints and domain columns, the four enums, and how the tables link
+- [Item lifecycle](./diagrams/item-lifecycle.excalidraw): how the processing worker moves an Item between Processing, Ready and Failed, including retries, the stuck-Item sweep and late jobs
+- [Worker job routing](./diagrams/worker-job-routing.excalidraw): how the processing worker routes Item processing queue jobs by name, its retry defaults, the failed set and slimming, and the Item tagging queue's own retries
 - [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
 - [Extension capture](./diagrams/extension-capture.excalidraw): what a toolbar-icon click does, from the missing-API-key popup through the size-cap fallback and YouTube captions to the badge
 - [AI tagging](./diagrams/ai-tagging.excalidraw): what the model sees, how its answer is cleaned and applied, the Tag limits, and why Tags may not appear
