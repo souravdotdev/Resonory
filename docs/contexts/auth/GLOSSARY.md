@@ -31,3 +31,7 @@ _Avoid_: Cooling-off period, retention window
 **Session**:
 One signed-in browser. A User can have several Sessions at once, and User deletion ends all of them.
 _Avoid_: Login, connection
+
+**API key**:
+A secret a User gives the browser extension so it can save Items for them without a Session. It can't manage Tags.
+_Avoid_: Token, access key
