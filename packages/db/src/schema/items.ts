@@ -55,7 +55,8 @@ export const items = pgTable(
     title: text("title"),
     description: text("description"),
     // The Thumbnail's object path in the private Supabase Storage bucket `thumbnails`:
-    // {userId}/{itemId}.webp. Null without a Thumbnail.
+    // shared/{sha256(canonical Source URL)}.webp, one object shared by every Item saved
+    // from that URL. Null without a Thumbnail.
     thumbnailKey: text("thumbnail_key"),
     // Readable text, deliberately uncapped; keyword search reads it through search_vector.
     extractedText: text("extracted_text"),
