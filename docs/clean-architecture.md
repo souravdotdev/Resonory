@@ -57,6 +57,8 @@ Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and
 
 ## The dependency rule
 
+Diagram: [Clean Architecture layers](./diagrams/clean-architecture-layers.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 Source code dependencies point inward only:
 
 ```

@@ -24,6 +24,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
 - [Workspace dependencies](./diagrams/workspace-dependencies.excalidraw): which apps depend on which `@resonory/*` packages, at runtime and dev-only
+- [Clean Architecture layers](./diagrams/clean-architecture-layers.excalidraw): the API's and the worker's four layers, the inward dependency rule, the lint guard and the composition roots
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
