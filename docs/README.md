@@ -24,6 +24,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
 - [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
+- [Extension capture](./diagrams/extension-capture.excalidraw): what a toolbar-icon click does, from the missing-API-key popup through the size-cap fallback and YouTube captions to the badge
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
