@@ -85,7 +85,7 @@ Example validation failure:
 
 ## Auth
 
-Diagram: [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw)
+![Sign-in sequence](./diagrams/sign-in-sequence.excalidraw.svg)
 
 Three pieces, all in `apps/api`: Better Auth's own routes under `/api/auth/*` (signing in and out), the auth middleware every protected route runs, and `GET /me`, the first protected route.
 

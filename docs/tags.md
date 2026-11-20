@@ -130,7 +130,7 @@ Ownership doesn't depend on the use cases alone: `item_tags` has composite forei
 
 ## AI tagging
 
-Diagram: [AI tagging](./diagrams/ai-tagging.excalidraw)
+![AI tagging](./diagrams/ai-tagging.excalidraw.svg)
 
 Settled in a grilling session (issue #176) and built by #177, #178 and #179. How the job runs is in [Queue → AI tagging](./queue.md#ai-tagging). What's sent to the model, and why Groq, is [Items ADR 0004](./contexts/items/adr/0004-ai-tagging-sends-an-item-excerpt-to-a-third-party-model.md).
 

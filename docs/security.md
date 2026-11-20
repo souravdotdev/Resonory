@@ -10,7 +10,7 @@ Originally registered with `{ origin: true }`, which reflects _any_ requesting o
 
 ## Authentication
 
-Diagram: [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw)
+![Sign-in sequence](./diagrams/sign-in-sequence.excalidraw.svg)
 
 Two independent ways to prove who's asking, both resolved by the identical `getSession({ headers })` call (`BetterAuthSessionProvider` → `ResolveSignedInUserUseCase`) — there is no separate code path for either, so every session-authenticated route (`POST /items`, `GET /me`, …) accepts both for free:
 

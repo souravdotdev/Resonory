@@ -4,7 +4,7 @@ How `apps/extension` works: a Chrome extension (built with [WXT](https://wxt.dev
 
 ## In one picture
 
-Diagram: [Extension capture](./diagrams/extension-capture.excalidraw)
+![Extension capture](./diagrams/extension-capture.excalidraw.svg)
 
 ```mermaid
 sequenceDiagram
