@@ -61,7 +61,7 @@ See [Database](./database.md) for the schema itself and the full migration workf
 Thumbnails are kept in Supabase Storage, in the same Supabase project as the dev database. It's optional: without it the worker runs and Items simply have no Thumbnails. To turn it on, create the bucket **once** in the dev project (the worker never creates it):
 
 1. In the Supabase dashboard, open **Storage → New bucket**.
-2. Name it `thumbnails` and leave **Public bucket** off: it must be private (the API hands out signed links).
+2. Name it `thumbnails` and leave **Public bucket** off: it must be private (Thumbnails are meant to be read only through links the API signs).
 3. No policies are needed: the worker uploads with the service role key, which bypasses row-level security.
 
 Or, in the SQL editor:
@@ -70,7 +70,7 @@ Or, in the SQL editor:
 insert into storage.buckets (id, name, public) values ('thumbnails', 'thumbnails', false);
 ```
 
-Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/{userId}/{itemId}.webp`.
+Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/shared/{sha256(canonical final URL)}.webp`, one object shared by every Item saved from that URL (see [Queue](./queue.md#thumbnails)).
 
 ## Local Supabase (optional)
 
@@ -85,7 +85,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
    ```
 
 3. **Create the `thumbnails` bucket, private.** The worker never creates it. In local Studio (`http://127.0.0.1:55323`) open **Storage → New bucket**, name it `thumbnails` and leave **Public bucket** off. Or run the same SQL as above in Studio's SQL editor. Recent CLI versions can also create it from `supabase/config.toml` (a `[storage.buckets.thumbnails]` table with `public = false`), which runs on `supabase start` and `supabase db reset`.
-4. **Point the apps at it.** Run `supabase status` for the API URL and the service role (secret) key, then set both in **`apps/worker/.env`** and **`apps/api/.env`**: the worker uploads Thumbnails and the API signs their links.
+4. **Point the apps at it.** Run `supabase status` for the API URL and the service role (secret) key, then set both in **`apps/worker/.env`** and **`apps/api/.env`**: the worker uploads Thumbnails, and the API binds its Thumbnail URL signer (nothing calls it yet).
 
    ```
    SUPABASE_URL=http://127.0.0.1:55321
@@ -94,7 +94,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
 
    This is the local stack's own key, not your hosted project's. Never commit it.
 
-5. **Check an image loads.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), and the app shows it through a signed link to `http://127.0.0.1:55321`, which your browser reaches on the same machine.
+5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/shared/{sha256(canonical final URL)}.webp` in local Storage (see it in Studio), one object shared by every Item saved from that URL. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
 
 Good to know:
 

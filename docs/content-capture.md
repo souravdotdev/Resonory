@@ -2,6 +2,8 @@
 
 How an Item's content gets into the system changed with the browser extension (issue #143/#145/#146), motivated by a problem no server-side fix could close (issue #137, [ADR 0007](./adr/0007-v1-capture-is-a-browser-extension-not-paste-a-link.md)). This doc is the side-by-side: what the old path did, what the new path does, and exactly where in the code they diverge and reconverge. For the processing pipeline itself (type detection, oEmbed, Thumbnails), see [Queue](./queue.md); this doc is specifically about where the _content_ comes from before that pipeline ever runs.
 
+![Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw.svg)
+
 ## The problem with the old path
 
 **Paste-a-link** was the only way to save an Item: a User pastes a URL into the web app, and the **worker** fetches it itself, server-side, to read its title, description and picture.

@@ -2,6 +2,8 @@
 
 `apps/waitlist` is the one-screen waitlist at `resonory.com`: the page and its `POST /api/waitlist` endpoint, deployed together as one Vercel project on the free tier. It is independent of `apps/web`, `apps/api` and `apps/worker`; it only uses `@resonory/db`'s schema and the shared config packages. It also emails each new signup a Welcome email through AutoSend. This is the checklist for setting it up on Vercel by hand.
 
+![Waitlist signup](./diagrams/waitlist-signup.excalidraw.svg)
+
 ## Before you start
 
 - A Supabase project, with its connection strings to hand (Project Settings → Database → Connection string). You need two of them:

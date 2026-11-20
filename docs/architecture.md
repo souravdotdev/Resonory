@@ -1,6 +1,10 @@
 # Architecture
 
+![System context](./diagrams/system-context.excalidraw.svg)
+
 ## Monorepo layout
+
+![Workspace dependencies](./diagrams/workspace-dependencies.excalidraw.svg)
 
 Managed with [pnpm workspaces](https://pnpm.io/workspaces) + [Turborepo](https://turborepo.com). Two top-level groups:
 
@@ -15,14 +19,12 @@ apps/
               src/di/              tokens.ts and container.ts (the InversifyJS container)
   worker/   Background-job processes (one per queue: Item processing, Item tagging), the same layers as the API
               src/domain/          the Item entity, the Item repository port, the URL rules
-              src/application/     ProcessItemUseCase, FailItemUseCase, SweepStuckItemsUseCase
+              src/application/     ProcessItemUseCase, FailItemUseCase, SweepStuckItemsUseCase, TagItemUseCase
               src/interface/       itemProcessingWorker.ts, itemTaggingWorker.ts (a BullMQ Worker and its failed handler each), processors/
               src/infrastructure/  adapters: the Drizzle database and Item repository
               src/di/              tokens.ts (WORKER_TOKENS), commonBindings.ts, processingContainer.ts, taggingContainer.ts
-  extension/ WXT-based Chrome MV3 browser extension skeleton:
-              entrypoints/      WXT's file-based entrypoints; background.ts, content.ts and
-                                popup/ each exist as minimal stubs (log on load / placeholder
-                                markup) — real capture, API calls and token handling land later
+  extension/ WXT Chrome MV3 extension: a toolbar click captures the page (and a YouTube video's
+              captions) and saves it with POST /items and the User's API key (see docs/extension.md)
   waitlist/ Next.js one-screen waitlist page and POST /api/waitlist, organised by feature (ADR 0005):
               src/waitlist/        request schema, WaitlistStore port, Drizzle adapter, handler factory,
                                    EmailSender port with its AutoSend and logging adapters, the Welcome
@@ -55,6 +57,8 @@ That's fine for anything bundler-based — but plain `node` cannot execute raw T
 `packages/*` themselves stay JIT — no `build` script, not independently cached by Turborepo the way `apps/api`'s/`apps/worker`'s own `build` task is. Only the four deployable apps have real `build` scripts (`tsup` for api/worker, `next build` for web and waitlist).
 
 ## Why this split
+
+![Context map](./diagrams/context-map.excalidraw.svg)
 
 - **`apps/api`** holds all of the API's code, organised by layer rather than by feature ([ADR 0004](./adr/0004-layer-first-apps-with-use-case-classes-and-a-di-container.md)): `domain/` for the Auth and Items entities, ports, errors and rules; `application/` for the use cases (`AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`) and their output DTOs (`MeOutput`, `ItemCardOutput`); `interface/` for the routes, controllers and middleware; `infrastructure/` for Better Auth (`createAuth`, `BetterAuthSessionProvider`), the Drizzle repositories and the row mappers; and `di/` for the container that wires them. Google sign-in through [Better Auth](https://better-auth.com) runs here ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). See [Clean Architecture](./clean-architecture.md) for each layer and the dependency rule.
 - **`packages/shared`** defines every request and response between `apps/web` and `apps/api` once, as zod schemas, so the two can't drift apart (see [ADR 0001](./adr/0001-shared-zod-contracts-package.md)). Its only dependency is `zod`, and it never imports domain, persistence or framework code, so the web app never pulls in server packages. It has one entry point per context: `@resonory/shared/schemas/common` (the error response, whose codes include `forbidden` for an API key on a web-Session-only route and `item_tag_limit` / `user_tag_limit` for the Tag limits, and the `paginated(schema)` helper), `@resonory/shared/schemas/auth` (the signed-in User returned by `GET /me`), and `@resonory/shared/schemas/items` (the Item card with its Tags and who applied each, the list query and paginated list response, the create-Item input and response, and the Tag routes' shapes: `TagItemSchema` and `ItemTagParamsSchema` for tagging an Item by name, `UntagItemParamsSchema` for taking a Tag off, `ItemTagsResponseSchema` for an Item's Tags after either, and `ListTagsResponseSchema` for `GET /tags`). Beside the schemas, `@resonory/shared/html` holds HTML rules two apps must apply alike: today `isJsonLdType`, which the worker's head parser reads JSON-LD by and the extension's capture keeps it by (the extension as a tested in-page copy, since its injected capture can't import). Schemas end in `Schema` and their inferred types drop the suffix (`ItemCardSchema` / `ItemCard`); a plain `Item` is always the domain entity. The API validates what it receives and filters what it sends through these schemas, and the web app's API helpers (`apps/web/src/lib/api.ts`) parse every response with them and throw on a mismatch. The API's application layer owns the explicit mapping from its entities to these shapes (for Items, `toItemCardOutput` in `apps/api/src/application/dto/items/ItemCardOutput.ts`).

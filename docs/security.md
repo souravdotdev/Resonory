@@ -10,6 +10,8 @@ Originally registered with `{ origin: true }`, which reflects _any_ requesting o
 
 ## Authentication
 
+![Sign-in sequence](./diagrams/sign-in-sequence.excalidraw.svg)
+
 Two independent ways to prove who's asking, both resolved by the identical `getSession({ headers })` call (`BetterAuthSessionProvider` → `ResolveSignedInUserUseCase`) — there is no separate code path for either, so every session-authenticated route (`POST /items`, `GET /me`, …) accepts both for free:
 
 - **Session cookie.** The web app's normal signed-in state, set after `/api/auth/sign-in/social` (Google) completes. See [`POST /items`](./api.md#post-items) and [CORS](#cors) above for how it crosses origins.
@@ -60,7 +62,7 @@ Not covered: there's no outbound proxy or egress firewall behind this; the guard
 
 ## Thumbnail storage
 
-Thumbnails live in the **private** Supabase Storage bucket `thumbnails`, at `{userId}/{itemId}.webp`. The bucket is never public: the API hands out short-lived signed links, so a Thumbnail can't be guessed or shared past its link's life. The worker uploads with `SUPABASE_SERVICE_ROLE_KEY`, which bypasses Supabase's row-level security on every table and bucket of the project, so it belongs **only on the server** (the worker's and API's `.env`, the deploy's secret store): never in `apps/web`, never behind a `NEXT_PUBLIC_` prefix, never in a client bundle, a log or the repo. The worker never creates the bucket; it is created once by hand (see [Getting Started](./getting-started.md#thumbnail-storage)). Without the two variables the worker downloads no images at all.
+Thumbnails live in the **private** Supabase Storage bucket `thumbnails`, at `shared/{sha256(canonical final URL)}.webp` (`apps/worker/src/domain/rules/thumbnailKey.ts`): one object shared by every Item saved from that URL, whichever User saved it. The key holds no User or Item id, and it isn't a secret: anyone who knows a URL can work out its key. The bucket is never public, so knowing the key isn't enough to read the object. The API has a signer for 1-hour links (`SupabaseThumbnailUrlProvider`), but nothing calls it yet, so no Thumbnail is served. Nothing deletes a Thumbnail object, even once no Item points at it. The worker uploads with `SUPABASE_SERVICE_ROLE_KEY`, which bypasses Supabase's row-level security on every table and bucket of the project, so it belongs **only on the server** (the worker's and API's `.env`, the deploy's secret store): never in `apps/web`, never behind a `NEXT_PUBLIC_` prefix, never in a client bundle, a log or the repo. The worker never creates the bucket; it is created once by hand (see [Getting Started](./getting-started.md#thumbnail-storage)). Without the two variables the worker downloads no images at all.
 
 ## `apps/web` response headers
 

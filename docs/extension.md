@@ -4,28 +4,7 @@ How `apps/extension` works: a Chrome extension (built with [WXT](https://wxt.dev
 
 ## In one picture
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant BG as Background script
-    participant Tab as Active tab
-    participant API as apps/api
-    participant W as apps/worker
-    User->>BG: clicks toolbar icon
-    BG->>Tab: executeScript(capturePage)
-    Tab-->>BG: { url, head, stripped body }
-    opt YouTube video only, in the page's main world
-        BG->>Tab: executeScript(readPlayerCaptions)
-        Tab-->>BG: video id, page language, caption tracks
-        BG->>Tab: executeScript(fetchCaptionTrack, [track URL])
-        Tab-->>BG: json3 track → captions
-    end
-    BG->>API: POST /items { url, html, captions? }, x-api-key
-    API-->>BG: 201 (Item created, processing)
-    BG-->>User: green ✓ badge (red ! on any failure)
-    API->>W: job { itemId, userId, html, captions? }
-    W->>W: skip fetch, read title / description / Thumbnail from html, Text from captions or body
-```
+![Extension capture](./diagrams/extension-capture.excalidraw.svg)
 
 ## The two click modes
 

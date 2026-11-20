@@ -130,6 +130,8 @@ Ownership doesn't depend on the use cases alone: `item_tags` has composite forei
 
 ## AI tagging
 
+![AI tagging](./diagrams/ai-tagging.excalidraw.svg)
+
 Settled in a grilling session (issue #176) and built by #177, #178 and #179. How the job runs is in [Queue → AI tagging](./queue.md#ai-tagging). What's sent to the model, and why Groq, is [Items ADR 0004](./contexts/items/adr/0004-ai-tagging-sends-an-item-excerpt-to-a-third-party-model.md).
 
 - **When.** Once Processing marks an Item Ready, the worker queues a `tag-item` job (see [Queue](./queue.md)). It's separate from Processing, so a slow or failing model never delays Ready or makes an Item Failed. A final failure is only logged; the User sees an Item without AI Tags. A Failed Item retried to Ready is tagged again. New saves only: existing Items aren't backfilled. There's no per-User setting in v1.
