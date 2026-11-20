@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw): Google sign-in through Better Auth on the API, the sign-in decision, the shared Session cookie and how protected routes answer 401 or 403
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
