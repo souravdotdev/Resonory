@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Item type detection](./diagrams/item-type-detection.excalidraw): the order the processing worker tries signals in to type an Item, and which fetch failures retry
 
 Every diagram in `docs/diagrams/` follows these conventions:
 

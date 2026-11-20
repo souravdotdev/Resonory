@@ -44,6 +44,8 @@ Async processing is handled with [BullMQ](https://docs.bullmq.io) backed by Redi
 
 ### Detection order
 
+Diagram: [Item type detection](./diagrams/item-type-detection.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 `itemTypeOf` in `ProcessItemUseCase.ts` is the one place the order is written down; the first signal that answers wins:
 
 1. the URL rules on the Source URL as pasted, then on the final URL ([URL rules](#url-rules));
