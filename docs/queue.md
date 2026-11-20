@@ -54,7 +54,7 @@ Diagram: [Item type detection](./diagrams/item-type-detection.excalidraw) (open 
 
 `itemTypeOf` in `ProcessItemUseCase.ts` is the one place the order is written down; the first signal that answers wins:
 
-1. the URL rules on the Source URL as pasted, then on the final URL ([URL rules](#url-rules));
+1. the URL rules on the final URL (after any redirect), then on the Source URL as pasted, so a short link is typed by where it leads, never by its shortening service ([URL rules](#url-rules));
 2. a file's (a 2xx non-HTML response's) Content-Type, then its magic bytes ([Response rules](#response-rules));
 3. oEmbed ([oEmbed](#oembed)), then the page's JSON-LD, then its Open Graph tags, then its Twitter Card ([Page rules](#page-rules));
 4. Link (anything else).
