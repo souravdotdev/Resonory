@@ -27,6 +27,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 - [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
 - [Extension capture](./diagrams/extension-capture.excalidraw): what a toolbar-icon click does, from the missing-API-key popup through the size-cap fallback and YouTube captions to the badge
 - [AI tagging](./diagrams/ai-tagging.excalidraw): what the model sees, how its answer is cleaned and applied, the Tag limits, and why Tags may not appear
+- [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw): Google sign-in through Better Auth on the API, the sign-in decision, the shared Session cookie and how protected routes answer 401 or 403
 - [Waitlist signup](./diagrams/waitlist-signup.excalidraw): how the waitlist route stores a Waitlist Entry and sends the Welcome email after the response
 
 Every diagram in `docs/diagrams/` follows these conventions:
