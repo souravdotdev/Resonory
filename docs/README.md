@@ -22,6 +22,8 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 
 ## Diagrams
 
+- [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+
 Every diagram in `docs/diagrams/` follows these conventions:
 
 - **Current state only.** A diagram shows the code as it is today. A partly built flow shows only its built part; nothing planned is drawn.

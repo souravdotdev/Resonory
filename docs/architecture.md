@@ -1,5 +1,7 @@
 # Architecture
 
+Diagram: [System context](./diagrams/system-context.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 ## Monorepo layout
 
 Managed with [pnpm workspaces](https://pnpm.io/workspaces) + [Turborepo](https://turborepo.com). Two top-level groups:
