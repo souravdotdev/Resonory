@@ -1221,7 +1221,7 @@
       "height": 80,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#d0bfff",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1233,8 +1233,8 @@
         "type": 3
       },
       "seed": 978983087,
-      "version": 1,
-      "versionNonce": 1485935201,
+      "version": 2,
+      "versionNonce": 2011992106,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1246,7 +1246,7 @@
           "id": "a-json-no"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056009,
       "link": null,
       "locked": false
     },
@@ -1369,7 +1369,7 @@
       "height": 80,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#d0bfff",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1381,8 +1381,8 @@
         "type": 3
       },
       "seed": 739632705,
-      "version": 1,
-      "versionNonce": 1246584819,
+      "version": 2,
+      "versionNonce": 2074509307,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1394,7 +1394,7 @@
           "id": "a-valid-no"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056009,
       "link": null,
       "locked": false
     },
@@ -1443,7 +1443,7 @@
       "height": 80,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#d0bfff",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1455,8 +1455,8 @@
         "type": 3
       },
       "seed": 619957514,
-      "version": 1,
-      "versionNonce": 1126909628,
+      "version": 2,
+      "versionNonce": 2100382178,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1468,7 +1468,7 @@
           "id": "a-insert-fail"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056009,
       "link": null,
       "locked": false
     },
@@ -2411,7 +2411,7 @@
       "height": 90,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#d0bfff",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -2423,8 +2423,8 @@
         "type": 3
       },
       "seed": 1451014060,
-      "version": 1,
-      "versionNonce": 1957966174,
+      "version": 2,
+      "versionNonce": 1970756839,
       "isDeleted": false,
       "boundElements": [
         {
@@ -2436,7 +2436,7 @@
           "id": "a-autosend-failed"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056009,
       "link": null,
       "locked": false
     },

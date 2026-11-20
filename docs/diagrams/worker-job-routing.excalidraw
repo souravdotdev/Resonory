@@ -1031,7 +1031,7 @@
       "height": 90,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#b2f2bb",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1043,8 +1043,8 @@
         "type": 3
       },
       "seed": 204429241,
-      "version": 1,
-      "versionNonce": 711381355,
+      "version": 2,
+      "versionNonce": 320936143,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1056,7 +1056,7 @@
           "id": "aToUnknown"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056008,
       "link": null,
       "locked": false
     },
@@ -1234,7 +1234,7 @@
       "height": 110,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#b2f2bb",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1246,8 +1246,8 @@
         "type": 3
       },
       "seed": 978983087,
-      "version": 1,
-      "versionNonce": 1485935201,
+      "version": 2,
+      "versionNonce": 1904770825,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1271,7 +1271,7 @@
           "id": "aItemFailed"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056008,
       "link": null,
       "locked": false
     },

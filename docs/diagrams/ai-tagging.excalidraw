@@ -1460,7 +1460,7 @@
       "height": 130,
       "angle": 0,
       "strokeColor": "#ef4444",
-      "backgroundColor": "#fff3bf",
+      "backgroundColor": "#b2f2bb",
       "fillStyle": "solid",
       "strokeWidth": 2,
       "strokeStyle": "solid",
@@ -1472,8 +1472,8 @@
         "type": 3
       },
       "seed": 619957514,
-      "version": 1,
-      "versionNonce": 1126909628,
+      "version": 2,
+      "versionNonce": 227087932,
       "isDeleted": false,
       "boundElements": [
         {
@@ -1485,7 +1485,7 @@
           "id": "ame"
         }
       ],
-      "updated": 1,
+      "updated": 1795167056011,
       "link": null,
       "locked": false
     },
