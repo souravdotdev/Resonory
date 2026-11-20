@@ -23,8 +23,16 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Database ER](./diagrams/database-er.excalidraw): every table with its keys, unique constraints and domain columns, the four enums, and how the tables link
+- [Item lifecycle](./diagrams/item-lifecycle.excalidraw): how the processing worker moves an Item between Processing, Ready and Failed, including retries, the stuck-Item sweep and late jobs
+- [Worker job routing](./diagrams/worker-job-routing.excalidraw): how the processing worker routes Item processing queue jobs by name, its retry defaults, the failed set and slimming, and the Item tagging queue's own retries
+- [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
+- [Extension capture](./diagrams/extension-capture.excalidraw): what a toolbar-icon click does, from the missing-API-key popup through the size-cap fallback and YouTube captions to the badge
 - [Item type detection](./diagrams/item-type-detection.excalidraw): the order the processing worker tries signals in to type an Item, and which fetch failures retry
 - [Thumbnail pipeline](./diagrams/thumbnail-pipeline.excalidraw): how a Thumbnail is picked, downloaded, resized and stored once per canonical URL, and how the API signs a link to it
+- [AI tagging](./diagrams/ai-tagging.excalidraw): what the model sees, how its answer is cleaned and applied, the Tag limits, and why Tags may not appear
+- [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw): Google sign-in through Better Auth on the API, the sign-in decision, the shared Session cookie and how protected routes answer 401 or 403
+- [Waitlist signup](./diagrams/waitlist-signup.excalidraw): how the waitlist route stores a Waitlist Entry and sends the Welcome email after the response
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
