@@ -23,6 +23,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 ## Diagrams
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
+- [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
 
 Every diagram in `docs/diagrams/` follows these conventions:
 
