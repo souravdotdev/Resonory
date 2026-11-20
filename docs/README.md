@@ -24,6 +24,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 
 - [System context](./diagrams/system-context.excalidraw): every app, store and external service, and how they talk to each other
 - [Item type detection](./diagrams/item-type-detection.excalidraw): the order the processing worker tries signals in to type an Item, and which fetch failures retry
+- [Thumbnail pipeline](./diagrams/thumbnail-pipeline.excalidraw): how a Thumbnail is picked, downloaded, resized and stored once per canonical URL, and how the API signs a link to it
 
 Every diagram in `docs/diagrams/` follows these conventions:
 

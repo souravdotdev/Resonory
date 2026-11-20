@@ -132,6 +132,8 @@ What else it builds on:
 
 ### Thumbnails
 
+Diagram: [Thumbnail pipeline](./diagrams/thumbnail-pipeline.excalidraw) (open in [excalidraw.com](https://excalidraw.com) or the VS Code Excalidraw extension)
+
 Implemented for **Image Items**, **HTML pages** and **oEmbed answers**. The candidates, best first, come from one pure rule, `domain/rules/thumbnailCandidates.ts`, the one place the order is written down: for an Image Item whose fetch ended at the image file, only that final URL; otherwise the oEmbed answer's `thumbnail_url` (a provider's deliberate answer beats page markup, as for the title), then an HTML page's `og:image`, then its `twitter:image` (from the oEmbed answer and the head Processing already has, so no extra request). Each value is made absolute against the final URL after redirects, blank values and ones that aren't http(s) (`data:`, `javascript:` …) are dropped, and an image offered twice is tried once. Other files have no candidate; an unsuccessful answer, or a failed page fetch for an Item a URL rule typed, has only its oEmbed `thumbnail_url`, so a post behind a login wall can still get one. Processing tries the candidates in order and keeps the first that works ([ADR 0002](./contexts/items/adr/0002-thumbnails-are-resized-by-the-worker-and-kept-in-private-supabase-storage.md)):
 
 1. **Download** each candidate in turn through the `IImageFetcher` port, bound to the same `SafeUrlFetcher` as the page (`fetchImage`): guarded, at most 5 MB, only JPEG, PNG, WebP, GIF or AVIF whose Content-Type and magic bytes agree (see [Security](./security.md#the-workers-url-fetch)). An Image Item's image is downloaded again in full; the page fetch read only its first 16 bytes.
