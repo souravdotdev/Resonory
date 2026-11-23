@@ -32,7 +32,7 @@ Each file stands on its own — start with whichever is relevant, or read [Archi
 - [Save-an-Item sequence](./diagrams/save-item-sequence.excalidraw.svg): both callers, the browser extension with an API key and the web app with a Session, through `POST /items`, Processing and AI tagging
 - [Extension capture](./diagrams/extension-capture.excalidraw.svg): what a toolbar-icon click does, from the missing-API-key popup through the size-cap fallback and YouTube captions to the badge
 - [Item type detection](./diagrams/item-type-detection.excalidraw.svg): the order the processing worker tries signals in to type an Item, and which fetch failures retry
-- [Thumbnail pipeline](./diagrams/thumbnail-pipeline.excalidraw.svg): how a Thumbnail is picked, downloaded, resized and stored once per canonical final URL, and the API's 1-hour URL signer that nothing calls yet
+- [Thumbnail pipeline](./diagrams/thumbnail-pipeline.excalidraw.svg): how a Thumbnail is picked, downloaded, resized and stored once per Item, in its User's folder, and the API's 1-hour URL signer that nothing calls yet
 - [AI tagging](./diagrams/ai-tagging.excalidraw.svg): what the model sees, how its answer is cleaned and applied, the Tag limits, and why Tags may not appear
 - [Sign-in sequence](./diagrams/sign-in-sequence.excalidraw.svg): Google sign-in through Better Auth on the API, the sign-in decision, the shared Session cookie and how protected routes answer 401 or 403
 - [Waitlist signup](./diagrams/waitlist-signup.excalidraw.svg): how the waitlist route stores a Waitlist Entry and sends the Welcome email after the response
