@@ -70,7 +70,22 @@ Or, in the SQL editor:
 insert into storage.buckets (id, name, public) values ('thumbnails', 'thumbnails', false);
 ```
 
-Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/shared/{sha256(canonical final URL)}.webp`, one object shared by every Item saved from that URL (see [Queue](./queue.md#thumbnails)).
+Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/{userId}/{itemId}.webp`, one object per Item, in its User's folder (see [Queue](./queue.md#thumbnails)).
+
+### Wiping the old shared Thumbnails (once)
+
+Before #216, Thumbnails were kept once per page, in the bucket's `shared/` folder, and Items pointed at them. Nothing reads them any more, and there is no migration for them: they are dev data, wiped once by hand in every project (hosted or [local](#local-supabase-optional)) and database that has them.
+
+1. **Delete the objects.** In the Supabase dashboard (or local Studio), open **Storage → `thumbnails`**, select the `shared` folder and delete it. Use the dashboard or the Storage API, not SQL: deleting rows from `storage.objects` leaves the files behind, and newer projects refuse it outright.
+2. **Clear the keys.** In the database `DATABASE_URL` points at (`psql`, or the Supabase SQL editor for a Supabase database):
+
+   ```sql
+   update items set thumbnail_key = null where thumbnail_key like 'shared/%';
+   ```
+
+   Those Items stay Ready, with no Thumbnail.
+
+Leftover per-URL preview entries in Redis (`url-preview:*`) need nothing: nothing reads them, and they expire within 7 days.
 
 ## Local Supabase (optional)
 
@@ -94,7 +109,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
 
    This is the local stack's own key, not your hosted project's. Never commit it.
 
-5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/shared/{sha256(canonical final URL)}.webp` in local Storage (see it in Studio), one object shared by every Item saved from that URL. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
+5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), one object per Item. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
 
 Good to know:
 

@@ -154,10 +154,11 @@ apps/worker/src/
   di/                   tokens.ts (WORKER_TOKENS), commonBindings.ts (logger, Redis, repositories),
                         processingContainer.ts, taggingContainer.ts
   domain/
-    entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; CachedPreview, a URL's
-                        shared preview; ReadyItem, what Processing learned: the CachedPreview plus
-                        Text; TaggableItem, the excerpt AI tagging sends, and TAGGING_TEXT_LENGTH, how
-                        much Text it holds; Item types and statuses),
+    entities/           Item.ts (the fields Processing needs; ItemRef; ItemMetadata; ItemPreview, the
+                        type, metadata and Thumbnail key from an Item's own save; ReadyItem, what
+                        Processing learned: the ItemPreview plus Text; TaggableItem, the excerpt AI
+                        tagging sends, and TAGGING_TEXT_LENGTH, how much Text it holds; Item types
+                        and statuses),
                         PageHead.ts (a page head's extracted tags)
     repositories/       IItemRepository.ts (findById, findTaggable, markReady, markFailed),
                         ITagRepository.ts (listNames, listRejectedNames, applyAsAi)
