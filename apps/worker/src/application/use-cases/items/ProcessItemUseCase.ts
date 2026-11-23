@@ -2,6 +2,7 @@ import { inject, injectable, optional } from "inversify";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
+  type Item,
   type ItemMetadata,
   type ItemRef,
   type ItemPreview,
@@ -126,7 +127,7 @@ export class ProcessItemUseCase {
           {
             type: typeFromSourceUrl,
             metadata: metadataOf(null, answer),
-            thumbnailKey: await this.keepThumbnail(ref, {
+            thumbnailKey: await this.keepThumbnail(item, {
               finalUrl: item.sourceUrl,
               isImage: false,
               head: null,
@@ -147,7 +148,7 @@ export class ProcessItemUseCase {
     const preview: ItemPreview = {
       type,
       metadata: metadataOf(head, answer),
-      thumbnailKey: await this.keepThumbnail(ref, {
+      thumbnailKey: await this.keepThumbnail(item, {
         finalUrl: page.finalUrl,
         isImage,
         head,
@@ -203,14 +204,15 @@ export class ProcessItemUseCase {
   /**
    * Keeps the first candidate image (thumbnailCandidates) that downloads,
    * resizes and uploads as the Item's card Thumbnail, at the Item's own key
-   * (thumbnailKeyOf), and returns that key. The upload overwrites only this
+   * (thumbnailKeyOf), and returns that key. The key comes from the loaded
+   * row, not the job, so its folder is always the row's real owner's. The upload overwrites only this
    * Item's object, left by an earlier run of the same Item. Any failure moves
    * on to the next candidate; null when none is kept, or when there is no
    * Thumbnail store (then nothing is downloaded at all).
    */
-  private async keepThumbnail(ref: ItemRef, offers: ThumbnailOffers): Promise<string | null> {
+  private async keepThumbnail(item: Item, offers: ThumbnailOffers): Promise<string | null> {
     if (!this.thumbnails) return null;
-    const key = thumbnailKeyOf(ref);
+    const key = thumbnailKeyOf({ userId: item.userId, itemId: item.id });
     for (const url of thumbnailCandidates(offers)) {
       try {
         const image = await this.images.fetchImage(url);

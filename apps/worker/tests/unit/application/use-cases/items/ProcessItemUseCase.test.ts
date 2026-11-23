@@ -840,6 +840,22 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     );
   });
 
+  it("keys the Thumbnail by the loaded Item's owner and id, not the job's", async () => {
+    const { repository, item } = itemsInMemory("https://example.com/sunset");
+    // A repository that loads the row whatever User the job names, as if a payload were ever off.
+    vi.mocked(repository.findById).mockImplementation(async () => ({ ...item }));
+    const { store, objects } = thumbnailsInMemory();
+    const useCase = useCaseFor(repository, photo(), undefined, {
+      images: imagesAnswering(),
+      resizer: resizerAnswering(),
+      store,
+    });
+
+    await useCase.execute({ itemId: ITEM_ID, userId: OTHER_USER_ID });
+
+    expect([...objects.keys()]).toEqual([ITEM_KEY]);
+  });
+
   it.each([
     ["a PDF", file("application/pdf", Buffer.from("%PDF-1.7"))],
     ["an unsuccessful answer", unsuccessful()],
