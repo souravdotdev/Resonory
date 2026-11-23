@@ -79,12 +79,10 @@ export interface ItemMetadata {
 export const NO_METADATA: ItemMetadata = { title: null, description: null };
 
 /**
- * What Processing decided for a URL, worth reusing for every later Item that
- * saves the same one: its Item type, its title and description, and its
- * Thumbnail key — explicitly including `null` when there is no Thumbnail, so
- * a page confirmed to offer none isn't retried on every save.
+ * What Processing decided for an Item from its own save: its Item type, its
+ * title and description, and its Thumbnail key (null without a Thumbnail).
  */
-export interface CachedPreview {
+export interface ItemPreview {
   type: ItemType;
   metadata: ItemMetadata;
   thumbnailKey: string | null;
@@ -92,12 +90,8 @@ export interface CachedPreview {
 
 /**
  * What Processing learned about an Item, written to it in one update when it
- * becomes Ready: the URL's preview (its Item type, title and description, and
- * its Thumbnail key, null without a Thumbnail) plus this Item's own Text (null
- * without one). Text is the User's own, from what their browser captured, so
- * it's never part of the preview every User saving the URL shares (Items ADR
- * 0003): a `CachedPreview` can't carry it.
+ * becomes Ready: its preview plus its own Text (null without one).
  */
-export interface ReadyItem extends CachedPreview {
+export interface ReadyItem extends ItemPreview {
   text: string | null;
 }

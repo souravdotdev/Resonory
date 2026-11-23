@@ -2,9 +2,9 @@ import { inject, injectable, optional } from "inversify";
 import type { ProcessItemResult } from "@/application/dto/items/ProcessItemResult";
 import { WORKER_TOKENS } from "@/di/tokens";
 import {
-  type CachedPreview,
   type ItemMetadata,
   type ItemRef,
+  type ItemPreview,
   type ItemType,
   NO_METADATA,
   type ReadyItem,
@@ -147,7 +147,7 @@ export class ProcessItemUseCase {
     const answer = await this.ask(request);
     const type = itemTypeOf(typeFromSourceUrl, page, answer);
     const isImage = type === "image" && page.kind === "file";
-    const preview: CachedPreview = {
+    const preview: ItemPreview = {
       type,
       metadata: metadataOf(head, answer),
       thumbnailKey: await this.keepThumbnail(page.finalUrl, canonical, isImage, head, answer),
@@ -246,7 +246,7 @@ export class ProcessItemUseCase {
    */
   private async ready(
     ref: ItemRef,
-    preview: CachedPreview,
+    preview: ItemPreview,
     { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
