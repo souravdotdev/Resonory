@@ -1,10 +1,10 @@
-import { sha256Hex } from "@/domain/rules/sha256Hex";
+import type { ItemRef } from "@/domain/entities/Item";
 
 /**
- * Where a URL's Thumbnail is kept, inside the `thumbnails` bucket: one fixed
- * path per canonical URL, shared by every Item that saves it. Every upload to
- * it overwrites the last one, so all those Items show the latest upload.
+ * Where an Item's Thumbnail is kept, inside the `thumbnails` bucket: one
+ * object per Item, in its User's folder. Only a later Processing run of that
+ * same Item overwrites it, so no other Item's save ever changes its picture.
  */
-export function thumbnailKeyOf(canonicalUrl: string): string {
-  return `shared/${sha256Hex(canonicalUrl)}.webp`;
+export function thumbnailKeyOf({ userId, itemId }: Pick<ItemRef, "userId" | "itemId">): string {
+  return `${userId}/${itemId}.webp`;
 }

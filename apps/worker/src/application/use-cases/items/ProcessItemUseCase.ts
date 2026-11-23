@@ -19,7 +19,6 @@ import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
-import { canonicalUrl } from "@/domain/rules/canonicalUrl";
 import { itemTypeFromJsonLd } from "@/domain/rules/itemTypeFromJsonLd";
 import { itemTypeFromOpenGraph } from "@/domain/rules/itemTypeFromOpenGraph";
 import { itemTypeFromResponse } from "@/domain/rules/itemTypeFromResponse";
@@ -127,20 +126,13 @@ export class ProcessItemUseCase {
           {
             type: typeFromSourceUrl,
             metadata: metadataOf(null, answer),
-            thumbnailKey: await this.keepThumbnail(
-              item.sourceUrl,
-              canonicalUrl(item.sourceUrl),
-              false,
-              null,
-              answer,
-            ),
+            thumbnailKey: await this.keepThumbnail(ref, item.sourceUrl, false, null, answer),
           },
           text,
         );
       }
     }
 
-    const canonical = canonicalUrl(page.finalUrl);
     const head = page.kind === "html" ? page.head : null;
     // A file says nothing oEmbed could add; an unsuccessful answer may still be a known provider's.
     const request = page.kind === "file" ? null : oEmbedRequestFor(page.finalUrl, head);
@@ -150,7 +142,7 @@ export class ProcessItemUseCase {
     const preview: ItemPreview = {
       type,
       metadata: metadataOf(head, answer),
-      thumbnailKey: await this.keepThumbnail(page.finalUrl, canonical, isImage, head, answer),
+      thumbnailKey: await this.keepThumbnail(ref, page.finalUrl, isImage, head, answer),
     };
     return this.ready(ref, preview, text);
   }
@@ -200,21 +192,22 @@ export class ProcessItemUseCase {
 
   /**
    * Keeps the first candidate image (thumbnailCandidates) that downloads,
-   * resizes and uploads as the URL's card Thumbnail, at its fixed key
-   * (shared by every Item that saves this URL), and returns that key. Any
-   * failure moves on to the next candidate; null when none is kept, or when
-   * there is no Thumbnail store (then nothing is downloaded at all).
+   * resizes and uploads as the Item's card Thumbnail, at the Item's own key
+   * (thumbnailKeyOf), and returns that key. The upload overwrites only this
+   * Item's object, left by an earlier run of the same Item. Any failure moves
+   * on to the next candidate; null when none is kept, or when there is no
+   * Thumbnail store (then nothing is downloaded at all).
    */
   private async keepThumbnail(
+    ref: ItemRef,
     finalUrl: string,
-    canonical: string | null,
     isImage: boolean,
     head: PageHead | null,
     answer: OEmbedAnswer | null,
   ): Promise<string | null> {
-    if (!this.thumbnails || !canonical) return null;
+    if (!this.thumbnails) return null;
     const oEmbedThumbnailUrl = answer?.oEmbed.thumbnailUrl ?? null;
-    const key = thumbnailKeyOf(canonical);
+    const key = thumbnailKeyOf(ref);
     for (const url of thumbnailCandidates({ finalUrl, isImage, head, oEmbedThumbnailUrl })) {
       try {
         const image = await this.images.fetchImage(url);

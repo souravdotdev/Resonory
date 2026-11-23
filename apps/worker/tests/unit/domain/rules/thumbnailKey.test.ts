@@ -2,21 +2,18 @@ import { describe, expect, it } from "vitest";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
 
 describe("thumbnailKeyOf", () => {
-  it("is the same key for the same canonical URL", () => {
-    const url = "https://example.com/page";
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
 
-    expect(thumbnailKeyOf(url)).toBe(thumbnailKeyOf(url));
-  });
-
-  it("is a different key for a different canonical URL", () => {
-    expect(thumbnailKeyOf("https://example.com/a")).not.toBe(
-      thumbnailKeyOf("https://example.com/b"),
+  it("is the Item's .webp object inside its User's folder", () => {
+    expect(thumbnailKeyOf({ userId: USER_ID, itemId: ITEM_ID })).toBe(
+      "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
     );
   });
 
-  it("is a .webp path under a shared prefix, not under any Item or User", () => {
-    const key = thumbnailKeyOf("https://example.com/page");
-
-    expect(key).toMatch(/^shared\/[0-9a-f]{64}\.webp$/);
+  it("is a different key for another Item of the same User", () => {
+    expect(
+      thumbnailKeyOf({ userId: USER_ID, itemId: "00000000-0000-4000-8000-000000000002" }),
+    ).toBe("7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000002.webp");
   });
 });
