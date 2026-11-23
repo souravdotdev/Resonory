@@ -17,7 +17,6 @@ import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { canonicalUrl } from "@/domain/rules/canonicalUrl";
@@ -50,20 +49,17 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * and description, and the Thumbnail key, each decided by the precedence
  * below, all in one update.
  *
- * Every Item is fetched, even one a URL rule already types, for its title —
- * its final URL is what the URL preview cache is keyed on, so a cache hit
- * still needs this fetch to learn it. When the final URL's canonical form
- * already has a cached result, that's used as-is and nothing else below runs
- * (no oEmbed call, no Thumbnail download/resize/upload); a cache miss, or a
- * cache that can't be reached, is treated exactly like processing a URL for
- * the first time, and its result is cached afterward for next time.
+ * Every Item is fetched, even one a URL rule already types, for its title,
+ * unless its job carries captured content: then that page is read instead.
+ * Each save runs in full from its own page (the captured page, otherwise the
+ * fetched one): nothing is looked up or remembered per URL, so nothing one
+ * User's save read is ever reused for another User's Item (Items ADR 0003).
  *
  * When the fetch fails or is refused, an Item a rule typed still becomes
  * Ready, titled by its known oEmbed provider if it has one (X, YouTube …),
  * and keeps that provider's thumbnail as its Thumbnail when it offers one;
  * an untyped one's error propagates, so the job is retried and, out of
- * attempts, the Item ends Failed as a Link. This path has no final URL, so
- * it never touches the cache. An oEmbed call that fails or is refused never
+ * attempts, the Item ends Failed as a Link. An oEmbed call that fails or is refused never
  * fails Processing: the page's other signals decide. Nor does a Thumbnail: a
  * download that is refused or fails, an image that can't be resized, or an
  * upload that fails moves on to the next candidate image, and with none left
@@ -71,10 +67,8 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  *
  * An Item with captured content also gets its Text: a video's captions when
  * the job carries them, otherwise the page's main content, extracted from the
- * captured HTML. It's decided once per job, before the cache is looked up, so
- * a cache hit and a miss both write it. It depends on nothing but what was
- * captured (not the Item type, not the oEmbed answer), and is never cached
- * (Items ADR 0003). A page with no main content, or one the extractor fails
+ * captured HTML. It depends on nothing but what was captured (not the Item
+ * type, not the oEmbed answer). A page with no main content, or one the extractor fails
  * on, has none; a job without captured content (the fetch path, failed or
  * not) has none either, even one that carries captions. Missing Text never
  * fails Processing.
@@ -95,7 +89,6 @@ export class ProcessItemUseCase {
   constructor(
     @inject(WORKER_TOKENS.ItemRepository) private readonly items: IItemRepository,
     @inject(WORKER_TOKENS.UrlFetcher) private readonly fetcher: IUrlFetcher,
-    @inject(WORKER_TOKENS.UrlPreviewCache) private readonly cache: IUrlPreviewCache,
     @inject(WORKER_TOKENS.OEmbedProvider) private readonly oEmbeds: IOEmbedProvider,
     @inject(WORKER_TOKENS.ImageFetcher) private readonly images: IImageFetcher,
     @inject(WORKER_TOKENS.ThumbnailResizer) private readonly resizer: IThumbnailResizer,
@@ -115,7 +108,6 @@ export class ProcessItemUseCase {
     if (item.status === "ready") return { outcome: "already_ready" };
 
     const typeFromSourceUrl = itemTypeFromUrl(item.sourceUrl);
-    // Before the cache short-circuit below: Text is this Item's own, never cached.
     const text = this.textOf(ref, item.sourceUrl);
     let page: FetchedPage;
     if (ref.html !== undefined) {
@@ -129,7 +121,6 @@ export class ProcessItemUseCase {
       } catch (error) {
         if (typeFromSourceUrl === null) throw error;
         // A known provider still describes a post its site wouldn't serve.
-        // There's no final URL here, so this path never touches the cache.
         const answer = await this.ask(knownOEmbedRequestFor(item.sourceUrl));
         return this.ready(
           ref,
@@ -150,22 +141,18 @@ export class ProcessItemUseCase {
     }
 
     const canonical = canonicalUrl(page.finalUrl);
-    const cached = canonical && (await this.cached(canonical));
-    if (cached) return this.ready(ref, cached, text);
-
     const head = page.kind === "html" ? page.head : null;
     // A file says nothing oEmbed could add; an unsuccessful answer may still be a known provider's.
     const request = page.kind === "file" ? null : oEmbedRequestFor(page.finalUrl, head);
     const answer = await this.ask(request);
     const type = itemTypeOf(typeFromSourceUrl, page, answer);
     const isImage = type === "image" && page.kind === "file";
-    const result: CachedPreview = {
+    const preview: CachedPreview = {
       type,
       metadata: metadataOf(head, answer),
       thumbnailKey: await this.keepThumbnail(page.finalUrl, canonical, isImage, head, answer),
     };
-    if (canonical) await this.remember(canonical, result);
-    return this.ready(ref, result, text);
+    return this.ready(ref, preview, text);
   }
 
   /**
@@ -253,26 +240,8 @@ export class ProcessItemUseCase {
     }
   }
 
-  /** The cached preview for a canonical URL, or null on a miss or an unreachable cache. */
-  private async cached(canonical: string): Promise<CachedPreview | null> {
-    try {
-      return await this.cache.get(canonical);
-    } catch {
-      return null;
-    }
-  }
-
-  /** Caches a freshly computed preview; a failed write is never fatal to Processing. */
-  private async remember(canonical: string, preview: CachedPreview): Promise<void> {
-    try {
-      await this.cache.set(canonical, preview);
-    } catch {
-      // Unreachable or erroring: next save just processes this URL fresh again.
-    }
-  }
-
   /**
-   * Marks the Item Ready with the URL's preview plus its own Text, in one
+   * Marks the Item Ready with its preview plus its own Text, in one
    * update, then queues its AI tagging.
    */
   private async ready(

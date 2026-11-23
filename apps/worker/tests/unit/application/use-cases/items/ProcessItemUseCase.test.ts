@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessItemUseCase } from "@/application/use-cases/items/ProcessItemUseCase";
 import {
-  type CachedPreview,
   type Item,
   type ItemMetadata,
   type ItemRef,
@@ -18,7 +17,6 @@ import type { FetchedPage, IUrlFetcher } from "@/domain/providers/IUrlFetcher";
 import type { IImageFetcher } from "@/domain/providers/IImageFetcher";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
-import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
 import type { IPageHeadParser } from "@/domain/providers/IPageHeadParser";
 import type { IQueueProvider, TagItemRequest } from "@/domain/providers/IQueueProvider";
 import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
@@ -215,47 +213,17 @@ interface ThumbnailPorts {
   store?: IThumbnailStore | null;
 }
 
-// A URL preview cache that never has anything cached yet.
-function cacheMissing() {
-  return {
-    get: vi.fn(async (_url: string) => null),
-    set: vi.fn(async (_url: string, _preview: CachedPreview) => {}),
-  } satisfies IUrlPreviewCache;
-}
-
-// A URL preview cache answering every get with this cached preview.
-function cacheAnswering(preview: CachedPreview) {
-  return {
-    get: vi.fn(async (_url: string) => preview),
-    set: vi.fn(async (_url: string, _preview: CachedPreview) => {}),
-  } satisfies IUrlPreviewCache;
-}
-
-// A URL preview cache whose every read and write fails (Redis unreachable …).
-function cacheFailing() {
-  return {
-    get: vi.fn(async (_url: string): Promise<CachedPreview | null> => {
-      throw new Error("Redis answered ECONNREFUSED");
-    }),
-    set: vi.fn(async (_url: string, _preview: CachedPreview): Promise<void> => {
-      throw new Error("Redis answered ECONNREFUSED");
-    }),
-  } satisfies IUrlPreviewCache;
-}
-
 // A queue recording each Tag Item job it's handed.
 function queueRecording() {
   return { enqueueTagItem: vi.fn(async (_request: TagItemRequest) => {}) } satisfies IQueueProvider;
 }
 
-// By default without a Thumbnail store, as the worker runs without Supabase Storage,
-// and without anything already cached.
+// By default without a Thumbnail store, as the worker runs without Supabase Storage.
 const useCaseFor = (
   repository: IItemRepository,
   fetcher: IUrlFetcher,
   oEmbeds: IOEmbedProvider = oEmbedsFailing(),
   { images = imagesFailing(), resizer = resizerFailing(), store = null }: ThumbnailPorts = {},
-  cache: IUrlPreviewCache = cacheMissing(),
   // The real adapter: deterministic and side-effect free, so tests use it as-is
   // rather than faking it, just like a pure domain rule.
   pageParser: IPageHeadParser = new HtmlPageParser(),
@@ -266,7 +234,6 @@ const useCaseFor = (
   new ProcessItemUseCase(
     repository,
     fetcher,
-    cache,
     oEmbeds,
     images,
     resizer,
@@ -281,11 +248,10 @@ const run = (
   fetcher: IUrlFetcher,
   oEmbeds: IOEmbedProvider = oEmbedsFailing(),
   thumbnails: ThumbnailPorts = {},
-  cache: IUrlPreviewCache = cacheMissing(),
 ) => {
   const { repository, item } = itemsInMemory(sourceUrl);
-  const useCase = useCaseFor(repository, fetcher, oEmbeds, thumbnails, cache);
-  return { item, repository, result: useCase.execute(REF), cache };
+  const useCase = useCaseFor(repository, fetcher, oEmbeds, thumbnails);
+  return { item, repository, result: useCase.execute(REF) };
 };
 
 describe("ProcessItemUseCase, Item type", () => {
@@ -769,7 +735,6 @@ describe("ProcessItemUseCase, Items that are already Ready", () => {
       fetcher,
       oEmbedsFailing(),
       {},
-      cacheMissing(),
       undefined,
       undefined,
       queue,
@@ -793,7 +758,6 @@ describe("ProcessItemUseCase, Items that are already Ready", () => {
       fetcherAnswering(htmlPage({ "og:title": "Found at last" })),
       oEmbedsFailing(),
       {},
-      cacheMissing(),
       undefined,
       undefined,
       queue,
@@ -1195,122 +1159,108 @@ describe("ProcessItemUseCase, the oEmbed Thumbnail", () => {
   });
 });
 
-describe("ProcessItemUseCase, the URL preview cache", () => {
-  it("reuses a cached preview instead of reprocessing, skipping oEmbed and the Thumbnail pipeline", async () => {
-    const preview: CachedPreview = {
-      type: "video",
-      metadata: { title: "Rick Astley - Never Gonna Give You Up", description: null },
-      thumbnailKey: "shared/abc123.webp",
-    };
-    const cache = cacheAnswering(preview);
-    const oEmbeds = oEmbedsFailing();
-    const { store } = thumbnailsInMemory();
+describe("ProcessItemUseCase, nothing shared across saves", () => {
+  const OTHER_ITEM_ID = "00000000-0000-4000-8000-000000000002";
+  const OTHER_REF = { itemId: OTHER_ITEM_ID, userId: OTHER_USER_ID };
 
-    const { item, result } = run(
-      "https://youtu.be/dQw4w9WgXcQ",
-      fetcherAnswering(htmlPage()),
+  // An in-memory Item repository holding two Processing Items saved from the same URL:
+  // ITEM_ID for USER_ID and OTHER_ITEM_ID for OTHER_USER_ID.
+  function twoItemsInMemory(sourceUrl: string) {
+    const mine = itemsInMemory(sourceUrl);
+    const theirs = itemsInMemory(sourceUrl);
+    Object.assign(theirs.item, { id: OTHER_ITEM_ID, userId: OTHER_USER_ID });
+    const holding = (ref: ItemRef) =>
+      ref.itemId === OTHER_ITEM_ID ? theirs.repository : mine.repository;
+    const repository: IItemRepository = {
+      ...mine.repository,
+      findById: vi.fn(async (ref: ItemRef) => holding(ref).findById(ref)),
+      markReady: vi.fn(async (ref: ItemRef, ready: ReadyItem) =>
+        holding(ref).markReady(ref, ready),
+      ),
+    };
+    return { repository, mine: mine.item, theirs: theirs.item };
+  }
+
+  // One use case for both saves, as one worker process runs them.
+  const useCaseWith = (
+    repository: IItemRepository,
+    fetcher: IUrlFetcher,
+    oEmbeds: IOEmbedProvider,
+    { images, resizer, store }: Required<ThumbnailPorts>,
+  ) =>
+    new ProcessItemUseCase(
+      repository,
+      fetcher,
       oEmbeds,
-      { images: imagesAnswering(), resizer: resizerAnswering(), store },
-      cache,
+      images,
+      resizer,
+      new HtmlPageParser(),
+      new ReadabilityTextExtractor(),
+      queueRecording(),
+      store,
     );
 
-    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
-    expect(item).toMatchObject({ status: "ready", type: preview.type, ...preview.metadata });
-    expect(oEmbeds.fetchOEmbed).not.toHaveBeenCalled();
-    expect(store.put).not.toHaveBeenCalled();
-  });
-
-  it("looks the cache up by the final, canonical URL, not the pasted one", async () => {
-    const preview: CachedPreview = { type: "article", metadata: NO_METADATA, thumbnailKey: null };
-    const cache = cacheAnswering(preview);
-    const page = { ...htmlPage(), finalUrl: "https://example.com/page?utm_source=newsletter" };
-
-    const { result } = run("https://bit.ly/3xYz", fetcherAnswering(page), undefined, {}, cache);
-
-    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
-    expect(cache.get).toHaveBeenCalledWith("https://example.com/page");
-  });
-
-  it("caches a freshly processed result by its final, canonical URL", async () => {
-    const page = {
-      ...htmlPage({ "og:type": "article" }, { title: "A title" }),
-      finalUrl: "https://example.com/page?utm_source=newsletter",
-    };
-    const { store } = thumbnailsInMemory();
-
-    const { result, cache } = run(
-      "https://example.com/page?utm_source=newsletter",
-      fetcherAnswering(page),
-      undefined,
-      { images: imagesFailing(), resizer: resizerFailing(), store },
+  it("runs a second save of the same URL in full: oEmbed asked and the image downloaded again", async () => {
+    const page = htmlPage(
+      { "og:type": "article", "og:image": "https://cdn.example.com/a.jpg" },
+      { oEmbedLinks: [{ url: "https://example.com/oembed?url=page", format: "json" }] },
     );
-
-    await result;
-
-    expect(cache.set).toHaveBeenCalledWith("https://example.com/page", {
-      type: "article",
-      metadata: { title: "A title", description: null },
-      thumbnailKey: null,
-    });
-  });
-
-  it("caches a 'no Thumbnail' result too, so a page confirmed to offer nothing isn't retried", async () => {
-    const page = htmlPage({ "og:type": "article" });
-
-    const { result, cache } = run("https://example.com/page", fetcherAnswering(page));
-
-    await result;
-
-    expect(cache.set).toHaveBeenCalledWith(
-      "https://example.com/page",
-      expect.objectContaining({ thumbnailKey: null }),
-    );
-  });
-
-  it("never touches the cache when the fetch itself fails", async () => {
-    const { result, cache } = run(
-      "https://youtu.be/dQw4w9WgXcQ",
-      fetcherFailing(new Error("ETIMEDOUT")),
-    );
-
-    await result;
-
-    expect(cache.get).not.toHaveBeenCalled();
-    expect(cache.set).not.toHaveBeenCalled();
-  });
-
-  it("treats a cache read or write failure as a miss and still completes Processing", async () => {
-    const page = htmlPage({ "og:type": "article" });
-
-    const { result, item } = run(
-      "https://example.com/page",
-      fetcherAnswering(page),
-      undefined,
-      {},
-      cacheFailing(),
-    );
-
-    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
-    expect(item).toMatchObject({ status: "ready", type: "article" });
-  });
-
-  it("behaves exactly as without caching for a URL never seen before", async () => {
+    const { repository, mine, theirs } = twoItemsInMemory(PAGE_URL);
+    const oEmbeds = oEmbedsAnswering({ title: "From oEmbed" });
     const images = imagesAnswering();
-    const resizer = resizerAnswering();
-    const { store, objects } = thumbnailsInMemory();
-    const page = htmlPage({ "og:type": "article", "og:image": "https://cdn.example.com/a.jpg" });
+    const { store } = thumbnailsInMemory();
+    const useCase = useCaseWith(repository, fetcherAnswering(page), oEmbeds, {
+      images,
+      resizer: resizerAnswering(),
+      store,
+    });
 
-    const { result } = run(
-      "https://example.com/page",
-      fetcherAnswering(page),
-      undefined,
-      { images, resizer, store },
-      cacheMissing(),
+    await useCase.execute(REF);
+    await useCase.execute(OTHER_REF);
+
+    expect(oEmbeds.fetchOEmbed).toHaveBeenCalledTimes(2);
+    expect(images.fetchImage).toHaveBeenCalledTimes(2);
+    expect(store.put).toHaveBeenCalledTimes(2);
+    expect(mine).toMatchObject({ status: "ready", type: "article", title: "From oEmbed" });
+    expect(theirs).toMatchObject({ status: "ready", type: "article", title: "From oEmbed" });
+  });
+
+  it("gives two Users' Items saved from the same URL each the title and description of their own captured page", async () => {
+    const captured = (title: string, description: string) => `
+      <!doctype html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <meta name="description" content="${description}">
+        </head>
+        <body>Ignored.</body>
+      </html>
+    `;
+    const { repository, mine, theirs } = twoItemsInMemory(PAGE_URL);
+    const useCase = useCaseWith(
+      repository,
+      fetcherFailing(new Error("must not be called")),
+      oEmbedsFailing(),
+      {
+        images: imagesFailing(),
+        resizer: resizerFailing(),
+        store: thumbnailsInMemory().store,
+      },
     );
 
-    await expect(result).resolves.toMatchObject({ outcome: "ready", type: "article" });
-    expect(images.fetchImage).toHaveBeenCalledWith("https://cdn.example.com/a.jpg");
-    expect(objects.size).toBe(1);
+    await useCase.execute({ ...REF, html: captured("Inbox (3) – my subject", "My private inbox") });
+    await useCase.execute({ ...OTHER_REF, html: captured("Sign in", "Sign in to continue") });
+
+    expect(mine).toMatchObject({
+      status: "ready",
+      title: "Inbox (3) – my subject",
+      description: "My private inbox",
+    });
+    expect(theirs).toMatchObject({
+      status: "ready",
+      title: "Sign in",
+      description: "Sign in to continue",
+    });
   });
 });
 
@@ -1458,17 +1408,15 @@ describe("ProcessItemUseCase, Text", () => {
     ports: Ports = {},
   ) => {
     const { repository, item } = itemsInMemory(sourceUrl);
-    const cache = ports.cache ?? cacheMissing();
     const useCase = useCaseFor(
       repository,
       fetcherFailing(new Error("must not be called")),
       undefined,
       ports.thumbnails ?? {},
-      cache,
       undefined,
       ports.textExtractor,
     );
-    return { item, cache, result: useCase.execute({ ...REF, ...job }) };
+    return { item, result: useCase.execute({ ...REF, ...job }) };
   };
 
   it("fills an article's Text with its body, without navigation, footer or sidebar text", async () => {
@@ -1507,34 +1455,6 @@ describe("ProcessItemUseCase, Text", () => {
 
     await expect(result).resolves.toMatchObject({ outcome: "ready", type: "link", text: null });
     expect(item).toMatchObject({ status: "ready", title: "Example", text: null });
-  });
-
-  it("still writes this Item's Text on a cache hit, and never caches Text", async () => {
-    const preview: CachedPreview = {
-      type: "article",
-      metadata: { title: "A long read", description: null },
-      thumbnailKey: "shared/abc123.webp",
-    };
-    const hit = cacheAnswering(preview);
-
-    const { item, result } = processCaptured(articlePage(), ARTICLE_URL, { cache: hit });
-
-    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
-    expect(item.text).toContain(PARAGRAPHS[0]);
-    expect(hit.set).not.toHaveBeenCalled();
-  });
-
-  it("never puts Text in the cache it writes on a miss", async () => {
-    const { item, cache, result } = processCaptured(articlePage());
-
-    await result;
-
-    expect(item.text).toContain(PARAGRAPHS[0]);
-    expect(cache.set).toHaveBeenCalledWith(canonicalUrl(ARTICLE_URL), {
-      type: "article",
-      metadata: { title: "A long read", description: null },
-      thumbnailKey: null,
-    });
   });
 
   it("leaves an Item Ready with its type, title, description and Thumbnail, and no Text, when the extractor throws", async () => {
@@ -1646,7 +1566,6 @@ describe("ProcessItemUseCase, Text", () => {
       undefined,
       {},
       undefined,
-      undefined,
       extractor,
     );
 
@@ -1717,23 +1636,6 @@ describe("ProcessItemUseCase, Text", () => {
       expect(item.text!.length).toBeLessThanOrEqual(100_000);
     });
 
-    it("still writes the captions as Text on a cache hit, and never caches them", async () => {
-      const preview: CachedPreview = {
-        type: "video",
-        metadata: { title: "A video", description: null },
-        thumbnailKey: null,
-      };
-      const hit = cacheAnswering(preview);
-
-      const { item, result } = processJob({ html: articlePage(), captions: CAPTIONS }, VIDEO_URL, {
-        cache: hit,
-      });
-
-      await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview });
-      expect(item.text).toBe(CAPTIONS);
-      expect(hit.set).not.toHaveBeenCalled();
-    });
-
     it("writes no Text for captions on a job without captured content", async () => {
       const { repository, item } = itemsInMemory(VIDEO_URL);
       const page = { ...htmlPage(), finalUrl: VIDEO_URL };
@@ -1772,7 +1674,6 @@ describe("ProcessItemUseCase, Text", () => {
 });
 
 interface Ports {
-  cache?: IUrlPreviewCache;
   thumbnails?: ThumbnailPorts;
   textExtractor?: ITextExtractor;
 }
@@ -1792,20 +1693,10 @@ describe("ProcessItemUseCase, an X post's Text", () => {
     "Your articles, threads and videos, findable by the words inside them. #buildinpublic https://resonory.app/changelog",
   ].join("\n");
 
-  const processCaptured = (
-    html: string,
-    sourceUrl = POST_URL,
-    cache: IUrlPreviewCache = cacheMissing(),
-  ) => {
+  const processCaptured = (html: string, sourceUrl = POST_URL) => {
     const { repository, item } = itemsInMemory(sourceUrl);
-    const useCase = useCaseFor(
-      repository,
-      fetcherFailing(new Error("must not be called")),
-      undefined,
-      {},
-      cache,
-    );
-    return { item, cache, result: useCase.execute({ ...REF, html }) };
+    const useCase = useCaseFor(repository, fetcherFailing(new Error("must not be called")));
+    return { item, result: useCase.execute({ ...REF, html }) };
   };
 
   it("fills an X post's Text with the post's own words only", async () => {
@@ -1829,20 +1720,6 @@ describe("ProcessItemUseCase, an X post's Text", () => {
     expect(item.text).toBe(
       "Finally. I have four hundred saved essays and could never find the one about tide pools. Does it work on paywalled pieces I read while logged in?",
     );
-  });
-
-  it("still gets the post's Text when another User's save already cached the post", async () => {
-    const preview: CachedPreview = {
-      type: "post",
-      metadata: { title: "Resonory on X", description: null },
-      thumbnailKey: "shared/abc123.webp",
-    };
-
-    const { item, result, cache } = processCaptured(X_POST_PAGE, POST_URL, cacheAnswering(preview));
-
-    await expect(result).resolves.toMatchObject({ outcome: "ready", ...preview, text: POST_TEXT });
-    expect(item.text).toBe(POST_TEXT);
-    expect(cache.set).not.toHaveBeenCalled();
   });
 
   // Long enough that the page reads as having main content.
@@ -1915,7 +1792,6 @@ describe("ProcessItemUseCase, AI tagging", () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       queue,
     );
     return { item, repository, result: useCase.execute({ ...REF, ...job }) };
@@ -1953,7 +1829,6 @@ describe("ProcessItemUseCase, AI tagging", () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       queue,
     );
 
@@ -1970,33 +1845,12 @@ describe("ProcessItemUseCase, AI tagging", () => {
     expect(queue.enqueueTagItem).toHaveBeenCalledExactlyOnceWith(REF);
   });
 
-  it("queues it for an Item Ready from a cached preview", async () => {
-    const queue = queueRecording();
-    const { repository } = itemsInMemory(POST_URL);
-    const cached: CachedPreview = { type: "video", metadata: NO_METADATA, thumbnailKey: null };
-    const useCase = useCaseFor(
-      repository,
-      fetcherAnswering(htmlPage()),
-      undefined,
-      undefined,
-      cacheAnswering(cached),
-      undefined,
-      undefined,
-      queue,
-    );
-
-    await useCase.execute(REF);
-
-    expect(queue.enqueueTagItem).toHaveBeenCalledExactlyOnceWith(REF);
-  });
-
   it("queues nothing for an Item that isn't Ready", async () => {
     const queue = queueRecording();
     const { repository } = itemsInMemory("http://127.0.0.1:4000/health");
     const useCase = useCaseFor(
       repository,
       fetcherFailing(new Error("127.0.0.1 isn't public")),
-      undefined,
       undefined,
       undefined,
       undefined,

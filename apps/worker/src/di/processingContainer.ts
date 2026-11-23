@@ -17,8 +17,6 @@ import type { ITextExtractor } from "@/domain/providers/ITextExtractor";
 import type { IThumbnailResizer } from "@/domain/providers/IThumbnailResizer";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IUrlFetcher } from "@/domain/providers/IUrlFetcher";
-import type { IUrlPreviewCache } from "@/domain/providers/IUrlPreviewCache";
-import { RedisUrlPreviewCache } from "@/infrastructure/cache/RedisUrlPreviewCache";
 import { GuardedOEmbedProvider } from "@/infrastructure/http/GuardedOEmbedProvider";
 import { HtmlPageParser } from "@/infrastructure/http/HtmlPageParser";
 import { ReadabilityTextExtractor } from "@/infrastructure/http/ReadabilityTextExtractor";
@@ -61,11 +59,6 @@ export function createProcessingContainer(): Container {
   // the Thumbnail image download, so all go through the same guard.
   container.bind<IUrlFetcher>(WORKER_TOKENS.UrlFetcher).to(SafeUrlFetcher).inSingletonScope();
   container.bind<IJsonFetcher>(WORKER_TOKENS.JsonFetcher).toService(WORKER_TOKENS.UrlFetcher);
-  // Redis is already required for BullMQ, so this has no "unset" case.
-  container
-    .bind<IUrlPreviewCache>(WORKER_TOKENS.UrlPreviewCache)
-    .to(RedisUrlPreviewCache)
-    .inSingletonScope();
   container
     .bind<IOEmbedProvider>(WORKER_TOKENS.OEmbedProvider)
     .to(GuardedOEmbedProvider)
