@@ -70,7 +70,7 @@ Or, in the SQL editor:
 insert into storage.buckets (id, name, public) values ('thumbnails', 'thumbnails', false);
 ```
 
-Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/shared/{sha256(canonical final URL)}.webp`, one object shared by every Item saved from that URL (see [Queue](./queue.md#thumbnails)).
+Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/{userId}/{itemId}.webp`, one object per Item, in its User's folder (see [Queue](./queue.md#thumbnails)).
 
 ## Local Supabase (optional)
 
@@ -94,7 +94,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
 
    This is the local stack's own key, not your hosted project's. Never commit it.
 
-5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/shared/{sha256(canonical final URL)}.webp` in local Storage (see it in Studio), one object shared by every Item saved from that URL. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
+5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), one object per Item. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
 
 Good to know:
 
