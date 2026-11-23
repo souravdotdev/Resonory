@@ -72,6 +72,21 @@ insert into storage.buckets (id, name, public) values ('thumbnails', 'thumbnails
 
 Then set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/worker/.env` (see [Environment Variables](./environment-variables.md#appsworkerenv)). Thumbnails land at `thumbnails/{userId}/{itemId}.webp`, one object per Item, in its User's folder (see [Queue](./queue.md#thumbnails)).
 
+### Wiping the old shared Thumbnails (once)
+
+Before #216, Thumbnails were kept once per page, in the bucket's `shared/` folder, and Items pointed at them. Nothing reads them any more, and there is no migration for them: they are dev data, wiped once by hand in every project (hosted or [local](#local-supabase-optional)) and database that has them.
+
+1. **Delete the objects.** In the Supabase dashboard (or local Studio), open **Storage → `thumbnails`**, select the `shared` folder and delete it. Use the dashboard or the Storage API, not SQL: deleting rows from `storage.objects` leaves the files behind, and newer projects refuse it outright.
+2. **Clear the keys.** In the database `DATABASE_URL` points at (`psql`, or the Supabase SQL editor for a Supabase database):
+
+   ```sql
+   update items set thumbnail_key = null where thumbnail_key like 'shared/%';
+   ```
+
+   Those Items stay Ready, with no Thumbnail.
+
+Leftover per-URL preview entries in Redis (`url-preview:*`) need nothing: nothing reads them, and they expire within 7 days.
+
 ## Local Supabase (optional)
 
 Thumbnail storage normally uses your hosted dev project (above). You can run Supabase on your machine instead with the [Supabase CLI](https://supabase.com/docs/guides/local-development): its local stack includes Storage, and the worker and API only need a Supabase URL, a service role key and the private `thumbnails` bucket, so they don't care that the stack is local. Docker must be running. Nothing in the repo depends on this; it is a way to work on Thumbnails without touching a hosted project.
