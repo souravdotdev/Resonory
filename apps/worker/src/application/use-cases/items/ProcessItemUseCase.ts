@@ -56,21 +56,21 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  *
  * When the fetch fails or is refused, an Item a rule typed still becomes
  * Ready, titled by its known oEmbed provider if it has one (X, YouTube …),
- * and keeps that provider's thumbnail as its Thumbnail when it offers one;
- * an untyped one's error propagates, so the job is retried and, out of
- * attempts, the Item ends Failed as a Link. An oEmbed call that fails or is refused never
- * fails Processing: the page's other signals decide. Nor does a Thumbnail: a
- * download that is refused or fails, an image that can't be resized, or an
- * upload that fails moves on to the next candidate image, and with none left
- * the Item is Ready without one.
+ * and keeps that provider's thumbnail as its Thumbnail when it offers one; an
+ * untyped one's error propagates, so the job is retried and, out of attempts,
+ * the Item ends Failed as a Link. An oEmbed call that fails or is refused
+ * never fails Processing: the page's other signals decide. Nor does a
+ * Thumbnail: a download that is refused or fails, an image that can't be
+ * resized, or an upload that fails moves on to the next candidate image, and
+ * with none left the Item is Ready without one.
  *
  * An Item with captured content also gets its Text: a video's captions when
  * the job carries them, otherwise the page's main content, extracted from the
  * captured HTML. It depends on nothing but what was captured (not the Item
- * type, not the oEmbed answer). A page with no main content, or one the extractor fails
- * on, has none; a job without captured content (the fetch path, failed or
- * not) has none either, even one that carries captions. Missing Text never
- * fails Processing.
+ * type, not the oEmbed answer). A page with no main content, or one the
+ * extractor fails on, has none; a job without captured content (the fetch
+ * path, failed or not) has none either, even one that carries captions.
+ * Missing Text never fails Processing.
  *
  * An Item that is already Ready is left alone: nothing is fetched or written
  * and no Tag Item job is queued. A Processing or Failed Item runs as usual,
