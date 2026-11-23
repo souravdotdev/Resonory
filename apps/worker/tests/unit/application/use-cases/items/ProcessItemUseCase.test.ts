@@ -812,9 +812,13 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     expect(item).toMatchObject({ status: "ready", type: "image", thumbnailKey: ITEM_KEY });
   });
 
-  it("overwrites the Thumbnail when the same Item is processed again", async () => {
+  it("overwrites only the Item's own Thumbnail when the same Item is processed again", async () => {
+    // Another User's Item saved from the same URL, whose Thumbnail is already stored.
+    const OTHER_ITEM_KEY = `${OTHER_USER_ID}/00000000-0000-4000-8000-000000000002.webp`;
+    const THEIR_THUMBNAIL = new Uint8Array([2, 2, 2]);
     const { repository, item } = itemsInMemory("https://example.com/sunset");
     const { store, objects } = thumbnailsInMemory();
+    objects.set(OTHER_ITEM_KEY, THEIR_THUMBNAIL);
     const useCase = useCaseFor(repository, photo(), undefined, {
       images: imagesAnswering(),
       resizer: resizerAnswering(),
@@ -827,7 +831,13 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     await useCase.execute(REF);
 
     expect(store.put).toHaveBeenCalledTimes(2);
-    expect([...objects.keys()]).toEqual([ITEM_KEY]);
+    expect(store.put.mock.calls.map(([key]) => key)).toEqual([ITEM_KEY, ITEM_KEY]);
+    expect(objects).toEqual(
+      new Map([
+        [OTHER_ITEM_KEY, THEIR_THUMBNAIL],
+        [ITEM_KEY, CARD_THUMBNAIL],
+      ]),
+    );
   });
 
   it.each([
