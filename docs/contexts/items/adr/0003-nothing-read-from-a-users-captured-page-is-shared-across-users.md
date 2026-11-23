@@ -15,4 +15,4 @@ An Item's Text comes from what that User's own browser captured: the page as the
 - Text is computed on every save. Its cost is one Readability parse of the captured HTML per job.
 - A job without captured content (the legacy server-fetch path) gets no Text.
 - X post Text comes from the captured page's post node, the User's own capture, not the oEmbed answer.
-- Anything later built on what Processing reads (embeddings, AI tags, summaries) is per Item, never per URL. A per-URL optimisation is safe only for something no User's page can change, such as an oEmbed answer cached by endpoint.
+- Anything later built on what Processing reads (embeddings, AI tags, summaries) is per Item, never per URL.
