@@ -38,7 +38,7 @@ import {
   pickMetadata,
   twitterCardMetadata,
 } from "@/domain/rules/pageMetadata";
-import { thumbnailCandidates } from "@/domain/rules/thumbnailCandidates";
+import { type ThumbnailOffers, thumbnailCandidates } from "@/domain/rules/thumbnailCandidates";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
 
 /**
@@ -126,7 +126,12 @@ export class ProcessItemUseCase {
           {
             type: typeFromSourceUrl,
             metadata: metadataOf(null, answer),
-            thumbnailKey: await this.keepThumbnail(ref, item.sourceUrl, false, null, answer),
+            thumbnailKey: await this.keepThumbnail(ref, {
+              finalUrl: item.sourceUrl,
+              isImage: false,
+              head: null,
+              oEmbedThumbnailUrl: answer?.oEmbed.thumbnailUrl ?? null,
+            }),
           },
           text,
         );
@@ -142,7 +147,12 @@ export class ProcessItemUseCase {
     const preview: ItemPreview = {
       type,
       metadata: metadataOf(head, answer),
-      thumbnailKey: await this.keepThumbnail(ref, page.finalUrl, isImage, head, answer),
+      thumbnailKey: await this.keepThumbnail(ref, {
+        finalUrl: page.finalUrl,
+        isImage,
+        head,
+        oEmbedThumbnailUrl: answer?.oEmbed.thumbnailUrl ?? null,
+      }),
     };
     return this.ready(ref, preview, text);
   }
@@ -198,17 +208,10 @@ export class ProcessItemUseCase {
    * on to the next candidate; null when none is kept, or when there is no
    * Thumbnail store (then nothing is downloaded at all).
    */
-  private async keepThumbnail(
-    ref: ItemRef,
-    finalUrl: string,
-    isImage: boolean,
-    head: PageHead | null,
-    answer: OEmbedAnswer | null,
-  ): Promise<string | null> {
+  private async keepThumbnail(ref: ItemRef, offers: ThumbnailOffers): Promise<string | null> {
     if (!this.thumbnails) return null;
-    const oEmbedThumbnailUrl = answer?.oEmbed.thumbnailUrl ?? null;
     const key = thumbnailKeyOf(ref);
-    for (const url of thumbnailCandidates({ finalUrl, isImage, head, oEmbedThumbnailUrl })) {
+    for (const url of thumbnailCandidates(offers)) {
       try {
         const image = await this.images.fetchImage(url);
         await this.thumbnails.put(key, await this.resizer.toCardThumbnail(image));
