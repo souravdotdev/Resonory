@@ -1260,7 +1260,7 @@ describe("GET /items", () => {
         id: OLDEST,
         userId: USER_ID,
         status: "failed",
-        type: null,
+        type: "article",
         title: null,
         createdAt: new Date("2026-05-01T00:00:00.000Z"),
       }),
@@ -1294,7 +1294,7 @@ describe("GET /items", () => {
       {
         id: OLDEST,
         sourceUrl: "https://example.com/post",
-        type: null,
+        type: "article",
         status: "failed",
         title: null,
         description: null,
