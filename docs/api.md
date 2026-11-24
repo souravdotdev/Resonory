@@ -192,7 +192,7 @@ POST /items
 
 The signed-in User's Library: every Item they've saved, newest first, Processing and Failed ones included, as Item cards. Only the web app's Session may call it: it declares `preHandler: sessionOnlyAuthMiddleware(container)`, like the [Tag routes](#tags) (see [Web-Session-only routes](#web-session-only-routes)). It keeps the app-wide rate limit. Served by `itemsRoutes` → `ItemsController` → `ListItemsUseCase`, which:
 
-1. loads the User's Items through `IItemRepository.listForUser`, newest first (`created_at` descending, then id descending, so two saved at the same moment keep a stable order), over the `items_user_id_created_at_idx` index;
+1. loads the User's Items through `IItemRepository.listForUser`, newest first (`created_at` descending, then id descending, so two saved at the same moment keep a stable order), over the `items_user_id_created_at_idx` index. Each comes as an `ItemSummary`, an Item without its Text: the select leaves out `extracted_text`, which can be long and which no card shows;
 2. loads every card's Tags in one query (`ITagRepository.listOnItems`), each with its Tag source, oldest link first, then by Tag name;
 3. signs every Thumbnail in the Library in one call (`IThumbnailUrlProvider.resolveMany`): 1-hour links into the private `thumbnails` bucket. A card whose Item has no Thumbnail, or whose Thumbnail can't be signed, gets a null `thumbnailUrl`; one that can't be signed never fails the request. With no Thumbnail provider (Supabase Storage isn't configured), every card's `thumbnailUrl` is null;
 4. returns `ListItemsResponseSchema`: `{ items: ItemCard[], nextCursor: null }`. There's no pagination yet, so every Item comes back at once and `nextCursor` is always null.
