@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toItem } from "@/infrastructure/mappers/itemMapper";
+import { toItem, toItemSummary } from "@/infrastructure/mappers/itemMapper";
 
 type ItemRow = Parameters<typeof toItem>[0];
 
@@ -66,5 +66,17 @@ describe("toItem", () => {
     const item = toItem(row({ type: "link", status: "failed" }));
 
     expect(item).toEqual({ ...processingItem, type: "link", status: "failed" });
+  });
+});
+
+describe("toItemSummary", () => {
+  it("maps a row selected without extracted_text to an Item with no Text field", () => {
+    const { extractedText: _text, ...summaryRow } = row({ type: "article", status: "ready" });
+    const { extractedText: _none, ...processingSummary } = processingItem;
+
+    const summary = toItemSummary(summaryRow);
+
+    expect(summary).toEqual({ ...processingSummary, type: "article", status: "ready" });
+    expect(summary).not.toHaveProperty("extractedText");
   });
 });
