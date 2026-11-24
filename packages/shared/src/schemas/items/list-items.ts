@@ -5,7 +5,7 @@ import { ItemCardSchema } from "./item-card";
 export const DEFAULT_LIST_LIMIT = 30;
 export const MAX_LIST_LIMIT = 100;
 
-/** One listing serves the feed, keyword search and tag filtering. */
+/** One listing serves the Library, keyword search and tag filtering. */
 export const ListItemsQuerySchema = z.object({
   q: z.string().optional(),
   tagId: z.uuid().optional(),
