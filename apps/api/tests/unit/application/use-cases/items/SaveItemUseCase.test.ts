@@ -34,6 +34,9 @@ function itemsInMemory() {
       async (userId: string, itemId: string) =>
         saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
     ),
+    listForUser: vi.fn(async (userId: string) =>
+      saved.filter((item) => item.userId === userId).reverse(),
+    ),
   };
   return { repository, saved };
 }

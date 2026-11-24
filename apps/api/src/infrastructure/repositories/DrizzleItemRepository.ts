@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, getTableColumns } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -32,5 +32,15 @@ export class DrizzleItemRepository implements IItemRepository {
       .where(and(eq(items.id, itemId), eq(items.userId, userId)))
       .limit(1);
     return row === undefined ? null : toItem(row);
+  }
+
+  async listForUser(userId: string): Promise<Item[]> {
+    // Served by items_user_id_created_at_idx; the id breaks ties between equal creation times.
+    const rows = await this.db
+      .select(itemColumns)
+      .from(items)
+      .where(eq(items.userId, userId))
+      .orderBy(desc(items.createdAt), desc(items.id));
+    return rows.map(toItem);
   }
 }

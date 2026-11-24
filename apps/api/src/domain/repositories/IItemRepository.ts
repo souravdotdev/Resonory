@@ -16,4 +16,11 @@ export interface IItemRepository {
 
   /** The User's Item with this id, or null when there's none or it's another User's. */
   findById(userId: string, itemId: string): Promise<Item | null>;
+
+  /**
+   * Every one of the User's Items, Processing and Failed included, newest first:
+   * by creation time, then by id, so two Items created at the same moment keep
+   * the same order between calls.
+   */
+  listForUser(userId: string): Promise<Item[]>;
 }

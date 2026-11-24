@@ -5,13 +5,14 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import {
   CreateItemResponseSchema,
   CreateItemSchema,
+  ListItemsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
   MAX_URL_LENGTH,
 } from "@resonory/shared/schemas/items";
 import { TOKENS } from "@/di/tokens";
 import type { ItemsController } from "@/interface/controllers/ItemsController";
-import { authMiddleware } from "@/interface/middleware/auth.middleware";
+import { authMiddleware, sessionOnlyAuthMiddleware } from "@/interface/middleware/auth.middleware";
 
 /**
  * `POST /items`' request-body limit, in bytes, derived from the create-Item
@@ -55,6 +56,10 @@ export interface ItemsRoutesOptions {
  * megabytes (captured page content), so it replaces the app-wide rate limit
  * with a stricter 30 a minute per API key (`createItemRateLimitKey`), plus
  * `CREATE_ITEM_IP_LIMIT` per IP.
+ *
+ * `GET /items`: the User's Library, every Item they've saved, newest first.
+ * Only the web app's Session may call it: an API key is refused with 403
+ * (`sessionOnlyAuthMiddleware`). It keeps the app-wide rate limit.
  */
 export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
   app,
@@ -91,5 +96,14 @@ export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
     },
     // request.body is CreateItemInput, already trimmed and validated
     (request, reply) => itemsController().create(request, reply),
+  );
+
+  app.get(
+    "/items",
+    {
+      preHandler: sessionOnlyAuthMiddleware(container),
+      schema: { response: { 200: ListItemsResponseSchema } },
+    },
+    (request) => itemsController().list(request),
   );
 };

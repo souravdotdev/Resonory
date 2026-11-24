@@ -64,6 +64,15 @@ export function taggingInMemory() {
     },
     findById: async (userId, itemId) =>
       items.find((item) => item.id === itemId && item.userId === userId) ?? null,
+    // Newest first, then by id, like the adapter's order.
+    listForUser: async (userId) =>
+      items
+        .filter((item) => item.userId === userId)
+        .sort(
+          (a, b) =>
+            b.createdAt.getTime() - a.createdAt.getTime() ||
+            (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
+        ),
   };
 
   const createTag = (userId: string, name: string, origin: TagOrigin): Tag => {

@@ -7,6 +7,7 @@ import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
   ItemTagsResponseSchema,
+  ListItemsResponseSchema,
   ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
@@ -15,6 +16,7 @@ import {
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
+import { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
 import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
@@ -95,6 +97,8 @@ function itemsInMemory() {
     },
     findById: async (userId: string, itemId: string) =>
       saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
+    // Every save has the same creation time, so the later id comes first.
+    listForUser: async (userId: string) => saved.filter((item) => item.userId === userId).reverse(),
   };
   return { repository, saved };
 }
@@ -131,6 +135,7 @@ function testContainer(
   container.bind<IItemRepository>(TOKENS.ItemRepository).toConstantValue(items);
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
+  container.bind(TOKENS.ListItemsUseCase).to(ListItemsUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
@@ -1193,6 +1198,32 @@ describe("GET /tags", () => {
 
     expect(res.statusCode).toBe(401);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
+describe("GET /items", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // An app over the in-memory Items and Tags; seed `items` to set the User's Library.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const list = (url = "/items", headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "GET", url, headers });
+    return { ...store, app, list };
+  }
+
+  it("answers 200 with an empty Library for a User with no Items", async () => {
+    const { list } = await scene();
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ items: [], nextCursor: null });
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
   });
 });
 
