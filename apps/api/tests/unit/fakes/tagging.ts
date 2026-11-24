@@ -96,6 +96,18 @@ export function taggingInMemory() {
   // Only the AI used it and it's on no Items.
   const unusedAiTag = (tag: Tag) => tag.origin === "ai" && !onAnItem(tag);
 
+  // The User's Tags on the Item, oldest link first, then by name, like the adapter's order.
+  const onItem = (userId: string, itemId: string) =>
+    links
+      .filter((link) => link.itemId === itemId && link.userId === userId)
+      .map((link) => ({ link, tag: tags.find((tag) => tag.id === link.tagId)! }))
+      .sort(
+        (a, b) =>
+          a.link.createdAt.getTime() - b.link.createdAt.getTime() ||
+          a.tag.name.localeCompare(b.tag.name),
+      )
+      .map(({ link, tag }) => ({ tag, source: link.source }));
+
   const tagRepository: ITagRepository = {
     findOrCreate: async (userId, name) => {
       const existing = tags.find((tag) => tag.userId === userId && tag.name === name);
@@ -131,11 +143,9 @@ export function taggingInMemory() {
       // Applied by the User, so it's theirs now.
       tags.find((tag) => tag.id === tagId)!.origin = "user";
     },
-    listOnItem: async (userId, itemId) =>
-      links
-        .filter((link) => link.itemId === itemId && link.userId === userId)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map((link) => ({ tag: tags.find((tag) => tag.id === link.tagId)!, source: link.source })),
+    listOnItem: async (userId, itemId) => onItem(userId, itemId),
+    listOnItems: async (userId, itemIds) =>
+      new Map(itemIds.map((itemId) => [itemId, onItem(userId, itemId)])),
     listForUser: async (userId) => {
       // When the Tag last went on any Item, or when it was created if it's on none.
       const lastUsed = (tag: Tag) => {

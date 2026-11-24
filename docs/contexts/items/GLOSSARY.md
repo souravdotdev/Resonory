@@ -14,6 +14,10 @@ _Avoid_: Bookmark, save, entry, note
 The address of the page an Item was saved from.
 _Avoid_: Link, original URL
 
+**Library**:
+Every Item a User has saved, newest first.
+_Avoid_: Feed, list, inbox
+
 **Thumbnail**:
 The picture Resonory keeps for an Item, copied from what its page or provider offers as its preview; for an Image, the image itself. It comes from that User's own save, never from another User's save of the same page. Some Items have none.
 _Avoid_: Cover, preview image, OG image

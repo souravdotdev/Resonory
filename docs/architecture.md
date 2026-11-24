@@ -10,7 +10,7 @@ Managed with [pnpm workspaces](https://pnpm.io/workspaces) + [Turborepo](https:/
 
 ```
 apps/
-  web/      Next.js frontend (feed + save-a-link pages)
+  web/      Next.js frontend (Library + save-a-link pages)
   api/      Fastify API, organised by layer (ADR 0004):
               src/domain/          entities, ports (repositories/, providers/), errors, pure rules
               src/application/     use-case classes (XUseCase) and their output DTOs

@@ -36,6 +36,13 @@ export interface ITagRepository {
   listOnItem(userId: string, itemId: string): Promise<AppliedTag[]>;
 
   /**
+   * The Tags on several of the User's Items in one query, keyed by Item id, each
+   * Item's in `listOnItem`'s order. Every Item id asked for has an entry, `[]`
+   * when it has no Tags; another User's Tags never appear. No Item ids, no query.
+   */
+  listOnItems(userId: string, itemIds: readonly string[]): Promise<Map<string, AppliedTag[]>>;
+
+  /**
    * Every one of the User's Tags, most recently used first: by the latest time it
    * was put on any Item, by the AI or the User, or, on no Items, when it was created.
    * A Tag only the AI used is left out once it's on no Items: one left there by
