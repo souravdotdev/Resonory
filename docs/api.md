@@ -4,7 +4,7 @@ Fastify server in `apps/api`, organised by layer (see [Clean Architecture](./cle
 
 Base URL locally: `http://localhost:4000` (from `PORT` in `apps/api/.env`).
 
-Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL), `GET /tags` (list the User's Tags), `POST /items/:itemId/tags` (tag an Item by name) and `DELETE /items/:itemId/tags/:tagId` (take a Tag off an Item). The other Item endpoints (list, search, retry, delete) come in later specs, built on the same schema wiring described below.
+Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL), `GET /items` (the User's Library), `GET /tags` (list the User's Tags), `POST /items/:itemId/tags` (tag an Item by name) and `DELETE /items/:itemId/tags/:tagId` (take a Tag off an Item). The other Item endpoints (search, retry, delete) come in later specs, built on the same schema wiring described below.
 
 ## Shared schemas: one definition of every request and response
 
@@ -12,7 +12,7 @@ Every request and response between `apps/web` and `apps/api` is defined once, as
 
 - `@resonory/shared/schemas/common`: shared shapes, such as the error envelope (`ErrorResponseSchema`).
 - `@resonory/shared/schemas/auth`: the signed-in User (`MeResponseSchema`).
-- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
+- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`), the Library's response (`ListItemsResponseSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
 - `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Item processing and Item tagging queue names, the job names and their payloads (see [Queue](./queue.md)).
 
 Naming: zod schemas end in `Schema` and their inferred TypeScript types drop the suffix (for example `CreateItemSchema` / `CreateItemInput`, `ItemCardSchema` / `ItemCard`). A plain `Item` is always the domain entity in `apps/api/src/domain/entities`, never a wire shape.
@@ -124,13 +124,13 @@ The web app's requests (`apps/web/src/lib/api.ts`) send the Session cookie with 
 
 ### Web-Session-only routes
 
-Better Auth turns a valid `x-api-key` header (the extension's) into a Session just as it does a cookie, so the auth middleware accepts both. Routes only the web app may call (today the [Tag routes](#tags)) declare `preHandler: sessionOnlyAuthMiddleware(container)` instead. It runs the same guard first, so a request with no Session, or an invalid key, still gets `401 unauthorized`; then a request carrying an `x-api-key` header is refused with `ForbiddenError`, sent as:
+Better Auth turns a valid `x-api-key` header (the extension's) into a Session just as it does a cookie, so the auth middleware accepts both. Routes only the web app may call (today [`GET /items`](#get-items) and the [Tag routes](#tags)) declare `preHandler: sessionOnlyAuthMiddleware(container)` instead. It runs the same guard first, so a request with no Session, or an invalid key, still gets `401 unauthorized`; then a request carrying an `x-api-key` header is refused with `ForbiddenError`, sent as:
 
 ```json
 { "error": { "code": "forbidden", "message": "That isn't allowed with these credentials" } }
 ```
 
-It looks at the header because Better Auth's api-key plugin uses the key over any Session cookie sent alongside it, and reads keys from that one header only. The header name is one constant, `API_KEY_HEADER` (`src/infrastructure/auth/apiKeyHeader.ts`): `createAuth` passes it to the plugin as `apiKeyHeaders` (explicitly, not relying on the default) and sets no `customAPIKeyGetter`, and the guard reads the same constant. `tests/unit/infrastructure/auth/createAuth.test.ts` fails if the plugin ever reads keys from anywhere else, since the Tag routes would then quietly start accepting keys.
+It looks at the header because Better Auth's api-key plugin uses the key over any Session cookie sent alongside it, and reads keys from that one header only. The header name is one constant, `API_KEY_HEADER` (`src/infrastructure/auth/apiKeyHeader.ts`): `createAuth` passes it to the plugin as `apiKeyHeaders` (explicitly, not relying on the default) and sets no `customAPIKeyGetter`, and the guard reads the same constant. `tests/unit/infrastructure/auth/createAuth.test.ts` fails if the plugin ever reads keys from anywhere else, since the Web-Session-only routes would then quietly start accepting keys.
 
 ### `GET /me`
 
@@ -187,6 +187,55 @@ POST /items
 - Captured content over 5 Mi characters → `400 validation_failed` with the issue at `/html`. The route sets its own request-body limit (`CREATE_ITEM_BODY_LIMIT`, derived from the schema's caps: two bytes per character plus headroom), so an oversized capture reaches the schema instead of getting Fastify's 413 from its 1 MiB default. Captions over 1 Mi characters are the same `400`, at `/captions`.
 - More than 30 saves in a minute → `429 rate_limited`. `POST /items` replaces the app-wide 100 a minute with 30, counted per API key (`x-api-key`, hashed), or per client IP for a request without one, and every IP gets at most 60 a minute whatever keys it sends (see [Security](./security.md#rate-limiting)).
 - If the job can't be enqueued (Redis is down), the request fails with `500 internal`. The Item is already stored and stays Processing until the processing worker's stuck-Item sweep ends it as Failed (see [Queue](./queue.md#stuck-items)); there is no retry endpoint yet.
+
+### `GET /items`
+
+The signed-in User's Library: every Item they've saved, newest first, Processing and Failed ones included, as Item cards. Only the web app's Session may call it: it declares `preHandler: sessionOnlyAuthMiddleware(container)`, like the [Tag routes](#tags) (see [Web-Session-only routes](#web-session-only-routes)). It keeps the app-wide rate limit. Served by `itemsRoutes` → `ItemsController` → `ListItemsUseCase`, which:
+
+1. loads the User's Items through `IItemRepository.listForUser`, newest first (`created_at` descending, then id descending, so two saved at the same moment keep a stable order), over the `items_user_id_created_at_idx` index;
+2. loads every card's Tags in one query (`ITagRepository.listOnItems`), each with its Tag source, oldest link first, then by Tag name;
+3. signs every Thumbnail in the Library in one call (`IThumbnailUrlProvider.resolveMany`): 1-hour links into the private `thumbnails` bucket. A card whose Item has no Thumbnail, or whose Thumbnail can't be signed, gets a null `thumbnailUrl`; one that can't be signed never fails the request. With no Thumbnail provider (Supabase Storage isn't configured), every card's `thumbnailUrl` is null;
+4. returns `ListItemsResponseSchema`: `{ items: ItemCard[], nextCursor: null }`. There's no pagination yet, so every Item comes back at once and `nextCursor` is always null.
+
+```
+GET /items
+
+200 OK
+{
+  "items": [
+    {
+      "id": "3b241101-e2bb-4255-8caf-4136c566a962",
+      "sourceUrl": "https://youtu.be/dQw4w9WgXcQ",
+      "type": "video",
+      "status": "ready",
+      "title": "Never Gonna Give You Up",
+      "description": "The official video.",
+      "thumbnailUrl": "https://<project>.supabase.co/storage/v1/object/sign/thumbnails/...?token=...",
+      "failureMessage": null,
+      "createdAt": "2026-04-02T00:00:00.000Z",
+      "tags": [{ "id": "0f1e2d3c-4b5a-4968-8776-655443322110", "name": "music", "source": "ai" }]
+    },
+    {
+      "id": "9d7c3f0e-5b1a-4e2f-8c6d-1a2b3c4d5e6f",
+      "sourceUrl": "https://example.com/gone",
+      "type": "link",
+      "status": "failed",
+      "title": null,
+      "description": null,
+      "thumbnailUrl": null,
+      "failureMessage": "We couldn't process this link. Try again.",
+      "createdAt": "2026-04-01T00:00:00.000Z",
+      "tags": []
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+- A User with no Items → `200 OK` with `{ "items": [], "nextCursor": null }`.
+- Any query parameter (`q`, `tagId`, `cursor`, `limit`, ...) → `400 validation_failed`: there's no filtering or pagination yet, so a client never mistakes the whole Library for a filtered one. The query is checked before auth, so this holds without a Session too.
+- No valid Session (or an invalid API key) → `401 unauthorized`.
+- A valid API key → `403 forbidden`.
 
 ## Tags
 
