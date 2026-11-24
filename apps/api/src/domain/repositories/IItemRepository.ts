@@ -1,4 +1,4 @@
-import type { Item } from "@/domain/entities/Item";
+import type { Item, ItemSummary } from "@/domain/entities/Item";
 
 /** What saving an Item needs: whose it is and the Source URL exactly as pasted (trimmed). */
 export interface NewItem {
@@ -20,7 +20,8 @@ export interface IItemRepository {
   /**
    * Every one of the User's Items, Processing and Failed included, newest first:
    * by creation time, then by id, so two Items created at the same moment keep
-   * the same order between calls.
+   * the same order between calls. Each comes without its Text, which no card
+   * shows and which can be long, so the Library never loads every Item's Text.
    */
-  listForUser(userId: string): Promise<Item[]>;
+  listForUser(userId: string): Promise<ItemSummary[]>;
 }

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { items, users } from "@resonory/db/schema";
+import type { Item } from "@/domain/entities/Item";
 import type { Database } from "@/infrastructure/database/Database";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
 import { createTestDatabase, type TestDatabase } from "../../support/testDatabase";
@@ -33,7 +34,13 @@ async function anItem(
     id,
     createdAt,
     status,
-  }: { id?: string; createdAt?: Date; status?: "processing" | "failed" } = {},
+    extractedText,
+  }: {
+    id?: string;
+    createdAt?: Date;
+    status?: "processing" | "failed";
+    extractedText?: string;
+  } = {},
 ): Promise<string> {
   const [item] = await db
     .insert(items)
@@ -45,6 +52,7 @@ async function anItem(
       createdAt,
       status,
       type: status === "failed" ? "article" : undefined,
+      extractedText,
     })
     .returning({ id: items.id });
   return item!.id;
@@ -81,7 +89,18 @@ describe("DrizzleItemRepository.listForUser", () => {
     expect(listed.map((item) => item.id)).toEqual([higher, lower]);
   });
 
-  it("includes Processing and Failed Items, as whole Items", async () => {
+  it("never loads an Item's Text, which no card shows", async () => {
+    const userId = await aUser();
+    const itemId = await anItem(userId, { extractedText: "A long article body…" });
+
+    const [listed] = await repository.listForUser(userId);
+
+    expect(listed).not.toHaveProperty("extractedText");
+    const { extractedText: _text, ...summary } = (await repository.findById(userId, itemId))!;
+    expect(listed).toEqual(summary);
+  });
+
+  it("includes Processing and Failed Items, as whole Item summaries", async () => {
     const userId = await aUser();
     const processing = await anItem(userId, {
       status: "processing",
@@ -94,9 +113,13 @@ describe("DrizzleItemRepository.listForUser", () => {
 
     const listed = await repository.listForUser(userId);
 
+    const withoutText = (item: Item | null) => {
+      const { extractedText: _text, ...summary } = item!;
+      return summary;
+    };
     expect(listed).toEqual([
-      await repository.findById(userId, processing),
-      await repository.findById(userId, failed),
+      withoutText(await repository.findById(userId, processing)),
+      withoutText(await repository.findById(userId, failed)),
     ]);
     expect(listed.map((item) => item.status)).toEqual(["processing", "failed"]);
   });
