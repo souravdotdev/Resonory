@@ -105,7 +105,7 @@ describe("toItemCardOutput", () => {
     expect(card.thumbnailUrl).toBeNull();
   });
 
-  // A list signs every Thumbnail in one go, then builds each card from its signed URL.
+  // The Library signs every Thumbnail in one go, then builds each card from its signed URL.
   it("takes a Thumbnail URL that's already been signed", () => {
     const signed = "https://cdn.example.com/signed/already?sig=batch";
 

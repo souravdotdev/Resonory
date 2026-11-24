@@ -41,8 +41,8 @@ export async function toItemCardOutput(
 
 /**
  * Builds the Item card for an Item and its applied Tags, with a Thumbnail URL
- * that's already been signed (or null for no Thumbnail). A list signs all its
- * Thumbnails in one go, then builds each card with this.
+ * that's already been signed (or null for no Thumbnail). The Library signs all
+ * its Thumbnails in one go, then builds each card with this.
  */
 export function toItemCardOutputWithThumbnailUrl(
   item: Item,

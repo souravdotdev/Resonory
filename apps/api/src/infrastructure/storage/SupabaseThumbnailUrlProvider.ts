@@ -37,7 +37,7 @@ const SIGNED_URL_EXPIRY = 60 * 60;
  * Signs short-lived links to Thumbnails in Supabase Storage. Thumbnails are stored
  * card-sized, so no transformation is asked for (it needs a paid Supabase plan).
  * A key Storage refuses to sign (a missing object or bucket, a bad service role
- * key) gets no link, so one bad row never breaks a list of cards.
+ * key) gets no link, so one bad row never breaks the Library.
  */
 @injectable()
 export class SupabaseThumbnailUrlProvider implements IThumbnailUrlProvider {
@@ -66,7 +66,7 @@ export class SupabaseThumbnailUrlProvider implements IThumbnailUrlProvider {
         urls.set(key, signed && !signed.error ? signed.signedUrl : null);
       });
     } catch {
-      // A network failure: no Thumbnails, but the list still loads.
+      // A network failure: no Thumbnails, but the Library still loads.
     }
     return urls;
   }
