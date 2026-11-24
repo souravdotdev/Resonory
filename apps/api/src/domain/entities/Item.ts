@@ -30,3 +30,9 @@ export interface Item {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * An Item without its Text: everything an Item card shows. The Library loads
+ * these, since its cards never show Text and an Item's Text can be long.
+ */
+export type ItemSummary = Omit<Item, "extractedText">;

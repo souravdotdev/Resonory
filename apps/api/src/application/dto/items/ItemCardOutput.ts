@@ -5,7 +5,7 @@ import type {
   TagSource as SharedTagSource,
 } from "@resonory/shared/schemas/items";
 import { toItemTagsOutput } from "@/application/dto/tags/ItemTagsOutput";
-import type { Item, ItemStatus, ItemType } from "@/domain/entities/Item";
+import type { ItemStatus, ItemSummary, ItemType } from "@/domain/entities/Item";
 import type { AppliedTag, TagSource } from "@/domain/entities/Tag";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 
@@ -28,9 +28,10 @@ const FAILURE_MESSAGE = "We couldn't process this link. Try again.";
 /**
  * Builds the Item card for an Item and its applied Tags, signing the Thumbnail URL.
  * With no Thumbnail provider (Thumbnail storage isn't configured), the card shows no Thumbnail.
+ * A card never shows an Item's Text, so an Item without it (an `ItemSummary`) is enough.
  */
 export async function toItemCardOutput(
-  item: Item,
+  item: ItemSummary,
   tags: readonly AppliedTag[],
   thumbnails?: IThumbnailUrlProvider,
 ): Promise<ItemCardOutput> {
@@ -45,7 +46,7 @@ export async function toItemCardOutput(
  * its Thumbnails in one go, then builds each card with this.
  */
 export function toItemCardOutputWithThumbnailUrl(
-  item: Item,
+  item: ItemSummary,
   tags: readonly AppliedTag[],
   thumbnailUrl: string | null,
 ): ItemCardOutput {
