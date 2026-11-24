@@ -1319,7 +1319,64 @@ describe("GET /items", () => {
     expect(res.json().items.map((card: { id: string }) => card.id)).toEqual([OLDEST]);
   });
 
-  it("gives every card no Tags and no Thumbnail yet", async () => {
+  it("puts each Item's Tags, with their Tag source, on its own card, oldest link first, then by name", async () => {
+    const { list, items, tagRepository, links, tick } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID, createdAt: new Date("2026-05-01T00:00:00.000Z") }),
+      anItem({ id: NEWEST, userId: USER_ID, createdAt: new Date("2026-05-02T00:00:00.000Z") }),
+    );
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    const reading = await tagRepository.findOrCreate(USER_ID, "reading");
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+    const first = tick();
+    const together = tick();
+    links.push(
+      { userId: USER_ID, itemId: OLDEST, tagId: sleep.id, source: "ai", createdAt: first },
+      { userId: USER_ID, itemId: OLDEST, tagId: reading.id, source: "user", createdAt: together },
+      { userId: USER_ID, itemId: OLDEST, tagId: memory.id, source: "ai", createdAt: together },
+      { userId: USER_ID, itemId: NEWEST, tagId: memory.id, source: "user", createdAt: tick() },
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    const tagsOn = (id: string) =>
+      res
+        .json()
+        .items.find((card: { id: string }) => card.id === id)
+        .tags.map((tag: { name: string; source: string }) => [tag.name, tag.source]);
+    expect(tagsOn(NEWEST)).toEqual([["memory", "user"]]);
+    expect(tagsOn(OLDEST)).toEqual([
+      ["sleep", "ai"],
+      ["memory", "ai"],
+      ["reading", "user"],
+    ]);
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("never puts another User's Tags on a card, even on an Item id they share", async () => {
+    const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+    const { list, items, tagRepository, links, tick } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID }),
+      anItem({ id: OLDEST, userId: OTHER_USER_ID }),
+    );
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "theirs");
+    links.push({
+      userId: OTHER_USER_ID,
+      itemId: OLDEST,
+      tagId: theirs.id,
+      source: "user",
+      createdAt: tick(),
+    });
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([expect.objectContaining({ id: OLDEST, tags: [] })]);
+  });
+
+  it("gives a card with no Tags `tags: []`, and no Thumbnail yet", async () => {
     const { list, items } = await scene();
     items.push(anItem({ id: OLDEST, userId: USER_ID, thumbnailKey: `${USER_ID}/${OLDEST}.jpg` }));
 

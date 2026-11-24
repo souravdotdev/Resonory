@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, getTableColumns, notExists, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -116,6 +127,26 @@ export class DrizzleTagRepository implements ITagRepository {
       .where(and(eq(itemTags.itemId, itemId), eq(itemTags.userId, userId)))
       .orderBy(asc(itemTags.createdAt), asc(tags.name));
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
+  }
+
+  async listOnItems(
+    userId: string,
+    itemIds: readonly string[],
+  ): Promise<Map<string, AppliedTag[]>> {
+    const onItems = new Map<string, AppliedTag[]>(itemIds.map((itemId) => [itemId, []]));
+    if (itemIds.length === 0) return onItems;
+
+    const rows = await this.db
+      .select({ itemId: itemTags.itemId, tag: getTableColumns(tags), source: itemTags.source })
+      .from(itemTags)
+      .innerJoin(tags, eq(tags.id, itemTags.tagId))
+      .where(and(inArray(itemTags.itemId, [...itemIds]), eq(itemTags.userId, userId)))
+      // listOnItem's order, so each Item's Tags come out grouped in it.
+      .orderBy(asc(itemTags.createdAt), asc(tags.name));
+    for (const { itemId, tag, source } of rows) {
+      onItems.get(itemId)!.push({ tag: toTag(tag), source });
+    }
+    return onItems;
   }
 
   async listForUser(userId: string): Promise<Tag[]> {
