@@ -1204,6 +1204,10 @@ describe("GET /tags", () => {
 describe("GET /items", () => {
   const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
   const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+  const OLDEST = "00000000-0000-4000-8000-000000000001";
+  const TIED_LOWER_ID = "00000000-0000-4000-8000-00000000000a";
+  const TIED_HIGHER_ID = "00000000-0000-4000-8000-00000000000b";
+  const NEWEST = "00000000-0000-4000-8000-000000000002";
 
   // An app over the in-memory Items and Tags; seed `items` to set the User's Library.
   async function scene(sessions: ISessionProvider = signedIn()) {
@@ -1224,6 +1228,107 @@ describe("GET /items", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ items: [], nextCursor: null });
     expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("lists the User's Items newest first, and two created at the same moment by id descending", async () => {
+    const { list, items } = await scene();
+    const sameMoment = new Date("2026-05-02T00:00:00.000Z");
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID, createdAt: new Date("2026-05-01T00:00:00.000Z") }),
+      anItem({ id: TIED_LOWER_ID, userId: USER_ID, createdAt: sameMoment }),
+      anItem({ id: NEWEST, userId: USER_ID, createdAt: new Date("2026-05-03T00:00:00.000Z") }),
+      anItem({ id: TIED_HIGHER_ID, userId: USER_ID, createdAt: sameMoment }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items.map((card: { id: string }) => card.id)).toEqual([
+      NEWEST,
+      TIED_HIGHER_ID,
+      TIED_LOWER_ID,
+      OLDEST,
+    ]);
+    expect(res.json().nextCursor).toBeNull();
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("includes Processing and Failed Items, a Failed card with its retry message", async () => {
+    const { list, items } = await scene();
+    items.push(
+      anItem({
+        id: OLDEST,
+        userId: USER_ID,
+        status: "failed",
+        type: null,
+        title: null,
+        createdAt: new Date("2026-05-01T00:00:00.000Z"),
+      }),
+      anItem({
+        id: NEWEST,
+        userId: USER_ID,
+        status: "processing",
+        type: null,
+        title: null,
+        sourceUrl: "https://example.com/just-saved",
+        createdAt: new Date("2026-05-02T00:00:00.000Z"),
+      }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([
+      {
+        id: NEWEST,
+        sourceUrl: "https://example.com/just-saved",
+        type: null,
+        status: "processing",
+        title: null,
+        description: null,
+        thumbnailUrl: null,
+        failureMessage: null,
+        createdAt: "2026-05-02T00:00:00.000Z",
+        tags: [],
+      },
+      {
+        id: OLDEST,
+        sourceUrl: "https://example.com/post",
+        type: null,
+        status: "failed",
+        title: null,
+        description: null,
+        thumbnailUrl: null,
+        failureMessage: "We couldn't process this link. Try again.",
+        createdAt: "2026-05-01T00:00:00.000Z",
+        tags: [],
+      },
+    ]);
+  });
+
+  it("never lists another User's Items", async () => {
+    const { list, items } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID }),
+      anItem({ id: NEWEST, userId: "11111111-1111-4111-8111-111111111111" }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items.map((card: { id: string }) => card.id)).toEqual([OLDEST]);
+  });
+
+  it("gives every card no Tags and no Thumbnail yet", async () => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID, thumbnailKey: `${USER_ID}/${OLDEST}.jpg` }));
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([
+      expect.objectContaining({ id: OLDEST, tags: [], thumbnailUrl: null }),
+    ]);
   });
 });
 
