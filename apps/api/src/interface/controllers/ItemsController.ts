@@ -2,12 +2,16 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { inject, injectable } from "inversify";
 import type { CreateItemInput } from "@resonory/shared/schemas/items";
 import type { ItemCardOutput } from "@/application/dto/items/ItemCardOutput";
+import type { ListItemsOutput } from "@/application/dto/items/ListItemsOutput";
+import type { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import type { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TOKENS } from "@/di/tokens";
 import { signedInUser } from "@/interface/middleware/auth.middleware";
 
 /**
- * HTTP work only for the Item routes: the User and validated body in, the Item card out.
+ * HTTP work only for the Item routes: `create` saves a link (the User and validated body
+ * in, the new Item card out), and `list` returns the User's Library (the User in, every
+ * Item card out).
  *
  * Convention: nothing here logs yet, but if a use case ever needs its own request-scoped
  * logger (one carrying this request's `reqId`), hand it `request.log` as a plain argument
@@ -18,7 +22,13 @@ import { signedInUser } from "@/interface/middleware/auth.middleware";
  */
 @injectable()
 export class ItemsController {
-  constructor(@inject(TOKENS.SaveItemUseCase) private readonly saveItemUseCase: SaveItemUseCase) {}
+  constructor(
+    @inject(TOKENS.SaveItemUseCase) private readonly saveItemUseCase: SaveItemUseCase,
+    @inject(TOKENS.ListItemsUseCase) private readonly listItemsUseCase: ListItemsUseCase,
+  ) {}
+
+  list = async (request: FastifyRequest): Promise<ListItemsOutput> =>
+    this.listItemsUseCase.execute({ userId: signedInUser(request).id });
 
   create = async (
     request: FastifyRequest<{ Body: CreateItemInput }>,

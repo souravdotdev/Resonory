@@ -651,6 +651,54 @@ describe("DrizzleTagRepository against Postgres", () => {
     });
   });
 
+  describe("listOnItems", () => {
+    it("keys each Item's Tags by its id, each with its Tag source, oldest link first, ties by name", async () => {
+      const userId = await aUser();
+      const first = await anItem(userId);
+      const second = await anItem(userId);
+      const memory = await aTag(userId, "memory");
+      const reading = await aTag(userId, "reading");
+      const sleep = await aTag(userId, "sleep");
+      const at = (minute: number) => new Date(`2026-05-01T00:0${minute}:00.000Z`);
+      await aLink(userId, first, sleep, { source: "ai", createdAt: at(1) });
+      await aLink(userId, first, reading, { source: "user", createdAt: at(2) });
+      await aLink(userId, first, memory, { source: "ai", createdAt: at(2) });
+      await aLink(userId, second, memory, { source: "user", createdAt: at(3) });
+
+      const onItems = await repository.listOnItems(userId, [first, second]);
+
+      const named = (itemId: string) =>
+        onItems.get(itemId)?.map(({ tag, source }) => ({ name: tag.name, source }));
+      expect(named(first)).toEqual([
+        { name: "sleep", source: "ai" },
+        { name: "memory", source: "ai" },
+        { name: "reading", source: "user" },
+      ]);
+      expect(named(second)).toEqual([{ name: "memory", source: "user" }]);
+    });
+
+    it("gives an Item with no Tags an empty entry, and never another User's Tags", async () => {
+      const userId = await aUser();
+      const untagged = await anItem(userId);
+      const otherUserId = await aUser();
+      const theirs = await anItem(otherUserId);
+      await aLink(otherUserId, theirs, await aTag(otherUserId, "theirs"));
+
+      const onItems = await repository.listOnItems(userId, [untagged, theirs]);
+
+      expect(onItems).toEqual(
+        new Map([
+          [untagged, []],
+          [theirs, []],
+        ]),
+      );
+    });
+
+    it("is an empty Map for no Item ids", async () => {
+      expect(await repository.listOnItems(await aUser(), [])).toEqual(new Map());
+    });
+  });
+
   describe("findById", () => {
     it("finds the User's Tag, and never another User's", async () => {
       const userId = await aUser();

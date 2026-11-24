@@ -7,6 +7,7 @@ import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
   CreateItemResponseSchema,
   ItemTagsResponseSchema,
+  ListItemsResponseSchema,
   ListTagsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
@@ -15,6 +16,7 @@ import {
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
+import { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
 import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
@@ -31,6 +33,7 @@ import {
 } from "@/domain/errors";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
+import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository, NewItem } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 import { TOKENS } from "@/di/tokens";
@@ -95,16 +98,41 @@ function itemsInMemory() {
     },
     findById: async (userId: string, itemId: string) =>
       saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
+    // Every save has the same creation time, so the later id comes first.
+    listForUser: async (userId: string) => saved.filter((item) => item.userId === userId).reverse(),
   };
   return { repository, saved };
 }
 
 const queueRecording = (): IQueueProvider => ({ enqueueProcessItem: vi.fn(async () => {}) });
 
+// The URL the fake signs a Thumbnail key to, so a test can tell which key a card's URL came from.
+const signedThumbnailUrl = (key: string) =>
+  `https://project.supabase.co/storage/v1/object/sign/thumbnails/${key}?token=fake`;
+
+// A Thumbnail URL provider that signs every key to `signedThumbnailUrl`, except
+// the `unsignable` ones (a missing object, a bad key), which get null. Signing
+// one key at a time throws, so a Library that doesn't sign in one batch fails.
+function thumbnailsSigning({ unsignable = [] }: { unsignable?: readonly string[] } = {}) {
+  const resolveMany = vi.fn(
+    async (keys: readonly string[]) =>
+      new Map(keys.map((key) => [key, unsignable.includes(key) ? null : signedThumbnailUrl(key)])),
+  );
+  const provider: IThumbnailUrlProvider = {
+    resolve: async () => {
+      throw new Error("signed one Thumbnail at a time");
+    },
+    resolveMany,
+  };
+  return { provider, resolveMany };
+}
+
 interface TestDoubles {
   items?: IItemRepository;
   queue?: IQueueProvider;
   tags?: ITagRepository;
+  // Left out, no Thumbnail provider is bound, as when Supabase Storage isn't configured.
+  thumbnails?: IThumbnailUrlProvider;
 }
 
 // A test container: the real app, use cases and controllers, with fakes for
@@ -116,6 +144,7 @@ function testContainer(
     items = itemsInMemory().repository,
     queue = queueRecording(),
     tags = taggingInMemory().tagRepository,
+    thumbnails,
   }: TestDoubles = {},
 ) {
   const container = new Container();
@@ -131,12 +160,16 @@ function testContainer(
   container.bind<IItemRepository>(TOKENS.ItemRepository).toConstantValue(items);
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
+  container.bind(TOKENS.ListItemsUseCase).to(ListItemsUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
   container.bind(TOKENS.UntagItemUseCase).to(UntagItemUseCase);
   container.bind(TOKENS.TagsController).to(TagsController);
   container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
+  if (thumbnails) {
+    container.bind<IThumbnailUrlProvider>(TOKENS.ThumbnailUrlProvider).toConstantValue(thumbnails);
+  }
   return container;
 }
 
@@ -1193,6 +1226,327 @@ describe("GET /tags", () => {
 
     expect(res.statusCode).toBe(401);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+});
+
+describe("GET /items", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+  const OLDEST = "00000000-0000-4000-8000-000000000001";
+  const TIED_LOWER_ID = "00000000-0000-4000-8000-00000000000a";
+  const TIED_HIGHER_ID = "00000000-0000-4000-8000-00000000000b";
+  const NEWEST = "00000000-0000-4000-8000-000000000002";
+
+  // An app over the in-memory Items and Tags; seed `items` to set the User's Library.
+  // With no `thumbnails`, no Thumbnail provider is bound (Supabase Storage isn't configured).
+  async function scene(
+    sessions: ISessionProvider = signedIn(),
+    thumbnails?: IThumbnailUrlProvider,
+  ) {
+    const store = taggingInMemory();
+    const app = await buildApp(
+      testContainer(sessions, {
+        items: store.itemRepository,
+        tags: store.tagRepository,
+        thumbnails,
+      }),
+    );
+    const list = (url = "/items", headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "GET", url, headers });
+    return { ...store, app, list };
+  }
+
+  it("answers 200 with an empty Library for a User with no Items", async () => {
+    const { list } = await scene();
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ items: [], nextCursor: null });
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("lists the User's Items newest first, and two created at the same moment by id descending", async () => {
+    const { list, items } = await scene();
+    const sameMoment = new Date("2026-05-02T00:00:00.000Z");
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID, createdAt: new Date("2026-05-01T00:00:00.000Z") }),
+      anItem({ id: TIED_LOWER_ID, userId: USER_ID, createdAt: sameMoment }),
+      anItem({ id: NEWEST, userId: USER_ID, createdAt: new Date("2026-05-03T00:00:00.000Z") }),
+      anItem({ id: TIED_HIGHER_ID, userId: USER_ID, createdAt: sameMoment }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items.map((card: { id: string }) => card.id)).toEqual([
+      NEWEST,
+      TIED_HIGHER_ID,
+      TIED_LOWER_ID,
+      OLDEST,
+    ]);
+    expect(res.json().nextCursor).toBeNull();
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("includes Processing and Failed Items, a Failed card with its retry message", async () => {
+    const { list, items } = await scene();
+    items.push(
+      anItem({
+        id: OLDEST,
+        userId: USER_ID,
+        status: "failed",
+        type: "article",
+        title: null,
+        createdAt: new Date("2026-05-01T00:00:00.000Z"),
+      }),
+      anItem({
+        id: NEWEST,
+        userId: USER_ID,
+        status: "processing",
+        type: null,
+        title: null,
+        sourceUrl: "https://example.com/just-saved",
+        createdAt: new Date("2026-05-02T00:00:00.000Z"),
+      }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([
+      {
+        id: NEWEST,
+        sourceUrl: "https://example.com/just-saved",
+        type: null,
+        status: "processing",
+        title: null,
+        description: null,
+        thumbnailUrl: null,
+        failureMessage: null,
+        createdAt: "2026-05-02T00:00:00.000Z",
+        tags: [],
+      },
+      {
+        id: OLDEST,
+        sourceUrl: "https://example.com/post",
+        type: "article",
+        status: "failed",
+        title: null,
+        description: null,
+        thumbnailUrl: null,
+        failureMessage: "We couldn't process this link. Try again.",
+        createdAt: "2026-05-01T00:00:00.000Z",
+        tags: [],
+      },
+    ]);
+  });
+
+  it("never lists another User's Items", async () => {
+    const { list, items } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID }),
+      anItem({ id: NEWEST, userId: "11111111-1111-4111-8111-111111111111" }),
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items.map((card: { id: string }) => card.id)).toEqual([OLDEST]);
+  });
+
+  it("puts each Item's Tags, with their Tag source, on its own card, oldest link first, then by name", async () => {
+    const { list, items, tagRepository, links, tick } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID, createdAt: new Date("2026-05-01T00:00:00.000Z") }),
+      anItem({ id: NEWEST, userId: USER_ID, createdAt: new Date("2026-05-02T00:00:00.000Z") }),
+    );
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    const reading = await tagRepository.findOrCreate(USER_ID, "reading");
+    const sleep = await tagRepository.findOrCreate(USER_ID, "sleep");
+    const first = tick();
+    const together = tick();
+    links.push(
+      { userId: USER_ID, itemId: OLDEST, tagId: sleep.id, source: "ai", createdAt: first },
+      { userId: USER_ID, itemId: OLDEST, tagId: reading.id, source: "user", createdAt: together },
+      { userId: USER_ID, itemId: OLDEST, tagId: memory.id, source: "ai", createdAt: together },
+      { userId: USER_ID, itemId: NEWEST, tagId: memory.id, source: "user", createdAt: tick() },
+    );
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    const tagsOn = (id: string) =>
+      res
+        .json()
+        .items.find((card: { id: string }) => card.id === id)
+        .tags.map((tag: { name: string; source: string }) => [tag.name, tag.source]);
+    expect(tagsOn(NEWEST)).toEqual([["memory", "user"]]);
+    expect(tagsOn(OLDEST)).toEqual([
+      ["sleep", "ai"],
+      ["memory", "ai"],
+      ["reading", "user"],
+    ]);
+    expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+  });
+
+  it("never puts another User's Tags on a card, even on an Item id they share", async () => {
+    const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+    const { list, items, tagRepository, links, tick } = await scene();
+    items.push(
+      anItem({ id: OLDEST, userId: USER_ID }),
+      anItem({ id: OLDEST, userId: OTHER_USER_ID }),
+    );
+    const theirs = await tagRepository.findOrCreate(OTHER_USER_ID, "theirs");
+    links.push({
+      userId: OTHER_USER_ID,
+      itemId: OLDEST,
+      tagId: theirs.id,
+      source: "user",
+      createdAt: tick(),
+    });
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([expect.objectContaining({ id: OLDEST, tags: [] })]);
+  });
+
+  it("gives a card with no Tags `tags: []`", async () => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID, thumbnailKey: `${USER_ID}/${OLDEST}.jpg` }));
+
+    const res = await list();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([expect.objectContaining({ id: OLDEST, tags: [] })]);
+  });
+
+  describe("Thumbnails", () => {
+    const keyOf = (id: string) => `${USER_ID}/${id}.jpg`;
+
+    it("gives each card with a Thumbnail its signed URL, signing them all in one call", async () => {
+      const thumbnails = thumbnailsSigning();
+      const { list, items } = await scene(signedIn(), thumbnails.provider);
+      items.push(
+        anItem({
+          id: OLDEST,
+          userId: USER_ID,
+          thumbnailKey: keyOf(OLDEST),
+          createdAt: new Date("2026-05-01T00:00:00.000Z"),
+        }),
+        anItem({
+          id: NEWEST,
+          userId: USER_ID,
+          thumbnailKey: keyOf(NEWEST),
+          createdAt: new Date("2026-05-02T00:00:00.000Z"),
+        }),
+      );
+
+      const res = await list();
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().items).toEqual([
+        expect.objectContaining({ id: NEWEST, thumbnailUrl: signedThumbnailUrl(keyOf(NEWEST)) }),
+        expect.objectContaining({ id: OLDEST, thumbnailUrl: signedThumbnailUrl(keyOf(OLDEST)) }),
+      ]);
+      expect(thumbnails.resolveMany).toHaveBeenCalledTimes(1);
+      expect([...thumbnails.resolveMany.mock.calls[0]![0]].sort()).toEqual(
+        [keyOf(OLDEST), keyOf(NEWEST)].sort(),
+      );
+      expect(ListItemsResponseSchema.safeParse(res.json()).success).toBe(true);
+    });
+
+    it("gives a card whose Item has no Thumbnail a null Thumbnail URL", async () => {
+      const thumbnails = thumbnailsSigning();
+      const { list, items } = await scene(signedIn(), thumbnails.provider);
+      items.push(
+        anItem({ id: OLDEST, userId: USER_ID, thumbnailKey: null }),
+        anItem({ id: NEWEST, userId: USER_ID, status: "processing", type: null }),
+      );
+
+      const res = await list();
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().items.map((card: { thumbnailUrl: unknown }) => card.thumbnailUrl)).toEqual([
+        null,
+        null,
+      ]);
+    });
+
+    it("leaves only the card whose Thumbnail can't be signed without a picture", async () => {
+      const thumbnails = thumbnailsSigning({ unsignable: [keyOf(OLDEST)] });
+      const { list, items } = await scene(signedIn(), thumbnails.provider);
+      items.push(
+        anItem({
+          id: OLDEST,
+          userId: USER_ID,
+          thumbnailKey: keyOf(OLDEST),
+          createdAt: new Date("2026-05-01T00:00:00.000Z"),
+        }),
+        anItem({
+          id: NEWEST,
+          userId: USER_ID,
+          thumbnailKey: keyOf(NEWEST),
+          createdAt: new Date("2026-05-02T00:00:00.000Z"),
+        }),
+      );
+
+      const res = await list();
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().items).toEqual([
+        expect.objectContaining({ id: NEWEST, thumbnailUrl: signedThumbnailUrl(keyOf(NEWEST)) }),
+        expect.objectContaining({ id: OLDEST, thumbnailUrl: null }),
+      ]);
+    });
+
+    it("still lists the Library, with no Thumbnails, when Supabase Storage isn't configured", async () => {
+      const { list, items } = await scene(signedIn(), undefined);
+      items.push(anItem({ id: OLDEST, userId: USER_ID, thumbnailKey: keyOf(OLDEST) }));
+
+      const res = await list();
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().items).toEqual([
+        expect.objectContaining({ id: OLDEST, thumbnailUrl: null }),
+      ]);
+    });
+  });
+
+  it("is 401 unauthorized without a valid Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list("/items", {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key", async () => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID }));
+
+    const res = await list("/items", { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+  });
+
+  // No filtering or pagination yet, so a client never mistakes the whole Library for a filtered one.
+  it.each([
+    ["q", "?q=memory"],
+    ["tagId", "?tagId=00000000-0000-4000-9000-000000000001"],
+    ["cursor", "?cursor=abc"],
+    ["limit", "?limit=10"],
+  ])("is 400 validation_failed for the unsupported %s param", async (_param, query) => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID }));
+
+    const res = await list(`/items${query}`);
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
   });
 });
 

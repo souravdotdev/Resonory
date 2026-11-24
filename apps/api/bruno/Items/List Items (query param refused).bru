@@ -1,0 +1,38 @@
+meta {
+  name: List Items (query param refused)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/items?limit=5
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 5
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+tests {
+  test("refuses a query param the Library doesn't support yet", () => {
+    expect(res.status).to.equal(400);
+    expect(res.body.error.code).to.equal("validation_failed");
+  });
+}
+
+docs {
+  Requires `sessionCookie`.
+
+  The Library has no pagination, keyword search or Tag filter yet, so every
+  query param (`limit`, `cursor`, `q`, `tagId`) is refused with 400
+  `validation_failed` rather than silently ignored. Swap `limit` for any of
+  the others to see the same answer.
+
+  The params are checked before the Session, so this is 400 even with no
+  cookie at all.
+}

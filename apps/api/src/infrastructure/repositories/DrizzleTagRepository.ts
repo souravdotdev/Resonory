@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, getTableColumns, notExists, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { inject, injectable } from "inversify";
 import { items, itemTags, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import { TOKENS } from "@/di/tokens";
@@ -8,6 +19,10 @@ import type { ITagRepository, ItemTagRef } from "@/domain/repositories/ITagRepos
 import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
 import { toTag } from "@/infrastructure/mappers/tagMapper";
+
+// The order of the Tags on an Item: the oldest link first, then by name. Shared
+// by listOnItem and listOnItems so one Item's Tags come out the same either way.
+const tagsOnItemOrder = [asc(itemTags.createdAt), asc(tags.name)] as const;
 
 /**
  * Tags in the `tags` table, the Tags on Items in `item_tags` and Rejected tags in
@@ -114,8 +129,28 @@ export class DrizzleTagRepository implements ITagRepository {
       .from(itemTags)
       .innerJoin(tags, eq(tags.id, itemTags.tagId))
       .where(and(eq(itemTags.itemId, itemId), eq(itemTags.userId, userId)))
-      .orderBy(asc(itemTags.createdAt), asc(tags.name));
+      .orderBy(...tagsOnItemOrder);
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
+  }
+
+  async listOnItems(
+    userId: string,
+    itemIds: readonly string[],
+  ): Promise<Map<string, AppliedTag[]>> {
+    const onItems = new Map<string, AppliedTag[]>(itemIds.map((itemId) => [itemId, []]));
+    if (itemIds.length === 0) return onItems;
+
+    const rows = await this.db
+      .select({ itemId: itemTags.itemId, tag: getTableColumns(tags), source: itemTags.source })
+      .from(itemTags)
+      .innerJoin(tags, eq(tags.id, itemTags.tagId))
+      .where(and(inArray(itemTags.itemId, [...itemIds]), eq(itemTags.userId, userId)))
+      // Each Item's Tags come out in tagsOnItemOrder.
+      .orderBy(...tagsOnItemOrder);
+    for (const { itemId, tag, source } of rows) {
+      onItems.get(itemId)!.push({ tag: toTag(tag), source });
+    }
+    return onItems;
   }
 
   async listForUser(userId: string): Promise<Tag[]> {

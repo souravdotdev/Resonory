@@ -5,6 +5,7 @@ import { createLogger, type Logger } from "@resonory/logger";
 import { AdmitSignInUseCase } from "@/application/use-cases/auth/AdmitSignInUseCase";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
+import { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
 import { ListTagsUseCase } from "@/application/use-cases/tags/ListTagsUseCase";
@@ -128,6 +129,7 @@ export function createContainer(): Container {
     .inTransientScope();
   container.bind(TOKENS.GetMeUseCase).to(GetMeUseCase).inTransientScope();
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase).inTransientScope();
+  container.bind(TOKENS.ListItemsUseCase).to(ListItemsUseCase).inTransientScope();
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase).inTransientScope();
   container.bind(TOKENS.UntagItemUseCase).to(UntagItemUseCase).inTransientScope();
   container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase).inTransientScope();

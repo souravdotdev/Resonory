@@ -2,16 +2,18 @@ import { createHash } from "node:crypto";
 import type { FastifyRequest } from "fastify";
 import type { Container } from "inversify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
 import {
   CreateItemResponseSchema,
   CreateItemSchema,
+  ListItemsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
   MAX_URL_LENGTH,
 } from "@resonory/shared/schemas/items";
 import { TOKENS } from "@/di/tokens";
 import type { ItemsController } from "@/interface/controllers/ItemsController";
-import { authMiddleware } from "@/interface/middleware/auth.middleware";
+import { authMiddleware, sessionOnlyAuthMiddleware } from "@/interface/middleware/auth.middleware";
 
 /**
  * `POST /items`' request-body limit, in bytes, derived from the create-Item
@@ -46,6 +48,14 @@ export function createItemRateLimitKey(request: FastifyRequest): string {
  */
 export const CREATE_ITEM_IP_LIMIT = 60;
 
+/**
+ * `GET /items` takes no query params yet: no search, Tag filter or pagination.
+ * Strict, so any param (`q`, `tagId`, `cursor`, `limit`) is a 400 and a client
+ * never mistakes the whole Library for a filtered one. The shared
+ * `ListItemsQuerySchema` waits for the follow-ups that implement them.
+ */
+const NoListItemsQuerySchema = z.object({}).strict();
+
 export interface ItemsRoutesOptions {
   container: Container;
 }
@@ -55,6 +65,10 @@ export interface ItemsRoutesOptions {
  * megabytes (captured page content), so it replaces the app-wide rate limit
  * with a stricter 30 a minute per API key (`createItemRateLimitKey`), plus
  * `CREATE_ITEM_IP_LIMIT` per IP.
+ *
+ * `GET /items`: the User's Library, every Item they've saved, newest first.
+ * Only the web app's Session may call it: an API key is refused with 403
+ * (`sessionOnlyAuthMiddleware`). It keeps the app-wide rate limit.
  */
 export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
   app,
@@ -91,5 +105,14 @@ export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
     },
     // request.body is CreateItemInput, already trimmed and validated
     (request, reply) => itemsController().create(request, reply),
+  );
+
+  app.get(
+    "/items",
+    {
+      preHandler: sessionOnlyAuthMiddleware(container),
+      schema: { querystring: NoListItemsQuerySchema, response: { 200: ListItemsResponseSchema } },
+    },
+    (request) => itemsController().list(request),
   );
 };

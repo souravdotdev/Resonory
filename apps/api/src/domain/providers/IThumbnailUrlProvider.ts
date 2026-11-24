@@ -1,3 +1,6 @@
+/** Each Thumbnail key asked for, mapped to its signed URL, or null when it can't be signed. */
+export type SignedThumbnailUrls = ReadonlyMap<string, string | null>;
+
 /**
  * Turns a stored Thumbnail key into a short-lived URL a User's browser can load,
  * or null when it can't be signed (the object is gone, the key is bad …): the
@@ -6,4 +9,11 @@
  */
 export interface IThumbnailUrlProvider {
   resolve(thumbnailKey: string): Promise<string | null>;
+
+  /**
+   * Signs many Thumbnail keys at once, so the Library doesn't make one
+   * request per Thumbnail. Every key gets an entry: its URL, or null when it
+   * can't be signed. It never throws: if signing fails as a whole, every key is null.
+   */
+  resolveMany(thumbnailKeys: readonly string[]): Promise<SignedThumbnailUrls>;
 }

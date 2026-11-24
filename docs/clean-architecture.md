@@ -17,17 +17,17 @@ apps/api/src/
     tokens.ts           TOKENS: one Symbol per bound dependency
     container.ts        createContainer(): the only place concrete classes are bound
   domain/
-    entities/           User.ts (User, SignInProfile), Item.ts, Tag.ts
+    entities/           User.ts (User, SignInProfile), Item.ts (Item, ItemSummary), Tag.ts
     repositories/       IUserRepository.ts, IItemRepository.ts, ITagRepository.ts
     providers/          ISessionProvider.ts, IThumbnailUrlProvider.ts, IQueueProvider.ts
     errors/             AppError and its subclasses (barrel: @/domain/errors)
     rules/              signInDecision.ts, tagName.ts (pure functions)
   application/
     use-cases/auth/     AdmitSignInUseCase, ResolveSignedInUserUseCase, GetMeUseCase
-    use-cases/items/    SaveItemUseCase
+    use-cases/items/    SaveItemUseCase, ListItemsUseCase
     use-cases/tags/     ListTagsUseCase, TagItemUseCase, UntagItemUseCase
     dto/auth/           MeOutput.ts
-    dto/items/          ItemCardOutput.ts (toItemCardOutput)
+    dto/items/          ItemCardOutput.ts (toItemCardOutput, toItemCardOutputWithThumbnailUrl), ListItemsOutput.ts
     dto/tags/           ItemTagsOutput.ts (toItemTagsOutput), ListTagsOutput.ts (toListTagsOutput)
   infrastructure/
     auth/               createAuth.ts, signInHook.ts, googleProfile.ts, BetterAuthSessionProvider.ts
@@ -48,12 +48,12 @@ What each layer holds:
 - **`domain/`** holds the business vocabulary and nothing else. It has entities (plain interfaces, dates as `Date`), ports (`I`-prefixed interfaces: repositories for storage, providers for every other outside service), errors and pure rules. Examples of rules: `decideSignIn(deletedAt, now)` returns `allow`, `restore` or `refuse`, with `GRACE_PERIOD_DAYS = 30`. `isDeleted(user)` says whether a User is deleted. `slugifyTagName` and `TAG_NAME_PATTERN` define Tag names. `MAX_TAGS_PER_ITEM = 20` and `MAX_TAGS_PER_USER = 1000` are the Tag limits. The domain imports nothing outside itself.
 - **`domain/errors/`** has `AppError(message, code)` with `ForbiddenError`, `NotFoundError`, `RepositoryError`, `UnauthorizedError` and `UserPermanentlyDeletedError`, and the Tag errors `InvalidTagNameError`, `ItemTagLimitError` and `UserTagLimitError`. A domain error carries a code (`AppErrorCode`), never an HTTP status.
 - **`application/`** holds the use cases and their DTOs. A use case is an `@injectable()` class named `XUseCase` with one `execute(input)` method. It gets its ports through `@inject(TOKENS.X)` constructor parameters. It returns an output DTO shaped for its view (for example `MeOutput`, `ItemCardOutput`), not an entity. Input types sit beside the use case (`AdmitSignInInput`). Output DTOs sit in `dto/<feature>/`. One exception, by design: `ResolveSignedInUserUseCase` returns the domain `User` entity, because the auth middleware attaches that User to the request for the use cases behind protected routes. Those use cases take the User as input (`GetMeUseCase.execute(user)`). The entity never reaches the wire: each route's use case still returns an output DTO.
-- **`infrastructure/`** holds the adapters: classes and functions that implement a domain port with a real tool. Examples: `DrizzleUserRepository implements IUserRepository`, `BetterAuthSessionProvider implements ISessionProvider`, and `createAuth`, which builds the Better Auth instance with every auth option ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). The row mappers (`toUser`, `toItem`, `toTag`, `toTagLink`) turn `@resonory/db` rows into entities. Tables, the Postgres client and the Redis connection come from `packages/db` (see [Database](./database.md)).
+- **`infrastructure/`** holds the adapters: classes and functions that implement a domain port with a real tool. Examples: `DrizzleUserRepository implements IUserRepository`, `BetterAuthSessionProvider implements ISessionProvider`, and `createAuth`, which builds the Better Auth instance with every auth option ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). The row mappers (`toUser`, `toItem`, `toItemSummary`, `toTag`, `toTagLink`) turn `@resonory/db` rows into entities. Tables, the Postgres client and the Redis connection come from `packages/db` (see [Database](./database.md)).
 - **`interface/`** holds the delivery mechanism (Fastify). Route plugins declare the shared request and response schemas, controllers do the HTTP work and call one use case, and middleware handles who is calling and how errors become responses. `error.middleware.ts` is the one place that maps an `AppError` code to an HTTP status and the shared error envelope. Zod validation failures become 400, and any other error becomes a generic 500 with the details only in the logs.
 
 `di/` sits outside the four layers. It is the composition root: the only code that knows every concrete class.
 
-Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider.
+Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `ListItemsUseCase` (over `IItemRepository`, `ITagRepository` and `IThumbnailUrlProvider`) behind `GET /items`, the Library; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider. `ListItemsUseCase` signs every Thumbnail in the Library in one `resolveMany` call, then builds each card with `toItemCardOutputWithThumbnailUrl`.
 
 ## The dependency rule
 
@@ -87,7 +87,7 @@ To fix it, define a port in the domain and put the tool code in an infrastructur
 
 ## Tokens, the container and scopes
 
-Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemProcessingQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
+Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemProcessingQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ListItemsUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
 
 `di/container.ts` exports `createContainer()`, an InversifyJS `Container`. It is the only place in application code that creates an application class. It binds:
 

@@ -123,7 +123,7 @@ Ownership doesn't depend on the use cases alone: `item_tags` has composite forei
 
 ## What's not built
 
-- **The web Tag picker.** It needs sign-in in `apps/web` and `GET /items` in the API first; neither exists.
+- **The web Tag picker.** It needs sign-in in `apps/web` first, which doesn't exist yet; the Library (`GET /items`) is served.
 - **Tagging from the extension**, at save time or later. The API refuses API keys on these routes on purpose (see above).
 - **Renaming, deleting and merging Tags.** Renaming onto an existing name would hit `tags_user_id_name_unique`, so a rename will need a merge rule.
 - **Filtering Items by Tag** (roadmap item 9). The `item_tags_tag_id_idx` index already serves "every Item with this Tag".

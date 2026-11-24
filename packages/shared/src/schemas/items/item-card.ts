@@ -31,7 +31,7 @@ export const ItemCardTagSchema = z.object({
 export type ItemCardTag = z.infer<typeof ItemCardTagSchema>;
 
 /**
- * The one V1 view of an Item: serves the feed, search results and the save response.
+ * The one V1 view of an Item: serves the Library, search results and the save response.
  * Never carries internals (User id, extracted text, Thumbnail key, updated time, why an Item failed).
  */
 export const ItemCardSchema = z.object({

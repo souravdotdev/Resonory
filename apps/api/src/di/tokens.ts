@@ -33,7 +33,9 @@ export const TOKENS = {
   ThumbnailUrlProvider: Symbol("IThumbnailUrlProvider"),
   /** Saves a pasted URL as a Processing Item and enqueues its Processing (`SaveItemUseCase`). */
   SaveItemUseCase: Symbol("SaveItemUseCase"),
-  /** Serves `POST /items` (`ItemsController`). */
+  /** The User's Library: every Item they've saved, newest first, as Item cards (`ListItemsUseCase`). */
+  ListItemsUseCase: Symbol("ListItemsUseCase"),
+  /** Serves `POST /items` and `GET /items` (`ItemsController`). */
   ItemsController: Symbol("ItemsController"),
   /** Where a User's Tags and the Tags on their Items are stored (`ITagRepository`). */
   TagRepository: Symbol("ITagRepository"),

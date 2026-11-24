@@ -1,0 +1,31 @@
+meta {
+  name: List Items (API key refused)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/items
+  body: none
+  auth: none
+}
+
+headers {
+  x-api-key: {{apiKey}}
+}
+
+tests {
+  test("refuses the extension's API key", () => {
+    expect(res.status).to.equal(403);
+    expect(res.body.error.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  Requires `apiKey` ("3. Create API Key").
+
+  The Library is web-Session-only, like the Tag routes: a valid API key (the
+  extension's) is refused with 403 `forbidden`, even though it would save an
+  Item on `POST /items`. An invalid or blank key gets 401 instead, since that
+  request has no Session at all.
+}

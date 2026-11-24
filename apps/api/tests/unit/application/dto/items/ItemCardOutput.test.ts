@@ -3,11 +3,17 @@ import { describe, expect, it } from "vitest";
 import type { Item } from "@/domain/entities/Item";
 import type { AppliedTag, Tag } from "@/domain/entities/Tag";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
-import { toItemCardOutput } from "@/application/dto/items/ItemCardOutput";
+import {
+  toItemCardOutput,
+  toItemCardOutputWithThumbnailUrl,
+} from "@/application/dto/items/ItemCardOutput";
 
 // A fake provider that makes it obvious which key each URL came from.
 const thumbnails: IThumbnailUrlProvider = {
   resolve: async (key) => `https://cdn.example.com/signed/${key}?sig=fake`,
+  resolveMany: async () => {
+    throw new Error("the card builder signs one key");
+  },
 };
 
 // A freshly saved Item that is still Processing; each test overrides only what it's about.
@@ -95,6 +101,32 @@ describe("toItemCardOutput", () => {
   // With Thumbnail storage unconfigured there's no provider: the card shows no Thumbnail.
   it("gives a null Thumbnail URL to an Item with a Thumbnail key when no Thumbnail provider is given", async () => {
     const card = await toItemCardOutput(readyItem, []);
+
+    expect(card.thumbnailUrl).toBeNull();
+  });
+
+  // The Library signs every Thumbnail in one go, then builds each card from its signed URL.
+  it("takes a Thumbnail URL that's already been signed", () => {
+    const signed = "https://cdn.example.com/signed/already?sig=batch";
+
+    const card = toItemCardOutputWithThumbnailUrl(readyItem, [aiTag], signed);
+
+    expect(card).toEqual({
+      id: "item-1",
+      sourceUrl: "https://example.com/post",
+      type: "article",
+      status: "ready",
+      title: "How spaced repetition works",
+      description: "A short primer on memory.",
+      thumbnailUrl: signed,
+      failureMessage: null,
+      createdAt: "2026-04-01T00:00:00.000Z",
+      tags: [{ id: "tag-1", name: "memory", source: "ai" }],
+    });
+  });
+
+  it("gives a null Thumbnail URL when the already-signed URL is null", () => {
+    const card = toItemCardOutputWithThumbnailUrl(readyItem, [], null);
 
     expect(card.thumbnailUrl).toBeNull();
   });

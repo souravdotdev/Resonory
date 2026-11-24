@@ -79,7 +79,7 @@ export const items = pgTable(
   (table) => [
     // Lets tag links (#11) require an Item and a tag to belong to the same User.
     unique("items_id_user_id_unique").on(table.id, table.userId),
-    // Serves "this User's Items, newest first" (the feed and per-User counts).
+    // Serves "this User's Items, newest first" (the Library and per-User counts).
     index("items_user_id_created_at_idx").on(table.userId, table.createdAt.desc()),
     // Serves the worker's sweep for Items stuck in Processing. Partial: only the few Items still Processing are in it.
     index("items_processing_created_at_idx")
