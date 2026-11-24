@@ -89,4 +89,22 @@ describe("the production container", () => {
     },
     SLOW_CONTAINER_TEST_TIMEOUT,
   );
+
+  // The Library serves cards with or without Thumbnails.
+  it.each([
+    ["with Supabase Storage configured", {}],
+    [
+      "without Supabase Storage configured",
+      { SUPABASE_URL: undefined, SUPABASE_SERVICE_ROLE_KEY: undefined },
+    ],
+  ])(
+    "resolves the Library's use case %s",
+    async (_case, overrides) => {
+      const { container, tokens } = await productionContainer(overrides);
+      const { ListItemsUseCase } = await import("@/application/use-cases/items/ListItemsUseCase");
+
+      expect(container.get(tokens.ListItemsUseCase)).toBeInstanceOf(ListItemsUseCase);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
 });
