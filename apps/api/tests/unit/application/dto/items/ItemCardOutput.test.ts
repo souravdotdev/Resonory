@@ -11,6 +11,9 @@ import {
 // A fake provider that makes it obvious which key each URL came from.
 const thumbnails: IThumbnailUrlProvider = {
   resolve: async (key) => `https://cdn.example.com/signed/${key}?sig=fake`,
+  resolveMany: async () => {
+    throw new Error("the card builder signs one key");
+  },
 };
 
 // A freshly saved Item that is still Processing; each test overrides only what it's about.
