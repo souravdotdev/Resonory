@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { FastifyRequest } from "fastify";
 import type { Container } from "inversify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
 import {
   CreateItemResponseSchema,
   CreateItemSchema,
@@ -46,6 +47,14 @@ export function createItemRateLimitKey(request: FastifyRequest): string {
  * (a household) each keep theirs.
  */
 export const CREATE_ITEM_IP_LIMIT = 60;
+
+/**
+ * `GET /items` takes no query params yet: no search, Tag filter or pagination.
+ * Strict, so any param (`q`, `tagId`, `cursor`, `limit`) is a 400 and a client
+ * never mistakes the whole Library for a filtered one. The shared
+ * `ListItemsQuerySchema` waits for the follow-ups that implement them.
+ */
+const NoListItemsQuerySchema = z.object({}).strict();
 
 export interface ItemsRoutesOptions {
   container: Container;
@@ -102,7 +111,7 @@ export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
     "/items",
     {
       preHandler: sessionOnlyAuthMiddleware(container),
-      schema: { response: { 200: ListItemsResponseSchema } },
+      schema: { querystring: NoListItemsQuerySchema, response: { 200: ListItemsResponseSchema } },
     },
     (request) => itemsController().list(request),
   );

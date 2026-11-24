@@ -1330,6 +1330,41 @@ describe("GET /items", () => {
       expect.objectContaining({ id: OLDEST, tags: [], thumbnailUrl: null }),
     ]);
   });
+
+  it("is 401 unauthorized without a valid Session", async () => {
+    const { list } = await scene(sessionsReturning(null));
+
+    const res = await list("/items", {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key", async () => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID }));
+
+    const res = await list("/items", { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+  });
+
+  // No filtering or pagination yet, so a client never mistakes the whole Library for a filtered one.
+  it.each([
+    ["q", "?q=memory"],
+    ["tagId", "?tagId=00000000-0000-4000-9000-000000000001"],
+    ["cursor", "?cursor=abc"],
+    ["limit", "?limit=10"],
+  ])("is 400 validation_failed for the unsupported %s param", async (_param, query) => {
+    const { list, items } = await scene();
+    items.push(anItem({ id: OLDEST, userId: USER_ID }));
+
+    const res = await list(`/items${query}`);
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+  });
 });
 
 // The real app plus a test-only protected route that echoes who it sees.
