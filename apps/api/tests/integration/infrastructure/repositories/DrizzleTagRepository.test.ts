@@ -676,6 +676,27 @@ describe("DrizzleTagRepository against Postgres", () => {
       ]);
       expect(named(second)).toEqual([{ name: "memory", source: "user" }]);
     });
+
+    it("gives an Item with no Tags an empty entry, and never another User's Tags", async () => {
+      const userId = await aUser();
+      const untagged = await anItem(userId);
+      const otherUserId = await aUser();
+      const theirs = await anItem(otherUserId);
+      await aLink(otherUserId, theirs, await aTag(otherUserId, "theirs"));
+
+      const onItems = await repository.listOnItems(userId, [untagged, theirs]);
+
+      expect(onItems).toEqual(
+        new Map([
+          [untagged, []],
+          [theirs, []],
+        ]),
+      );
+    });
+
+    it("is an empty Map for no Item ids", async () => {
+      expect(await repository.listOnItems(await aUser(), [])).toEqual(new Map());
+    });
   });
 
   describe("findById", () => {
