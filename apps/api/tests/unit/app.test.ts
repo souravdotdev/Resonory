@@ -46,7 +46,6 @@ import { authMiddleware, signedInUser } from "@/interface/middleware/auth.middle
 import type { AuthRequestHandler } from "@/interface/routes/auth.routes";
 import { CREATE_ITEM_IP_LIMIT } from "@/interface/routes/items.routes";
 import { anItem, taggingInMemory } from "./fakes/tagging";
-import { signedThumbnailUrl, thumbnailsSigning } from "./fakes/thumbnails";
 
 const env: Env = {
   PORT: 4000,
@@ -106,6 +105,27 @@ function itemsInMemory() {
 }
 
 const queueRecording = (): IQueueProvider => ({ enqueueProcessItem: vi.fn(async () => {}) });
+
+// The URL the fake signs a Thumbnail key to, so a test can tell which key a card's URL came from.
+const signedThumbnailUrl = (key: string) =>
+  `https://project.supabase.co/storage/v1/object/sign/thumbnails/${key}?token=fake`;
+
+// A Thumbnail URL provider that signs every key to `signedThumbnailUrl`, except
+// the `unsignable` ones (a missing object, a bad key), which get null. Signing
+// one key at a time throws, so a Library that doesn't sign in one batch fails.
+function thumbnailsSigning({ unsignable = [] }: { unsignable?: readonly string[] } = {}) {
+  const resolveMany = vi.fn(
+    async (keys: readonly string[]) =>
+      new Map(keys.map((key) => [key, unsignable.includes(key) ? null : signedThumbnailUrl(key)])),
+  );
+  const provider: IThumbnailUrlProvider = {
+    resolve: async () => {
+      throw new Error("signed one Thumbnail at a time");
+    },
+    resolveMany,
+  };
+  return { provider, resolveMany };
+}
 
 interface TestDoubles {
   items?: IItemRepository;
