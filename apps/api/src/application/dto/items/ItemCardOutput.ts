@@ -34,6 +34,21 @@ export async function toItemCardOutput(
   tags: readonly AppliedTag[],
   thumbnails?: IThumbnailUrlProvider,
 ): Promise<ItemCardOutput> {
+  const thumbnailUrl =
+    item.thumbnailKey && thumbnails ? await thumbnails.resolve(item.thumbnailKey) : null;
+  return toItemCardOutputWithThumbnailUrl(item, tags, thumbnailUrl);
+}
+
+/**
+ * Builds the Item card for an Item and its applied Tags, with a Thumbnail URL
+ * that's already been signed (or null for no Thumbnail). A list signs all its
+ * Thumbnails in one go, then builds each card with this.
+ */
+export function toItemCardOutputWithThumbnailUrl(
+  item: Item,
+  tags: readonly AppliedTag[],
+  thumbnailUrl: string | null,
+): ItemCardOutput {
   return {
     id: item.id,
     sourceUrl: item.sourceUrl,
@@ -41,8 +56,7 @@ export async function toItemCardOutput(
     status: item.status,
     title: item.title,
     description: item.description,
-    thumbnailUrl:
-      item.thumbnailKey && thumbnails ? await thumbnails.resolve(item.thumbnailKey) : null,
+    thumbnailUrl,
     failureMessage: item.status === "failed" ? FAILURE_MESSAGE : null,
     createdAt: item.createdAt.toISOString(),
     tags: toItemTagsOutput(tags),
