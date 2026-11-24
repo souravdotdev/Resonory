@@ -20,6 +20,10 @@ import { MAX_TAGS_PER_ITEM, MAX_TAGS_PER_USER } from "@/domain/rules/tagLimits";
 import type { Database } from "@/infrastructure/database/Database";
 import { toTag } from "@/infrastructure/mappers/tagMapper";
 
+// The order of the Tags on an Item: the oldest link first, then by name. Shared
+// by listOnItem and listOnItems so one Item's Tags come out the same either way.
+const tagsOnItemOrder = [asc(itemTags.createdAt), asc(tags.name)] as const;
+
 /**
  * Tags in the `tags` table, the Tags on Items in `item_tags` and Rejected tags in
  * `rejected_item_tags`, through Drizzle.
@@ -125,7 +129,7 @@ export class DrizzleTagRepository implements ITagRepository {
       .from(itemTags)
       .innerJoin(tags, eq(tags.id, itemTags.tagId))
       .where(and(eq(itemTags.itemId, itemId), eq(itemTags.userId, userId)))
-      .orderBy(asc(itemTags.createdAt), asc(tags.name));
+      .orderBy(...tagsOnItemOrder);
     return rows.map(({ tag, source }) => ({ tag: toTag(tag), source }));
   }
 
@@ -141,8 +145,8 @@ export class DrizzleTagRepository implements ITagRepository {
       .from(itemTags)
       .innerJoin(tags, eq(tags.id, itemTags.tagId))
       .where(and(inArray(itemTags.itemId, [...itemIds]), eq(itemTags.userId, userId)))
-      // listOnItem's order, so each Item's Tags come out grouped in it.
-      .orderBy(asc(itemTags.createdAt), asc(tags.name));
+      // Each Item's Tags come out in tagsOnItemOrder.
+      .orderBy(...tagsOnItemOrder);
     for (const { itemId, tag, source } of rows) {
       onItems.get(itemId)!.push({ tag: toTag(tag), source });
     }
