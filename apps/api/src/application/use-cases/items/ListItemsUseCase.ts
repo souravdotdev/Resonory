@@ -2,7 +2,10 @@ import { inject, injectable, optional } from "inversify";
 import { toItemCardOutputWithThumbnailUrl } from "@/application/dto/items/ItemCardOutput";
 import type { ListItemsOutput } from "@/application/dto/items/ListItemsOutput";
 import { TOKENS } from "@/di/tokens";
-import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
+import type {
+  IThumbnailUrlProvider,
+  SignedThumbnailUrls,
+} from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
 
@@ -48,9 +51,7 @@ export class ListItemsUseCase {
     return { items: cards, nextCursor: null };
   }
 
-  private async signThumbnails(
-    keys: readonly (string | null)[],
-  ): Promise<ReadonlyMap<string, string | null>> {
+  private async signThumbnails(keys: readonly (string | null)[]): Promise<SignedThumbnailUrls> {
     const present = keys.filter((key): key is string => Boolean(key));
     if (!this.thumbnails || present.length === 0) return new Map();
     return this.thumbnails.resolveMany(present);

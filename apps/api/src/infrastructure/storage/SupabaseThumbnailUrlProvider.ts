@@ -1,6 +1,9 @@
 import { inject, injectable } from "inversify";
 import { TOKENS } from "@/di/tokens";
-import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
+import type {
+  IThumbnailUrlProvider,
+  SignedThumbnailUrls,
+} from "@/domain/providers/IThumbnailUrlProvider";
 
 /** What Supabase's Storage client answers when asked to sign a link. */
 export type SignedUrlResult =
@@ -51,7 +54,7 @@ export class SupabaseThumbnailUrlProvider implements IThumbnailUrlProvider {
   }
 
   /** One request for all the keys; a whole failed request leaves every key unsigned. */
-  async resolveMany(thumbnailKeys: readonly string[]): Promise<ReadonlyMap<string, string | null>> {
+  async resolveMany(thumbnailKeys: readonly string[]): Promise<SignedThumbnailUrls> {
     const keys = [...new Set(thumbnailKeys)];
     const urls = new Map<string, string | null>(keys.map((key) => [key, null]));
     if (keys.length === 0) return urls;
