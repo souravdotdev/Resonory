@@ -100,7 +100,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
    ```
 
 3. **Create the `thumbnails` bucket, private.** The worker never creates it. In local Studio (`http://127.0.0.1:55323`) open **Storage → New bucket**, name it `thumbnails` and leave **Public bucket** off. Or run the same SQL as above in Studio's SQL editor. Recent CLI versions can also create it from `supabase/config.toml` (a `[storage.buckets.thumbnails]` table with `public = false`), which runs on `supabase start` and `supabase db reset`.
-4. **Point the apps at it.** Run `supabase status` for the API URL and the service role (secret) key, then set both in **`apps/worker/.env`** and **`apps/api/.env`**: the worker uploads Thumbnails, and the API binds its Thumbnail URL signer (nothing calls it yet).
+4. **Point the apps at it.** Run `supabase status` for the API URL and the service role (secret) key, then set both in **`apps/worker/.env`** and **`apps/api/.env`**: the worker uploads Thumbnails, and the API signs the Library's Thumbnails for `GET /items`.
 
    ```
    SUPABASE_URL=http://127.0.0.1:55321
@@ -109,7 +109,7 @@ Thumbnail storage normally uses your hosted dev project (above). You can run Sup
 
    This is the local stack's own key, not your hosted project's. Never commit it.
 
-5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), one object per Item. The app doesn't show it yet: the API's 1-hour URL signer, which would point at `http://127.0.0.1:55321`, isn't called by any route.
+5. **Check a Thumbnail is stored.** Save a link whose page has an image, with the worker running. The Thumbnail is stored at `thumbnails/{userId}/{itemId}.webp` in local Storage (see it in Studio), one object per Item. With the API running, `GET /items` gives its card a 1-hour signed link pointing at `http://127.0.0.1:55321`; the web app doesn't show Thumbnails yet.
 
 Good to know:
 
