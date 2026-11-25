@@ -178,6 +178,9 @@ function thumbnailsInMemory() {
     put: vi.fn(async (key: string, thumbnail: Uint8Array) => {
       objects.set(key, thumbnail);
     }),
+    delete: vi.fn(async (key: string) => {
+      objects.delete(key);
+    }),
   } satisfies IThumbnailStore;
   return { store, objects };
 }
@@ -188,6 +191,7 @@ function thumbnailsFailing() {
     put: vi.fn(async (_key: string, _thumbnail: Uint8Array): Promise<void> => {
       throw new Error("Storage answered 500");
     }),
+    delete: vi.fn(async (_key: string) => {}),
   } satisfies IThumbnailStore;
 }
 
@@ -198,6 +202,7 @@ function thumbnailsFailingOnce() {
     put: vi.fn(async (_key: string, _thumbnail: Uint8Array): Promise<void> => {
       if (++writes === 1) throw new Error("Storage answered 500");
     }),
+    delete: vi.fn(async (_key: string) => {}),
   } satisfies IThumbnailStore;
 }
 
