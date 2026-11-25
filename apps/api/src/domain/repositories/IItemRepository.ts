@@ -24,4 +24,11 @@ export interface IItemRepository {
    * shows and which can be long, so the Library never loads every Item's Text.
    */
   listForUser(userId: string): Promise<ItemSummary[]>;
+
+  /**
+   * Permanently deletes the User's Item with this id, its Text with it, and
+   * its Tag links and Rejected tags; their Tags stay. True if it deleted the
+   * User's Item, false when there's none or it's another User's.
+   */
+  delete(userId: string, itemId: string): Promise<boolean>;
 }

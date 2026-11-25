@@ -7,6 +7,7 @@ export {
   type CreateItemInput,
   type CreateItemResponse,
 } from "./create-item";
+export { DeleteItemParamsSchema, type DeleteItemParams } from "./delete-item";
 export {
   ItemCardSchema,
   ItemCardTagSchema,

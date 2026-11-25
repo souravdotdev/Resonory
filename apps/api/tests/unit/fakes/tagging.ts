@@ -73,6 +73,19 @@ export function taggingInMemory() {
             b.createdAt.getTime() - a.createdAt.getTime() ||
             (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
         ),
+    // Like the tables' cascades: the Item's Tag links and Rejected tags go, its Tags stay.
+    delete: async (userId, itemId) => {
+      const index = items.findIndex((item) => item.id === itemId && item.userId === userId);
+      if (index === -1) return false;
+      items.splice(index, 1);
+      for (const link of links.filter((link) => link.itemId === itemId)) {
+        links.splice(links.indexOf(link), 1);
+      }
+      for (const rejected of rejections.filter((rejected) => rejected.itemId === itemId)) {
+        rejections.splice(rejections.indexOf(rejected), 1);
+      }
+      return true;
+    },
   };
 
   const createTag = (userId: string, name: string, origin: TagOrigin): Tag => {

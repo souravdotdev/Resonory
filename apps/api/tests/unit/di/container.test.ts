@@ -107,4 +107,15 @@ describe("the production container", () => {
     },
     SLOW_CONTAINER_TEST_TIMEOUT,
   );
+
+  it(
+    "resolves the Item deletion use case",
+    async () => {
+      const { container, tokens } = await productionContainer();
+      const { DeleteItemUseCase } = await import("@/application/use-cases/items/DeleteItemUseCase");
+
+      expect(container.get(tokens.DeleteItemUseCase)).toBeInstanceOf(DeleteItemUseCase);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
 });

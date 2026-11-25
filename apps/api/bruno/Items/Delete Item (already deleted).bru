@@ -1,0 +1,30 @@
+meta {
+  name: Delete Item (already deleted)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/items/{{itemId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+tests {
+  test("is not found once the Item is gone", () => {
+    expect(res.status).to.equal(404);
+    expect(res.body.error.code).to.equal("not_found");
+  });
+}
+
+docs {
+  Requires `sessionCookie` and `itemId`. Run it right after "Delete Item".
+
+  Deleting the same Item again gets 404 `not_found`, the same answer as for
+  an Item that never existed or is another User's, so it never reveals whose
+  an Item is. A malformed id (not a uuid) gets 400 `validation_failed`.
+}

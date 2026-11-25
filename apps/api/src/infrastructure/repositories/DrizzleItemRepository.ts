@@ -46,4 +46,13 @@ export class DrizzleItemRepository implements IItemRepository {
       .orderBy(desc(items.createdAt), desc(items.id));
     return rows.map(toItemSummary);
   }
+
+  async delete(userId: string, itemId: string): Promise<boolean> {
+    // Scoped by user_id like findById. The item_tags and rejected_item_tags foreign keys cascade.
+    const deleted = await this.db
+      .delete(items)
+      .where(and(eq(items.id, itemId), eq(items.userId, userId)))
+      .returning({ id: items.id });
+    return deleted.length > 0;
+  }
 }

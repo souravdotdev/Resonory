@@ -1,0 +1,32 @@
+meta {
+  name: Delete Item
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/items/{{itemId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: better-auth.session_token={{sessionCookie}}
+}
+
+tests {
+  test("deletes the Item, with no body", () => {
+    expect(res.status).to.equal(204);
+    expect(res.body === undefined || res.body === null || res.body === "").to.equal(true);
+  });
+}
+
+docs {
+  Requires `sessionCookie` and `itemId` ("Create Item (with session)" sets
+  `itemId`).
+
+  Item deletion: permanently deletes the Item, which leaves "List Items
+  (Library)" at once. Its Text, Tag links and Rejected tags go with it; the
+  User's Tags stay. There's no undo. Run "Create Item (with session)" again
+  for a fresh `itemId` afterwards (the Tags requests reuse it).
+}
