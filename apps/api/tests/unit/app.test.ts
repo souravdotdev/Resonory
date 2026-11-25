@@ -1586,6 +1586,37 @@ describe("DELETE /items/:itemId", () => {
     expect(res.body).toBe("");
     expect(await library()).toEqual([]);
   });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { remove } = await scene();
+
+    const res = await remove("00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found when the Item was already deleted", async () => {
+    const { remove } = await scene();
+    await remove();
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Item, never 403, and leaves it", async () => {
+    const { remove, items } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: OTHER_USER_ID }));
+
+    const res = await remove(theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(items.map((item) => item.id)).toEqual([ITEM_ID, theirItemId]);
+  });
 });
 
 // The real app plus a test-only protected route that echoes who it sees.
