@@ -36,10 +36,15 @@ describe("SupabaseThumbnailStore", () => {
     await expect(new SupabaseThumbnailStore(fake.storage).delete(key)).resolves.toBeUndefined();
   });
 
-  it("rejects when Storage answers with an error", async () => {
+  it("rejects naming the bucket and key, with Storage's error as the cause", async () => {
     const error = new Error("Invalid Compact JWS");
     const fake = storageRemoving(async () => ({ data: null, error }));
 
-    await expect(new SupabaseThumbnailStore(fake.storage).delete(key)).rejects.toBe(error);
+    const rejection = new SupabaseThumbnailStore(fake.storage).delete(key);
+
+    await expect(rejection).rejects.toThrow(
+      /thumbnails\/user-1\/item-1\.webp.*Invalid Compact JWS/,
+    );
+    await expect(rejection).rejects.toMatchObject({ cause: error });
   });
 });

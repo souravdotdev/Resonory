@@ -16,6 +16,10 @@ export class SupabaseThumbnailStore implements IThumbnailStore {
 
   async delete(thumbnailKey: string): Promise<void> {
     const { error } = await this.storage.from(THUMBNAILS_BUCKET).remove([thumbnailKey]);
-    if (error) throw error;
+    if (error) {
+      throw new Error(`Deleting ${THUMBNAILS_BUCKET}/${thumbnailKey} failed: ${error.message}`, {
+        cause: error,
+      });
+    }
   }
 }
