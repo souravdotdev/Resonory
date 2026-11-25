@@ -34,6 +34,7 @@ import {
 } from "@/domain/errors";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
+import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository, NewItem } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
@@ -131,12 +132,26 @@ function thumbnailsSigning({ unsignable = [] }: { unsignable?: readonly string[]
   return { provider, resolveMany };
 }
 
+// A Thumbnail store that records each key it deleted, or rejects every delete with `failure`.
+function thumbnailStoreRecording({ failure }: { failure?: Error } = {}) {
+  const deleted: string[] = [];
+  const store: IThumbnailStore = {
+    delete: async (key) => {
+      if (failure) throw failure;
+      deleted.push(key);
+    },
+  };
+  return { store, deleted };
+}
+
 interface TestDoubles {
   items?: IItemRepository;
   queue?: IQueueProvider;
   tags?: ITagRepository;
   // Left out, no Thumbnail provider is bound, as when Supabase Storage isn't configured.
   thumbnails?: IThumbnailUrlProvider;
+  // Left out, no Thumbnail store is bound, as when Supabase Storage isn't configured.
+  thumbnailStore?: IThumbnailStore;
 }
 
 // A test container: the real app, use cases and controllers, with fakes for
@@ -149,6 +164,7 @@ function testContainer(
     queue = queueRecording(),
     tags = taggingInMemory().tagRepository,
     thumbnails,
+    thumbnailStore,
   }: TestDoubles = {},
 ) {
   const container = new Container();
@@ -174,6 +190,9 @@ function testContainer(
   container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
   if (thumbnails) {
     container.bind<IThumbnailUrlProvider>(TOKENS.ThumbnailUrlProvider).toConstantValue(thumbnails);
+  }
+  if (thumbnailStore) {
+    container.bind<IThumbnailStore>(TOKENS.ThumbnailStore).toConstantValue(thumbnailStore);
   }
   return container;
 }
@@ -1561,12 +1580,20 @@ describe("DELETE /items/:itemId", () => {
   const ITEM_ID = "00000000-0000-4000-8000-000000000001";
   const signedIn = () => sessionsReturning(user({ id: USER_ID }));
 
-  // The signed-in User's Item, and an app over the in-memory Items and Tags.
-  async function scene(sessions: ISessionProvider = signedIn()) {
+  // The signed-in User's Item, and an app over the in-memory Items and Tags,
+  // with no Thumbnail store unless one is given.
+  async function scene(
+    sessions: ISessionProvider = signedIn(),
+    { thumbnailStore }: Pick<TestDoubles, "thumbnailStore"> = {},
+  ) {
     const store = taggingInMemory();
     store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
     const app = await buildApp(
-      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+      testContainer(sessions, {
+        items: store.itemRepository,
+        tags: store.tagRepository,
+        thumbnailStore,
+      }),
     );
     const remove = (itemId = ITEM_ID, headers: Record<string, string> = withSessionCookie) =>
       app.inject({ method: "DELETE", url: `/items/${itemId}`, headers });
@@ -1585,6 +1612,22 @@ describe("DELETE /items/:itemId", () => {
     expect(res.statusCode).toBe(204);
     expect(res.body).toBe("");
     expect(await library()).toEqual([]);
+  });
+
+  describe("its Thumbnail object", () => {
+    // The key is fixed by the User and Item; what the row says plays no part.
+    it("deletes the object at {userId}/{itemId}.webp, even when the Item has no thumbnail_key", async () => {
+      const thumbnails = thumbnailStoreRecording();
+      const { remove, items } = await scene(signedIn(), { thumbnailStore: thumbnails.store });
+      items[0]!.thumbnailKey = null;
+
+      const res = await remove();
+
+      expect(res.statusCode).toBe(204);
+      expect(thumbnails.deleted).toEqual([
+        "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
+      ]);
+    });
   });
 
   it("is 404 not_found for an Item that doesn't exist", async () => {

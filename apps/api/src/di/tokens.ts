@@ -31,6 +31,8 @@ export const TOKENS = {
   ThumbnailStorage: Symbol("ThumbnailStorage"),
   /** Signs links to Thumbnails (`IThumbnailUrlProvider`); bound only when Supabase Storage is configured. */
   ThumbnailUrlProvider: Symbol("IThumbnailUrlProvider"),
+  /** Deletes Thumbnail objects (`IThumbnailStore`); bound only when Supabase Storage is configured. */
+  ThumbnailStore: Symbol("IThumbnailStore"),
   /** Saves a pasted URL as a Processing Item and enqueues its Processing (`SaveItemUseCase`). */
   SaveItemUseCase: Symbol("SaveItemUseCase"),
   /** The User's Library: every Item they've saved, newest first, as Item cards (`ListItemsUseCase`). */
