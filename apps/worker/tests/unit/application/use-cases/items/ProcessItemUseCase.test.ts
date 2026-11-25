@@ -785,6 +785,23 @@ describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
       thumbnailDeleteError: failure,
     });
   });
+
+  it("deletes nothing when the run uploaded no Thumbnail", async () => {
+    // Another run's object at the Item's key is the API's to delete, not this run's.
+    const { repository, fetcher } = deletedWhileFetching(htmlPage());
+    const { store } = thumbnailsInMemory();
+    const useCase = useCaseFor(repository, fetcher, undefined, {
+      images: imagesAnswering(),
+      resizer: resizerAnswering(),
+      store,
+    });
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({ outcome: "missing" });
+    expect(store.put).not.toHaveBeenCalled();
+    expect(store.delete).not.toHaveBeenCalled();
+  });
 });
 
 describe("ProcessItemUseCase, Items that are already Ready", () => {
