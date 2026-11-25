@@ -47,7 +47,7 @@ For local sign-in, create a Google OAuth **web** client whose authorized redirec
 
 For the extension's origin locally: load the unpacked `apps/extension` build in Chrome (`chrome://extensions` → Developer mode → Load unpacked), copy the `chrome-extension://<id>` origin Chrome assigns it, and set `EXTENSION_ORIGIN` to that. The id is random per unpacked install and changes if you reload it from a different path; a published extension (or one given a declared `key` in its manifest) gets a fixed id instead.
 
-Optional Thumbnail storage, read by the same rules as the worker. With either one unset (or empty), no Thumbnail provider is bound and every Item card's `thumbnailUrl` is `null`. With both set, the API signs 1-hour links into the private `thumbnails` bucket; a key Storage refuses to sign (missing object, bad service role key) gives that card a `null` `thumbnailUrl`:
+Optional Thumbnail storage, read by the same rules as the worker. With either one unset (or empty), no Thumbnail provider or store is bound: every Item card's `thumbnailUrl` is `null`, and Item deletion deletes the Item but skips its Thumbnail object. With both set, the API signs 1-hour links into the private `thumbnails` bucket; a key Storage refuses to sign (missing object, bad service role key) gives that card a `null` `thumbnailUrl`; and Item deletion deletes the Item's Thumbnail object:
 
 | Variable                    | Purpose                                                                        | Local dev value                              |
 | --------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
