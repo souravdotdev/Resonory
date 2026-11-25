@@ -1,0 +1,31 @@
+meta {
+  name: Delete Item (API key refused)
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/items/{{itemId}}
+  body: none
+  auth: none
+}
+
+headers {
+  x-api-key: {{apiKey}}
+}
+
+tests {
+  test("refuses the extension's API key", () => {
+    expect(res.status).to.equal(403);
+    expect(res.body.error.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  Requires `apiKey` ("3. Create API Key") and `itemId`.
+
+  Item deletion is web-Session-only: a valid API key (the extension's) is
+  refused with 403 `forbidden`, so a leaked key can save Items but never
+  delete them. The Item is left untouched. An invalid or blank key gets 401
+  instead, since that request has no Session at all.
+}
