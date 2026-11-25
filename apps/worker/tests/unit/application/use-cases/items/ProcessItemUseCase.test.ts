@@ -45,8 +45,9 @@ function itemsInMemory(sourceUrl: string) {
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => (owns(ref) ? { ...item } : null)),
     markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem) => {
-      if (owns(ref))
-        Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey, text });
+      if (!owns(ref)) return false;
+      Object.assign(item, { status: "ready", type, ...metadata, thumbnailKey, text });
+      return true;
     }),
     markFailed: vi.fn(async () => {}),
     findTaggable: vi.fn(async () => null),
@@ -1875,8 +1876,9 @@ describe("ProcessItemUseCase, AI tagging", () => {
     const { repository } = itemsInMemory(POST_URL);
     const markReady = repository.markReady;
     repository.markReady = vi.fn(async (...args: Parameters<typeof markReady>) => {
-      await markReady(...args);
+      const updated = await markReady(...args);
       order.push("ready");
+      return updated;
     });
     const useCase = useCaseFor(
       repository,

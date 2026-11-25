@@ -60,8 +60,11 @@ export class DrizzleItemRepository implements IItemRepository {
     return row ?? null;
   }
 
-  async markReady(ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem): Promise<void> {
-    await this.finish(ref, {
+  async markReady(
+    ref: ItemRef,
+    { type, metadata, thumbnailKey, text }: ReadyItem,
+  ): Promise<boolean> {
+    return this.finish(ref, {
       status: "ready",
       type,
       ...metadata,
@@ -99,11 +102,17 @@ export class DrizzleItemRepository implements IItemRepository {
     return changed.length > 0;
   }
 
-  /** Ends the Item's Processing with this status and Item type and, when Ready, the rest it learned. */
-  private async finish(ref: ItemRef, fields: FinishedFields): Promise<void> {
-    await this.db
+  /**
+   * Ends the Item's Processing with this status and Item type and, when Ready,
+   * the rest it learned. False when no row was updated: the Item doesn't exist
+   * (it was deleted mid-Processing) or isn't the User's.
+   */
+  private async finish(ref: ItemRef, fields: FinishedFields): Promise<boolean> {
+    const changed = await this.db
       .update(items)
       .set({ ...fields, updatedAt: new Date() })
-      .where(ownedBy(ref));
+      .where(ownedBy(ref))
+      .returning({ id: items.id });
+    return changed.length > 0;
   }
 }
