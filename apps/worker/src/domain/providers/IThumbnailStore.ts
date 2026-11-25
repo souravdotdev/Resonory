@@ -10,5 +10,5 @@
  */
 export interface IThumbnailStore {
   put(key: string, thumbnail: Uint8Array): Promise<void>;
-  delete(key: string): Promise<void>;
+  delete(thumbnailKey: string): Promise<void>;
 }
