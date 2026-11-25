@@ -18,6 +18,10 @@ _Avoid_: Link, original URL
 Every Item a User has saved, newest first.
 _Avoid_: Feed, list, inbox
 
+**Item deletion**:
+A User removing an Item from their Library for good. Its Thumbnail and Text go with it, and its Tags come off it. It can't be undone.
+_Avoid_: Archive, trash, remove
+
 **Thumbnail**:
 The picture Resonory keeps for an Item, copied from what its page or provider offers as its preview; for an Image, the image itself. It comes from that User's own save, never from another User's save of the same page. Some Items have none.
 _Avoid_: Cover, preview image, OG image
