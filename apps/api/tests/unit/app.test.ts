@@ -1617,6 +1617,57 @@ describe("DELETE /items/:itemId", () => {
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
     expect(items.map((item) => item.id)).toEqual([ITEM_ID, theirItemId]);
   });
+
+  it("takes the Item's Tags off it and drops its Rejected tags, keeping the User's Tags", async () => {
+    const { remove, tags, links, rejections, tagRepository, tick } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "user",
+      createdAt: tick(),
+    });
+    rejections.push({ userId: USER_ID, itemId: ITEM_ID, tagName: "sleep", createdAt: tick() });
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(204);
+    expect(links).toEqual([]);
+    expect(rejections).toEqual([]);
+    expect(tags).toEqual([memory]);
+  });
+
+  it("is 400 validation_failed when the Item id isn't a uuid", async () => {
+    const { remove, items } = await scene();
+
+    const res = await remove("item-1");
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    expect(items).toHaveLength(1);
+  });
+
+  it("is 401 unauthorized without a valid Session, and deletes nothing", async () => {
+    const { remove, items } = await scene(sessionsReturning(null));
+
+    const res = await remove(ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(items).toHaveLength(1);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and deletes nothing", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { remove, items } = await scene();
+
+    const res = await remove(ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+    expect(items).toHaveLength(1);
+  });
 });
 
 // The real app plus a test-only protected route that echoes who it sees.
