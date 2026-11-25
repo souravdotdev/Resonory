@@ -1,4 +1,5 @@
 import { inject, injectable, optional } from "inversify";
+import { describeError, type Logger } from "@resonory/logger";
 import { TOKENS } from "@/di/tokens";
 import { NotFoundError } from "@/domain/errors";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
@@ -18,7 +19,8 @@ export interface DeleteItemInput {
  *
  * The row goes first, then the Item's Thumbnail object at its fixed key,
  * whatever the row's `thumbnail_key` said. With no Thumbnail store (Supabase
- * Storage isn't configured), that step is skipped.
+ * Storage isn't configured), that step is skipped. A Storage failure never
+ * stops Item deletion: it's logged with the User, Item and key instead.
  */
 @injectable()
 export class DeleteItemUseCase {
@@ -29,9 +31,27 @@ export class DeleteItemUseCase {
     private readonly thumbnails?: IThumbnailStore,
   ) {}
 
-  async execute(input: DeleteItemInput): Promise<void> {
+  /** `logger` is the caller's request-scoped logger, passed per call (ADR 0006). */
+  async execute(input: DeleteItemInput, logger: Pick<Logger, "warn">): Promise<void> {
     const deleted = await this.items.delete(input.userId, input.itemId);
     if (!deleted) throw new NotFoundError(`Item ${input.itemId} not found`);
-    await this.thumbnails?.delete(thumbnailKeyOf(input));
+    await this.deleteThumbnail(input, logger);
+  }
+
+  // Best-effort: a failure leaves an orphan for a later clean-up, found through the log line.
+  private async deleteThumbnail(
+    input: DeleteItemInput,
+    logger: Pick<Logger, "warn">,
+  ): Promise<void> {
+    if (!this.thumbnails) return;
+    const thumbnailKey = thumbnailKeyOf(input);
+    try {
+      await this.thumbnails.delete(thumbnailKey);
+    } catch (error) {
+      logger.warn(
+        { userId: input.userId, itemId: input.itemId, thumbnailKey, err: describeError(error) },
+        "couldn't delete a Thumbnail",
+      );
+    }
   }
 }

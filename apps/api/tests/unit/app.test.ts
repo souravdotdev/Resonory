@@ -1,7 +1,9 @@
 import "reflect-metadata";
+import { Writable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { Container } from "inversify";
 import { z } from "zod";
+import { createLogger } from "@resonory/logger";
 import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
@@ -130,6 +132,29 @@ function thumbnailsSigning({ unsignable = [] }: { unsignable?: readonly string[]
     resolveMany,
   };
   return { provider, resolveMany };
+}
+
+// An error a Storage client might reject with, named so a log line can tell it apart.
+class StorageFailure extends Error {
+  override name = "StorageFailure";
+}
+
+// An in-memory destination for a real Pino logger, so a test can parse exactly what got logged.
+function memoryStream() {
+  const chunks: string[] = [];
+  const stream = new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(chunk.toString());
+      callback();
+    },
+  });
+  const lines = (): Record<string, unknown>[] =>
+    chunks
+      .join("")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  return { stream, lines };
 }
 
 // A Thumbnail store that records each key it deleted, or rejects every delete with `failure`.
@@ -1627,6 +1652,43 @@ describe("DELETE /items/:itemId", () => {
       expect(thumbnails.deleted).toEqual([
         "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
       ]);
+    });
+
+    // Best-effort: the orphan is left for a later clean-up, found through the log line.
+    it("still answers 204 when the Thumbnail store fails, logging the User, Item and key", async () => {
+      const logged = memoryStream();
+      const thumbnails = thumbnailStoreRecording({ failure: new StorageFailure("fetch failed") });
+      const store = taggingInMemory();
+      store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+      const app = await buildApp(
+        testContainer(signedIn(), {
+          items: store.itemRepository,
+          tags: store.tagRepository,
+          thumbnailStore: thumbnails.store,
+        }),
+        { loggerInstance: createLogger({ name: "api" }, logged.stream) },
+      );
+
+      const res = await app.inject({
+        method: "DELETE",
+        url: `/items/${ITEM_ID}`,
+        headers: withSessionCookie,
+      });
+
+      expect(res.statusCode).toBe(204);
+      expect(store.items).toEqual([]);
+      const failure = logged.lines().find((line) => line.msg === "couldn't delete a Thumbnail");
+      expect(failure).toMatchObject({
+        level: 40,
+        reqId: expect.any(String),
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        thumbnailKey:
+          "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
+        err: "StorageFailure",
+      });
+      // Never the error's message, which can carry what Storage echoed back.
+      expect(JSON.stringify(failure)).not.toContain("fetch failed");
     });
 
     it("deletes no object when the Item isn't found", async () => {

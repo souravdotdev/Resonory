@@ -51,10 +51,10 @@ export class ItemsController {
     request: FastifyRequest<{ Params: DeleteItemParams }>,
     reply: FastifyReply,
   ): Promise<void> => {
-    await this.deleteItemUseCase.execute({
-      userId: signedInUser(request).id,
-      itemId: request.params.itemId,
-    });
+    await this.deleteItemUseCase.execute(
+      { userId: signedInUser(request).id, itemId: request.params.itemId },
+      request.log,
+    );
     reply.code(204);
   };
 }
