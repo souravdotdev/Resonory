@@ -4,7 +4,7 @@ import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import {
   THUMBNAILS_BUCKET,
   type ThumbnailStorage,
-} from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+} from "@/infrastructure/storage/thumbnailStorage";
 
 /**
  * Deletes Thumbnail objects from Supabase Storage with the service role key.

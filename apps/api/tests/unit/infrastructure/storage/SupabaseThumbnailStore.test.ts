@@ -1,10 +1,7 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
-import type {
-  RemoveResult,
-  ThumbnailStorage,
-} from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+import type { RemoveResult, ThumbnailStorage } from "@/infrastructure/storage/thumbnailStorage";
 
 const key = "user-1/item-1.webp";
 

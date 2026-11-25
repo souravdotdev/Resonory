@@ -36,10 +36,8 @@ import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItem
 import { DrizzleTagRepository } from "@/infrastructure/repositories/DrizzleTagRepository";
 import { DrizzleUserRepository } from "@/infrastructure/repositories/DrizzleUserRepository";
 import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
-import {
-  SupabaseThumbnailUrlProvider,
-  type ThumbnailStorage,
-} from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+import { SupabaseThumbnailUrlProvider } from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+import type { ThumbnailStorage } from "@/infrastructure/storage/thumbnailStorage";
 import { ItemsController } from "@/interface/controllers/ItemsController";
 import { MeController } from "@/interface/controllers/MeController";
 import { TagsController } from "@/interface/controllers/TagsController";
