@@ -163,13 +163,17 @@ An extractor that throws counts as none, but isn't silent: `ProcessItemUseCase` 
 
 ### An Item deleted mid-Processing
 
-An Item can be deleted at any point, Processing included (Item deletion, [`DELETE /items/:itemId`](./api.md#delete-itemsitemid)). A job whose Item is already gone when it starts finds nothing to load and ends as `missing`. One deleted while it runs may already have uploaded its Thumbnail by then, and the Ready write is where it notices:
+An Item can be deleted at any point, Processing included (Item deletion, [`DELETE /items/:itemId`](./api.md#delete-itemsitemid)). An attempt may upload the Item's Thumbnail after the API has deleted its object, so the worker deletes it again whenever it finds the Item gone:
 
-- **`markReady` reports whether it updated a row.** `IItemRepository.markReady` returns false when its update (scoped to the Item's id and User) matches no row, because the Item was deleted meanwhile.
-- **The upload is deleted again.** When `markReady` returns false and this run uploaded a Thumbnail, `ProcessItemUseCase` deletes that object through `IThumbnailStore.delete` (`SupabaseThumbnailStore`, Supabase Storage's `remove([key])` on the `thumbnails` bucket; a missing object is a no-op). Nothing is queued for AI tagging, and Processing ends with the `missing` outcome, which completes the job without a retry. A run that uploaded nothing, or a worker with no Thumbnail store, deletes nothing.
-- **A failed delete doesn't fail the job.** The use case never logs: it hands the error back on its `missing` result with the key (`orphanedThumbnail: { key, error }`), and `processItem.processor.ts` logs a warning with `event: "thumbnail_delete_failed"`, the `itemId`, `thumbnailKey` and `err` (`describeError`), so the orphan can be found and cleaned up later. The job still ends as `missing`.
+- **Where it finds the Item gone.**
+  - `ProcessItemUseCase` finds no row when it starts: a retry after an attempt that uploaded and then threw.
+  - `markReady` updates no row: `IItemRepository.markReady` returns false when its update, scoped to the Item's id and User, matches nothing, because the Item was deleted mid-run.
+  - `FailItemUseCase` finds no row after the last attempt failed.
+- **The object at the job's own key is deleted.** Each of those deletes `{userId}/{itemId}.webp`, built from the job's ref, through `IThumbnailStore.delete`. That's `SupabaseThumbnailStore`, which calls Supabase Storage's `remove([key])` on the `thumbnails` bucket, and a missing object is a no-op. It runs whether this run uploaded or an earlier attempt did. Nothing is queued for AI tagging, and the job ends with the `missing` outcome, without a retry. A worker with no Thumbnail store deletes nothing.
+- **Why the job's key is safe.** The key comes from the job's ref, never the loaded row. That ref has no row, and Item ids are unique, so no live Item owns the object at that key. A payload naming the wrong User would point into that User's folder, where the Item has no object, so the real owner's Thumbnail is never touched.
+- **A failed delete doesn't fail the job.** The use cases never log. They hand the error back on the `missing` result with the key (`orphanedThumbnail: { key, error }`). `processItem.processor.ts` and `processItemFailed.processor.ts` then log a warning with `event: "thumbnail_delete_failed"`, the `itemId`, `thumbnailKey` and `err` (`describeError`), so the orphan can be found and cleaned up later. The job still ends as `missing`.
 
-The API deletes the Item's row before its Thumbnail object, and the worker checks for the row after uploading. So every ordering of the two ends with no orphan: an upload before the API's delete is removed by the API, and one after it is removed by the worker. A queued AI tagging job for a deleted Item needs no clean-up either: the tagger finds no row and skips it quietly (see [AI tagging](#ai-tagging)).
+The API deletes the Item's row before its Thumbnail object, and the worker deletes again once it sees the row gone. So an upload before the API's delete is removed by the API, and one after it is removed by the worker: on the Ready write, on a retry, or after the last attempt. Only a job that stalls and never runs again leaves its upload behind, for a later clean-up. A queued AI tagging job for a deleted Item needs no clean-up: the tagger finds no row and skips it quietly (see [AI tagging](#ai-tagging)).
 
 ### AI tagging
 

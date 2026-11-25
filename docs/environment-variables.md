@@ -54,6 +54,8 @@ Optional Thumbnail storage, read by the same rules as the worker. With either on
 | `SUPABASE_URL`              | The Supabase project URL, for Storage                                          | `https://<project-ref>.supabase.co` or unset |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role (or secret) key; bypasses Storage row-level security, server only | from Supabase dashboard → API keys, or unset |
 
+Without the Supabase pair, the API still starts, and it logs a warning at boot that Supabase Storage isn't configured. Then `GET /items` signs no Thumbnail links, and Item deletion leaves Thumbnail objects in the bucket. The pair goes in `apps/api/.env` as well as `apps/worker/.env`: the worker uploads with it, and the API signs and deletes with it.
+
 `TEST_DATABASE_URL` isn't read from `.env`: it's an optional shell variable for `pnpm test:integration`, the Postgres server the integration tests create their throwaway databases on. Unset, it's the Compose Postgres, `postgres://postgres:postgres@localhost:5433/postgres`. CI sets it to its Postgres service. See [Testing](./testing.md#integration-tests-apps-api).
 
 ## `apps/worker/.env`
