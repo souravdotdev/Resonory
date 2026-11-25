@@ -765,6 +765,26 @@ describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
     expect(objects).toEqual(new Map());
     expect(queue.enqueueTagItem).not.toHaveBeenCalled();
   });
+
+  it("still ends as missing when the delete fails, handing the error and key back to log", async () => {
+    const { repository, fetcher } = deletedWhileFetching(photo);
+    const { store } = thumbnailsInMemory();
+    const failure = new Error("Storage answered 500");
+    store.delete.mockRejectedValue(failure);
+    const useCase = useCaseFor(repository, fetcher, undefined, {
+      images: imagesAnswering(),
+      resizer: resizerAnswering(),
+      store,
+    });
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({
+      outcome: "missing",
+      orphanedThumbnailKey: ITEM_KEY,
+      thumbnailDeleteError: failure,
+    });
+  });
 });
 
 describe("ProcessItemUseCase, Items that are already Ready", () => {
