@@ -16,6 +16,7 @@ import {
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
+import { DeleteItemUseCase } from "@/application/use-cases/items/DeleteItemUseCase";
 import { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
@@ -164,6 +165,7 @@ function testContainer(
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
   container.bind(TOKENS.ListItemsUseCase).to(ListItemsUseCase);
+  container.bind(TOKENS.DeleteItemUseCase).to(DeleteItemUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
@@ -1550,6 +1552,39 @@ describe("GET /items", () => {
 
     expect(res.statusCode).toBe(400);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+  });
+});
+
+describe("DELETE /items/:itemId", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items and Tags.
+  async function scene(sessions: ISessionProvider = signedIn()) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, { items: store.itemRepository, tags: store.tagRepository }),
+    );
+    const remove = (itemId = ITEM_ID, headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "DELETE", url: `/items/${itemId}`, headers });
+    const library = async () =>
+      (await app.inject({ method: "GET", url: "/items", headers: withSessionCookie }))
+        .json()
+        .items.map((card: { id: string }) => card.id);
+    return { ...store, app, remove, library };
+  }
+
+  it("answers 204 with an empty body, and the Item is gone from the Library", async () => {
+    const { remove, library } = await scene();
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe("");
+    expect(await library()).toEqual([]);
   });
 });
 
