@@ -1,15 +1,13 @@
 import { inject, injectable, optional } from "inversify";
 import { describeError, type Logger } from "@resonory/logger";
 import { TOKENS } from "@/di/tokens";
+import type { ItemRef } from "@/domain/entities/Item";
 import { NotFoundError } from "@/domain/errors";
 import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
 
-export interface DeleteItemInput {
-  userId: string;
-  itemId: string;
-}
+export type DeleteItemInput = ItemRef;
 
 /**
  * Item deletion: permanently deletes one of the User's Items, at any point,

@@ -15,6 +15,12 @@ export type ItemType = (typeof ITEM_TYPES)[number];
 export const ITEM_STATUSES = ["processing", "ready", "failed"] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
+/** Names one of a User's Items: the Item's id and the User it belongs to. */
+export interface ItemRef {
+  userId: string;
+  itemId: string;
+}
+
 export interface Item {
   id: string;
   userId: string;
