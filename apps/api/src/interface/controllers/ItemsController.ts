@@ -15,12 +15,12 @@ import { signedInUser } from "@/interface/middleware/auth.middleware";
  * Item card out), and `delete` deletes one of the User's Items (the User and validated
  * Item id in, an empty 204 out).
  *
- * Convention: nothing here logs yet, but if a use case ever needs its own request-scoped
- * logger (one carrying this request's `reqId`), hand it `request.log` as a plain argument
- * at the call site (e.g. `saveItemUseCase.execute(input, request.log)`), the same way
- * `request`/`reply` already flow into a controller method — never as a constructor-injected
- * dependency. A constructor injection is a singleton bound once for the process's life, but
- * the *binding* (the reqId) is different on every call, so it can't live there.
+ * Convention: a use case that logs gets this request's logger (one carrying its `reqId`) as
+ * a plain argument at the call site, as `delete` does with
+ * `deleteItemUseCase.execute(input, request.log)`, the same way `request`/`reply` already
+ * flow into a controller method — never as a constructor-injected dependency. A constructor
+ * injection is a singleton bound once for the process's life, but the *binding* (the reqId)
+ * is different on every call, so it can't live there.
  */
 @injectable()
 export class ItemsController {
