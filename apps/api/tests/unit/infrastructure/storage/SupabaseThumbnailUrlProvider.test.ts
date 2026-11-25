@@ -20,7 +20,10 @@ const storageAnswering = (
 ) => {
   const createSignedUrl = vi.fn(async () => answer);
   const createSignedUrls = vi.fn(batchAnswer);
-  const from = vi.fn(() => ({ createSignedUrl, createSignedUrls }));
+  const remove = async () => {
+    throw new Error("removed an object while signing");
+  };
+  const from = vi.fn(() => ({ createSignedUrl, createSignedUrls, remove }));
   return {
     storage: { from } satisfies ThumbnailStorage,
     from,
