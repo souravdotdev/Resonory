@@ -160,8 +160,7 @@ describe("a Process Item job", () => {
     const KEY = `${USER_ID}/${ITEM_ID}.webp`;
     const { container, logger } = testContainer(async () => ({
       outcome: "missing",
-      orphanedThumbnailKey: KEY,
-      thumbnailDeleteError: new Error("Storage answered 500"),
+      orphanedThumbnail: { key: KEY, error: new Error("Storage answered 500") },
     }));
 
     await processItem(container, { itemId: ITEM_ID, userId: USER_ID });

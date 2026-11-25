@@ -781,8 +781,7 @@ describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
 
     expect(result).toEqual({
       outcome: "missing",
-      orphanedThumbnailKey: ITEM_KEY,
-      thumbnailDeleteError: failure,
+      orphanedThumbnail: { key: ITEM_KEY, error: failure },
     });
   });
 

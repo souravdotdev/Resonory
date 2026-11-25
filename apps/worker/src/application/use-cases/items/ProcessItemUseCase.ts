@@ -271,11 +271,7 @@ export class ProcessItemUseCase {
       await this.thumbnails.delete(thumbnailKey);
       return { outcome: "missing" };
     } catch (error) {
-      return {
-        outcome: "missing",
-        orphanedThumbnailKey: thumbnailKey,
-        thumbnailDeleteError: error,
-      };
+      return { outcome: "missing", orphanedThumbnail: { key: thumbnailKey, error } };
     }
   }
 

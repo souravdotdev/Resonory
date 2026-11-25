@@ -4,9 +4,9 @@ import type { ReadyItem } from "@/domain/entities/Item";
  * Ready with what Processing learned (Item type, title, description,
  * Thumbnail key and Text), or missing: the Item was deleted (or isn't the
  * User's), so there's nothing to do. A missing result carries
- * `orphanedThumbnailKey` and `thumbnailDeleteError` only when the Item was
+ * `orphanedThumbnail` (its key and the delete's error) only when the Item was
  * deleted mid-Processing and the Thumbnail this run uploaded couldn't be
- * deleted again: the processor logs both, so the orphan can be cleaned up
+ * deleted again: the processor logs it, so the orphan can be cleaned up
  * later. `already_ready` means the Item was Ready
  * before the job ran, so nothing was done. A Ready result carries `textError` only
  * when the Text extractor threw: the Item is Ready without that Text all the
@@ -23,4 +23,4 @@ export type ProcessItemResult =
       tagQueueError?: unknown;
     } & ReadyItem)
   | { outcome: "already_ready" }
-  | { outcome: "missing"; orphanedThumbnailKey?: string; thumbnailDeleteError?: unknown };
+  | { outcome: "missing"; orphanedThumbnail?: { key: string; error: unknown } };
