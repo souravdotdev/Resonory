@@ -37,6 +37,9 @@ function itemsInMemory() {
     listForUser: vi.fn(async (userId: string) =>
       saved.filter((item) => item.userId === userId).reverse(),
     ),
+    delete: async () => {
+      throw new Error("Deleting Items isn't part of saving");
+    },
   };
   return { repository, saved };
 }

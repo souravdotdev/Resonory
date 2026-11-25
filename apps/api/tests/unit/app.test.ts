@@ -100,6 +100,9 @@ function itemsInMemory() {
       saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
     // Every save has the same creation time, so the later id comes first.
     listForUser: async (userId: string) => saved.filter((item) => item.userId === userId).reverse(),
+    delete: async () => {
+      throw new Error("Deleting Items isn't part of saving");
+    },
   };
   return { repository, saved };
 }

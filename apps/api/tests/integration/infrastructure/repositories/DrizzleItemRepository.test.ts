@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { items, users } from "@resonory/db/schema";
+import { eq } from "drizzle-orm";
+import { itemTags, items, rejectedItemTags, tags, users } from "@resonory/db/schema";
 import type { Item } from "@/domain/entities/Item";
 import type { Database } from "@/infrastructure/database/Database";
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
@@ -133,5 +134,53 @@ describe("DrizzleItemRepository.listForUser", () => {
     const listed = await repository.listForUser(userId);
 
     expect(listed.map((item) => item.id)).toEqual([own]);
+  });
+});
+
+describe("DrizzleItemRepository.delete", () => {
+  it("deletes the User's Item with its Tag links and Rejected tags, keeping their Tags", async () => {
+    const userId = await aUser();
+    const itemId = await anItem(userId, { extractedText: "The Item's Text" });
+    const [tag] = await db.insert(tags).values({ userId, name: "memory" }).returning();
+    await db.insert(itemTags).values({ itemId, tagId: tag!.id, userId, source: "user" });
+    await db.insert(rejectedItemTags).values({ itemId, userId, tagName: "sleep" });
+
+    const deleted = await repository.delete(userId, itemId);
+
+    expect(deleted).toBe(true);
+    expect(await repository.findById(userId, itemId)).toBeNull();
+    expect(await db.select().from(itemTags).where(eq(itemTags.itemId, itemId))).toEqual([]);
+    expect(
+      await db.select().from(rejectedItemTags).where(eq(rejectedItemTags.itemId, itemId)),
+    ).toEqual([]);
+    expect(await db.select().from(tags).where(eq(tags.userId, userId))).toEqual([tag]);
+  });
+
+  it("leaves the User's other Items", async () => {
+    const userId = await aUser();
+    const deletedId = await anItem(userId);
+    const keptId = await anItem(userId);
+
+    await repository.delete(userId, deletedId);
+
+    expect((await repository.listForUser(userId)).map((item) => item.id)).toEqual([keptId]);
+  });
+
+  it("reports false for an Item that doesn't exist, or was already deleted", async () => {
+    const userId = await aUser();
+    const itemId = await anItem(userId);
+    await repository.delete(userId, itemId);
+
+    expect(await repository.delete(userId, itemId)).toBe(false);
+    expect(await repository.delete(userId, randomUUID())).toBe(false);
+  });
+
+  it("reports false for another User's Item, and leaves it", async () => {
+    const userId = await aUser();
+    const otherUserId = await aUser();
+    const theirs = await anItem(otherUserId);
+
+    expect(await repository.delete(userId, theirs)).toBe(false);
+    expect(await repository.findById(otherUserId, theirs)).not.toBeNull();
   });
 });
