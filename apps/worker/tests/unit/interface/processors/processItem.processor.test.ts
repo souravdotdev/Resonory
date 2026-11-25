@@ -170,7 +170,7 @@ describe("a Process Item job", () => {
         level: "warn",
         bindings: { itemId: ITEM_ID },
         fields: { event: "thumbnail_delete_failed", thumbnailKey: KEY, err: "Error" },
-        msg: "couldn't delete the Thumbnail of an Item deleted mid-Processing; it's left an orphan",
+        msg: "couldn't delete the Thumbnail of a deleted Item; it's left an orphan",
       },
       {
         level: "info",

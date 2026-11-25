@@ -63,7 +63,7 @@ export async function processItem(container: Container, data: unknown): Promise<
           thumbnailKey: result.orphanedThumbnail.key,
           err: describeError(result.orphanedThumbnail.error),
         },
-        "couldn't delete the Thumbnail of an Item deleted mid-Processing; it's left an orphan",
+        "couldn't delete the Thumbnail of a deleted Item; it's left an orphan",
       );
     }
     logger.info({}, "Item no longer exists; nothing to process");
