@@ -77,6 +77,11 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * and no Tag Item job is queued. A Processing or Failed Item runs as usual,
  * so a Failed Item that a late job finishes becomes Ready.
  *
+ * An Item that's gone (Item deletion) is found so at the start, or by its
+ * Ready write when it was deleted mid-run. Either way, the object at the job's
+ * own Thumbnail key is deleted (this run's upload, or an earlier attempt's),
+ * nothing is queued, and Processing ends as missing, which isn't retried.
+ *
  * Once the Item is Ready, its AI tagging is queued as a job of its own
  * (`tag-item`), on every path that reaches Ready, so a slow or failing model
  * never holds Ready up. A Failed Item retried to Ready is queued again. If the
@@ -103,7 +108,7 @@ export class ProcessItemUseCase {
 
   async execute(ref: ItemRef): Promise<ProcessItemResult> {
     const item = await this.items.findById(ref);
-    if (!item) return { outcome: "missing" };
+    if (!item) return this.endAsDeleted(ref);
     // A job that runs again for a finished Item (a re-run after a stall) has nothing left to do.
     if (item.status === "ready") return { outcome: "already_ready" };
 
@@ -248,9 +253,35 @@ export class ProcessItemUseCase {
     { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
-    await this.items.markReady(ref, ready);
+    if (!(await this.items.markReady(ref, ready))) return this.endAsDeleted(ref);
     const tagging = await this.queueTagging(ref);
     return { outcome: "ready", ...ready, ...extraction, ...tagging };
+  }
+
+  /**
+   * Ends Processing for an Item that's gone, found so at the start or by its
+   * Ready write: deletes the object at the job's own Thumbnail key, which this
+   * run or an earlier attempt may have uploaded after the API deleted the
+   * Item's object. Deleting a missing object is a no-op.
+   *
+   * The key comes from the job's ref, never the loaded row. It's safe because
+   * that ref has no row and Item ids are unique, so no live Item owns
+   * `{userId}/{itemId}.webp`. A payload naming the wrong User would point into
+   * that User's folder, where the Item has no object, so the real owner's
+   * Thumbnail is never touched.
+   *
+   * A failed delete is handed back with its key for the processor to log,
+   * never thrown, so the job still ends as missing and isn't retried.
+   */
+  private async endAsDeleted(ref: ItemRef): Promise<ProcessItemResult> {
+    if (!this.thumbnails) return { outcome: "missing" };
+    const thumbnailKey = thumbnailKeyOf(ref);
+    try {
+      await this.thumbnails.delete(thumbnailKey);
+      return { outcome: "missing" };
+    } catch (error) {
+      return { outcome: "missing", orphanedThumbnail: { key: thumbnailKey, error } };
+    }
   }
 
   /** Queues the Item's AI tagging, with only its ids; a failure is handed back, never thrown. */

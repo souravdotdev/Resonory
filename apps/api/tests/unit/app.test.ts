@@ -1,7 +1,9 @@
 import "reflect-metadata";
+import { Writable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { Container } from "inversify";
 import { z } from "zod";
+import { createLogger } from "@resonory/logger";
 import { MeResponseSchema } from "@resonory/shared/schemas/auth";
 import { ErrorResponseSchema } from "@resonory/shared/schemas/common";
 import {
@@ -16,6 +18,7 @@ import {
 import { buildApp } from "@/app";
 import { GetMeUseCase } from "@/application/use-cases/auth/GetMeUseCase";
 import { ResolveSignedInUserUseCase } from "@/application/use-cases/auth/ResolveSignedInUserUseCase";
+import { DeleteItemUseCase } from "@/application/use-cases/items/DeleteItemUseCase";
 import { ListItemsUseCase } from "@/application/use-cases/items/ListItemsUseCase";
 import { SaveItemUseCase } from "@/application/use-cases/items/SaveItemUseCase";
 import { TagItemUseCase } from "@/application/use-cases/tags/TagItemUseCase";
@@ -33,6 +36,7 @@ import {
 } from "@/domain/errors";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
+import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository, NewItem } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
@@ -100,6 +104,9 @@ function itemsInMemory() {
       saved.find((item) => item.id === itemId && item.userId === userId) ?? null,
     // Every save has the same creation time, so the later id comes first.
     listForUser: async (userId: string) => saved.filter((item) => item.userId === userId).reverse(),
+    delete: async () => {
+      throw new Error("Deleting Items isn't part of saving");
+    },
   };
   return { repository, saved };
 }
@@ -127,12 +134,49 @@ function thumbnailsSigning({ unsignable = [] }: { unsignable?: readonly string[]
   return { provider, resolveMany };
 }
 
+// An error a Storage client might reject with, named so a log line can tell it apart.
+class StorageFailure extends Error {
+  override name = "StorageFailure";
+}
+
+// An in-memory destination for a real Pino logger, so a test can parse exactly what got logged.
+function memoryStream() {
+  const chunks: string[] = [];
+  const stream = new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(chunk.toString());
+      callback();
+    },
+  });
+  const lines = (): Record<string, unknown>[] =>
+    chunks
+      .join("")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  return { stream, lines };
+}
+
+// A Thumbnail store that records each key it deleted, or rejects every delete with `failure`.
+function thumbnailStoreRecording({ failure }: { failure?: Error } = {}) {
+  const deleted: string[] = [];
+  const store: IThumbnailStore = {
+    delete: async (key) => {
+      if (failure) throw failure;
+      deleted.push(key);
+    },
+  };
+  return { store, deleted };
+}
+
 interface TestDoubles {
   items?: IItemRepository;
   queue?: IQueueProvider;
   tags?: ITagRepository;
   // Left out, no Thumbnail provider is bound, as when Supabase Storage isn't configured.
   thumbnails?: IThumbnailUrlProvider;
+  // Left out, no Thumbnail store is bound, as when Supabase Storage isn't configured.
+  thumbnailStore?: IThumbnailStore;
 }
 
 // A test container: the real app, use cases and controllers, with fakes for
@@ -145,6 +189,7 @@ function testContainer(
     queue = queueRecording(),
     tags = taggingInMemory().tagRepository,
     thumbnails,
+    thumbnailStore,
   }: TestDoubles = {},
 ) {
   const container = new Container();
@@ -161,6 +206,7 @@ function testContainer(
   container.bind<IQueueProvider>(TOKENS.QueueProvider).toConstantValue(queue);
   container.bind(TOKENS.SaveItemUseCase).to(SaveItemUseCase);
   container.bind(TOKENS.ListItemsUseCase).to(ListItemsUseCase);
+  container.bind(TOKENS.DeleteItemUseCase).to(DeleteItemUseCase);
   container.bind(TOKENS.ItemsController).to(ItemsController);
   container.bind<ITagRepository>(TOKENS.TagRepository).toConstantValue(tags);
   container.bind(TOKENS.TagItemUseCase).to(TagItemUseCase);
@@ -169,6 +215,9 @@ function testContainer(
   container.bind(TOKENS.ListTagsUseCase).to(ListTagsUseCase);
   if (thumbnails) {
     container.bind<IThumbnailUrlProvider>(TOKENS.ThumbnailUrlProvider).toConstantValue(thumbnails);
+  }
+  if (thumbnailStore) {
+    container.bind<IThumbnailStore>(TOKENS.ThumbnailStore).toConstantValue(thumbnailStore);
   }
   return container;
 }
@@ -1547,6 +1596,202 @@ describe("GET /items", () => {
 
     expect(res.statusCode).toBe(400);
     expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+  });
+});
+
+describe("DELETE /items/:itemId", () => {
+  const USER_ID = "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+  const OTHER_USER_ID = "11111111-1111-4111-8111-111111111111";
+  const ITEM_ID = "00000000-0000-4000-8000-000000000001";
+  const signedIn = () => sessionsReturning(user({ id: USER_ID }));
+
+  // The signed-in User's Item, and an app over the in-memory Items and Tags,
+  // with no Thumbnail store unless one is given.
+  async function scene(
+    sessions: ISessionProvider = signedIn(),
+    { thumbnailStore }: Pick<TestDoubles, "thumbnailStore"> = {},
+  ) {
+    const store = taggingInMemory();
+    store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+    const app = await buildApp(
+      testContainer(sessions, {
+        items: store.itemRepository,
+        tags: store.tagRepository,
+        thumbnailStore,
+      }),
+    );
+    const remove = (itemId = ITEM_ID, headers: Record<string, string> = withSessionCookie) =>
+      app.inject({ method: "DELETE", url: `/items/${itemId}`, headers });
+    const library = async () =>
+      (await app.inject({ method: "GET", url: "/items", headers: withSessionCookie }))
+        .json()
+        .items.map((card: { id: string }) => card.id);
+    return { ...store, app, remove, library };
+  }
+
+  it("answers 204 with an empty body, and the Item is gone from the Library", async () => {
+    const { remove, library } = await scene();
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe("");
+    expect(await library()).toEqual([]);
+  });
+
+  describe("its Thumbnail object", () => {
+    // The key is fixed by the User and Item; what the row says plays no part.
+    it("deletes the object at {userId}/{itemId}.webp, even when the Item has no thumbnail_key", async () => {
+      const thumbnails = thumbnailStoreRecording();
+      const { remove, items } = await scene(signedIn(), { thumbnailStore: thumbnails.store });
+      items[0]!.thumbnailKey = null;
+
+      const res = await remove();
+
+      expect(res.statusCode).toBe(204);
+      expect(thumbnails.deleted).toEqual([
+        "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
+      ]);
+    });
+
+    // Best-effort: the orphan is left for a later clean-up, found through the log line.
+    it("still answers 204 when the Thumbnail store fails, logging the User, Item and key", async () => {
+      const logged = memoryStream();
+      const thumbnails = thumbnailStoreRecording({ failure: new StorageFailure("fetch failed") });
+      const store = taggingInMemory();
+      store.items.push(anItem({ id: ITEM_ID, userId: USER_ID }));
+      const app = await buildApp(
+        testContainer(signedIn(), {
+          items: store.itemRepository,
+          tags: store.tagRepository,
+          thumbnailStore: thumbnails.store,
+        }),
+        { loggerInstance: createLogger({ name: "api" }, logged.stream) },
+      );
+
+      const res = await app.inject({
+        method: "DELETE",
+        url: `/items/${ITEM_ID}`,
+        headers: withSessionCookie,
+      });
+
+      expect(res.statusCode).toBe(204);
+      expect(store.items).toEqual([]);
+      const failure = logged.lines().find((line) => line.msg === "couldn't delete a Thumbnail");
+      expect(failure).toMatchObject({
+        level: 40,
+        reqId: expect.any(String),
+        userId: USER_ID,
+        itemId: ITEM_ID,
+        thumbnailKey:
+          "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
+        err: "StorageFailure",
+      });
+      // Never the error's message, which can carry what Storage echoed back.
+      expect(JSON.stringify(failure)).not.toContain("fetch failed");
+    });
+
+    it("deletes no object when the Item isn't found", async () => {
+      const thumbnails = thumbnailStoreRecording();
+      const { remove } = await scene(signedIn(), { thumbnailStore: thumbnails.store });
+
+      const res = await remove("00000000-0000-4000-8000-000000000099");
+
+      expect(res.statusCode).toBe(404);
+      expect(thumbnails.deleted).toEqual([]);
+    });
+
+    // As when Supabase Storage isn't configured.
+    it("still deletes the Item with no Thumbnail store", async () => {
+      const { remove, library } = await scene(signedIn(), { thumbnailStore: undefined });
+
+      const res = await remove();
+
+      expect(res.statusCode).toBe(204);
+      expect(await library()).toEqual([]);
+    });
+  });
+
+  it("is 404 not_found for an Item that doesn't exist", async () => {
+    const { remove } = await scene();
+
+    const res = await remove("00000000-0000-4000-8000-000000000099");
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found when the Item was already deleted", async () => {
+    const { remove } = await scene();
+    await remove();
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+  });
+
+  it("is 404 not_found for another User's Item, never 403, and leaves it", async () => {
+    const { remove, items } = await scene();
+    const theirItemId = "00000000-0000-4000-8000-000000000002";
+    items.push(anItem({ id: theirItemId, userId: OTHER_USER_ID }));
+
+    const res = await remove(theirItemId);
+
+    expect(res.statusCode).toBe(404);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("not_found");
+    expect(items.map((item) => item.id)).toEqual([ITEM_ID, theirItemId]);
+  });
+
+  it("takes the Item's Tags off it and drops its Rejected tags, keeping the User's Tags", async () => {
+    const { remove, tags, links, rejections, tagRepository, tick } = await scene();
+    const memory = await tagRepository.findOrCreate(USER_ID, "memory");
+    links.push({
+      userId: USER_ID,
+      itemId: ITEM_ID,
+      tagId: memory.id,
+      source: "user",
+      createdAt: tick(),
+    });
+    rejections.push({ userId: USER_ID, itemId: ITEM_ID, tagName: "sleep", createdAt: tick() });
+
+    const res = await remove();
+
+    expect(res.statusCode).toBe(204);
+    expect(links).toEqual([]);
+    expect(rejections).toEqual([]);
+    expect(tags).toEqual([memory]);
+  });
+
+  it("is 400 validation_failed when the Item id isn't a uuid", async () => {
+    const { remove, items } = await scene();
+
+    const res = await remove("item-1");
+
+    expect(res.statusCode).toBe(400);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("validation_failed");
+    expect(items).toHaveLength(1);
+  });
+
+  it("is 401 unauthorized without a valid Session, and deletes nothing", async () => {
+    const { remove, items } = await scene(sessionsReturning(null));
+
+    const res = await remove(ITEM_ID, {});
+
+    expect(res.statusCode).toBe(401);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("unauthorized");
+    expect(items).toHaveLength(1);
+  });
+
+  it("is 403 forbidden for a request authenticated by an API key, and deletes nothing", async () => {
+    // Better Auth turns a valid x-api-key into a Session, so the general guard lets it through.
+    const { remove, items } = await scene();
+
+    const res = await remove(ITEM_ID, { "x-api-key": "resk_valid" });
+
+    expect(res.statusCode).toBe(403);
+    expect(ErrorResponseSchema.parse(res.json()).error.code).toBe("forbidden");
+    expect(items).toHaveLength(1);
   });
 });
 

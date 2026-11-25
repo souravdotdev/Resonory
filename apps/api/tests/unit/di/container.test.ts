@@ -107,4 +107,88 @@ describe("the production container", () => {
     },
     SLOW_CONTAINER_TEST_TIMEOUT,
   );
+
+  it(
+    "deletes Thumbnail objects with Supabase Storage when it's configured",
+    async () => {
+      const { container, tokens } = await productionContainer();
+      const { SupabaseThumbnailStore } =
+        await import("@/infrastructure/storage/SupabaseThumbnailStore");
+
+      expect(container.get(tokens.ThumbnailStore)).toBeInstanceOf(SupabaseThumbnailStore);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+
+  // Item deletion then skips the Thumbnail object.
+  it(
+    "binds no Thumbnail store without Supabase Storage configured",
+    async () => {
+      const { container, tokens } = await productionContainer({
+        SUPABASE_URL: undefined,
+        SUPABASE_SERVICE_ROLE_KEY: undefined,
+      });
+
+      expect(container.isBound(tokens.ThumbnailStore)).toBe(false);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+
+  // Item deletion works with or without a Thumbnail store.
+  it.each([
+    ["with Supabase Storage configured", {}],
+    [
+      "without Supabase Storage configured",
+      { SUPABASE_URL: undefined, SUPABASE_SERVICE_ROLE_KEY: undefined },
+    ],
+  ])(
+    "resolves the Item deletion use case %s",
+    async (_case, overrides) => {
+      const { container, tokens } = await productionContainer(overrides);
+      const { DeleteItemUseCase } = await import("@/application/use-cases/items/DeleteItemUseCase");
+
+      expect(container.get(tokens.DeleteItemUseCase)).toBeInstanceOf(DeleteItemUseCase);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+});
+
+describe("the production container's Storage warning", () => {
+  // The container's logger, swapped for one that records its warnings.
+  async function warningsFrom(overrides: Record<string, string | undefined>) {
+    const warn = vi.fn();
+    vi.doMock("@resonory/logger", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@resonory/logger")>()),
+      createLogger: () => ({ warn, info: vi.fn(), error: vi.fn(), child: vi.fn() }),
+    }));
+    try {
+      await productionContainer(overrides);
+    } finally {
+      vi.doUnmock("@resonory/logger");
+    }
+    return warn.mock.calls.map(([message]) => message);
+  }
+
+  it(
+    "warns once that Thumbnails are off when Supabase Storage isn't configured",
+    async () => {
+      const warnings = await warningsFrom({
+        SUPABASE_URL: undefined,
+        SUPABASE_SERVICE_ROLE_KEY: undefined,
+      });
+
+      expect(warnings).toEqual([
+        "Supabase Storage isn't configured; Item cards get no Thumbnails, and Item deletion leaves Thumbnail objects behind",
+      ]);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+
+  it(
+    "warns about nothing when Supabase Storage is configured",
+    async () => {
+      expect(await warningsFrom({})).toEqual([]);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
 });

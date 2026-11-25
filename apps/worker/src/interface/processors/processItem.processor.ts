@@ -55,6 +55,17 @@ export async function processItem(container: Container, data: unknown): Promise<
     // `event` is a stable key to count how often a job finds its Item already Ready.
     logger.info({ event: "item_already_ready" }, "Item is already Ready; nothing to process");
   } else {
+    if (result.orphanedThumbnail) {
+      // `event` is a stable key to find the orphaned Thumbnails left behind, to clean them up later.
+      logger.warn(
+        {
+          event: "thumbnail_delete_failed",
+          thumbnailKey: result.orphanedThumbnail.key,
+          err: describeError(result.orphanedThumbnail.error),
+        },
+        "couldn't delete the Thumbnail of a deleted Item; it's left an orphan",
+      );
+    }
     logger.info({}, "Item no longer exists; nothing to process");
   }
 }

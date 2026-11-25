@@ -31,11 +31,15 @@ export const TOKENS = {
   ThumbnailStorage: Symbol("ThumbnailStorage"),
   /** Signs links to Thumbnails (`IThumbnailUrlProvider`); bound only when Supabase Storage is configured. */
   ThumbnailUrlProvider: Symbol("IThumbnailUrlProvider"),
+  /** Deletes Thumbnail objects (`IThumbnailStore`); bound only when Supabase Storage is configured. */
+  ThumbnailStore: Symbol("IThumbnailStore"),
   /** Saves a pasted URL as a Processing Item and enqueues its Processing (`SaveItemUseCase`). */
   SaveItemUseCase: Symbol("SaveItemUseCase"),
   /** The User's Library: every Item they've saved, newest first, as Item cards (`ListItemsUseCase`). */
   ListItemsUseCase: Symbol("ListItemsUseCase"),
-  /** Serves `POST /items` and `GET /items` (`ItemsController`). */
+  /** Permanently deletes one of the User's Items (`DeleteItemUseCase`). */
+  DeleteItemUseCase: Symbol("DeleteItemUseCase"),
+  /** Serves `POST /items`, `GET /items` and `DELETE /items/:itemId` (`ItemsController`). */
   ItemsController: Symbol("ItemsController"),
   /** Where a User's Tags and the Tags on their Items are stored (`ITagRepository`). */
   TagRepository: Symbol("ITagRepository"),

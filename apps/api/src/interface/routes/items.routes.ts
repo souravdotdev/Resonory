@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   CreateItemResponseSchema,
   CreateItemSchema,
+  DeleteItemParamsSchema,
   ListItemsResponseSchema,
   MAX_CAPTIONS_LENGTH,
   MAX_HTML_LENGTH,
@@ -69,6 +70,10 @@ export interface ItemsRoutesOptions {
  * `GET /items`: the User's Library, every Item they've saved, newest first.
  * Only the web app's Session may call it: an API key is refused with 403
  * (`sessionOnlyAuthMiddleware`). It keeps the app-wide rate limit.
+ *
+ * `DELETE /items/:itemId`: permanently delete one of the User's Items (Item
+ * deletion), answering 204 with no body. Session only and the app-wide rate
+ * limit, like `GET /items`.
  */
 export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
   app,
@@ -114,5 +119,14 @@ export const itemsRoutes: FastifyPluginAsyncZod<ItemsRoutesOptions> = async (
       schema: { querystring: NoListItemsQuerySchema, response: { 200: ListItemsResponseSchema } },
     },
     (request) => itemsController().list(request),
+  );
+
+  app.delete(
+    "/items/:itemId",
+    {
+      preHandler: sessionOnlyAuthMiddleware(container),
+      schema: { params: DeleteItemParamsSchema },
+    },
+    (request, reply) => itemsController().delete(request, reply),
   );
 };

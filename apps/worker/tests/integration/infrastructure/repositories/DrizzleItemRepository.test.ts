@@ -205,4 +205,42 @@ describe("the worker's DrizzleItemRepository against Postgres", () => {
       expect(row).toMatchObject({ status: "processing", type: null });
     });
   });
+
+  describe("markReady", () => {
+    const ready = {
+      type: "article",
+      metadata: { title: "A title", description: "A description" },
+      thumbnailKey: "user/item.webp",
+      text: "Some Text",
+    } as const;
+
+    it("marks an existing Item Ready and says it did", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId, { status: "processing", type: null });
+
+      const updated = await repository.markReady({ itemId, userId }, ready);
+
+      expect(updated).toBe(true);
+      const [row] = await db.select().from(items).where(eq(items.id, itemId));
+      expect(row).toMatchObject({
+        status: "ready",
+        type: "article",
+        title: "A title",
+        description: "A description",
+        thumbnailKey: "user/item.webp",
+        extractedText: "Some Text",
+      });
+    });
+
+    // The Item was deleted mid-Processing, so Processing can clean up what it uploaded.
+    it("says it updated nothing for an Item that doesn't exist, or isn't the User's", async () => {
+      const userId = await aUser();
+      const itemId = await anItem(userId, { status: "processing", type: null });
+
+      expect(await repository.markReady({ itemId: randomUUID(), userId }, ready)).toBe(false);
+      expect(await repository.markReady({ itemId, userId: await aUser() }, ready)).toBe(false);
+      const [row] = await db.select().from(items).where(eq(items.id, itemId));
+      expect(row).toMatchObject({ status: "processing", type: null });
+    });
+  });
 });

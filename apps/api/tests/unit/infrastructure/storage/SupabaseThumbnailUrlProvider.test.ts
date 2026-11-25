@@ -1,11 +1,11 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
-import {
-  SupabaseThumbnailUrlProvider,
-  type SignedUrlResult,
-  type SignedUrlsResult,
-  type ThumbnailStorage,
-} from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+import { SupabaseThumbnailUrlProvider } from "@/infrastructure/storage/SupabaseThumbnailUrlProvider";
+import type {
+  SignedUrlResult,
+  SignedUrlsResult,
+  ThumbnailStorage,
+} from "@/infrastructure/storage/thumbnailStorage";
 
 const key = "user-1/item-1.webp";
 const signedUrl =
@@ -20,7 +20,10 @@ const storageAnswering = (
 ) => {
   const createSignedUrl = vi.fn(async () => answer);
   const createSignedUrls = vi.fn(batchAnswer);
-  const from = vi.fn(() => ({ createSignedUrl, createSignedUrls }));
+  const remove = async () => {
+    throw new Error("removed an object while signing");
+  };
+  const from = vi.fn(() => ({ createSignedUrl, createSignedUrls, remove }));
   return {
     storage: { from } satisfies ThumbnailStorage,
     from,

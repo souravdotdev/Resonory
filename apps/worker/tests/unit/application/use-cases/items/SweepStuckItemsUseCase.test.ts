@@ -39,7 +39,7 @@ function itemsInMemory(...rows: Row[]) {
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => find(ref) ?? null),
     findTaggable: vi.fn(async () => null),
-    markReady: vi.fn(async () => {}),
+    markReady: vi.fn(async () => true),
     markFailed: vi.fn(async () => {}),
     findProcessingBefore: vi.fn(async (cutoff: Date, limit: number) =>
       rows

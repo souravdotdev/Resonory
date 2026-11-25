@@ -4,7 +4,7 @@ Fastify server in `apps/api`, organised by layer (see [Clean Architecture](./cle
 
 Base URL locally: `http://localhost:4000` (from `PORT` in `apps/api/.env`).
 
-Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL), `GET /items` (the User's Library), `GET /tags` (list the User's Tags), `POST /items/:itemId/tags` (tag an Item by name) and `DELETE /items/:itemId/tags/:tagId` (take a Tag off an Item). The other Item endpoints (search, retry, delete) come in later specs, built on the same schema wiring described below.
+Today the API serves `GET /health`, Better Auth's routes under `/api/auth/*`, `GET /me`, `POST /items` (save a URL), `GET /items` (the User's Library), `DELETE /items/:itemId` (Item deletion), `GET /tags` (list the User's Tags), `POST /items/:itemId/tags` (tag an Item by name) and `DELETE /items/:itemId/tags/:tagId` (take a Tag off an Item). The other Item endpoints (search, retry) come in later specs, built on the same schema wiring described below.
 
 ## Shared schemas: one definition of every request and response
 
@@ -12,7 +12,7 @@ Every request and response between `apps/web` and `apps/api` is defined once, as
 
 - `@resonory/shared/schemas/common`: shared shapes, such as the error envelope (`ErrorResponseSchema`).
 - `@resonory/shared/schemas/auth`: the signed-in User (`MeResponseSchema`).
-- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`), the Library's response (`ListItemsResponseSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
+- `@resonory/shared/schemas/items`: Item shapes, such as the create-Item input (`CreateItemSchema`), the Item card (`ItemCardSchema`), the Library's response (`ListItemsResponseSchema`), the delete-Item params (`DeleteItemParamsSchema`) and the Tag requests and responses (`ItemTagParamsSchema`, `TagItemSchema`, `UntagItemParamsSchema`, `ItemTagsResponseSchema`, `ListTagsResponseSchema`).
 - `@resonory/shared/schemas/queue`: not HTTP, but the API ↔ worker contract: the Item processing and Item tagging queue names, the job names and their payloads (see [Queue](./queue.md)).
 
 Naming: zod schemas end in `Schema` and their inferred TypeScript types drop the suffix (for example `CreateItemSchema` / `CreateItemInput`, `ItemCardSchema` / `ItemCard`). A plain `Item` is always the domain entity in `apps/api/src/domain/entities`, never a wire shape.
@@ -124,7 +124,7 @@ The web app's requests (`apps/web/src/lib/api.ts`) send the Session cookie with 
 
 ### Web-Session-only routes
 
-Better Auth turns a valid `x-api-key` header (the extension's) into a Session just as it does a cookie, so the auth middleware accepts both. Routes only the web app may call (today [`GET /items`](#get-items) and the [Tag routes](#tags)) declare `preHandler: sessionOnlyAuthMiddleware(container)` instead. It runs the same guard first, so a request with no Session, or an invalid key, still gets `401 unauthorized`; then a request carrying an `x-api-key` header is refused with `ForbiddenError`, sent as:
+Better Auth turns a valid `x-api-key` header (the extension's) into a Session just as it does a cookie, so the auth middleware accepts both. Routes only the web app may call (today [`GET /items`](#get-items), [`DELETE /items/:itemId`](#delete-itemsitemid) and the [Tag routes](#tags)) declare `preHandler: sessionOnlyAuthMiddleware(container)` instead. It runs the same guard first, so a request with no Session, or an invalid key, still gets `401 unauthorized`; then a request carrying an `x-api-key` header is refused with `ForbiddenError`, sent as:
 
 ```json
 { "error": { "code": "forbidden", "message": "That isn't allowed with these credentials" } }
@@ -236,6 +236,32 @@ GET /items
 - Any query parameter (`q`, `tagId`, `cursor`, `limit`, ...) → `400 validation_failed`: there's no filtering or pagination yet, so a client never mistakes the whole Library for a filtered one. The query is checked before auth, so this holds without a Session too.
 - No valid Session (or an invalid API key) → `401 unauthorized`.
 - A valid API key → `403 forbidden`.
+
+### `DELETE /items/:itemId`
+
+Item deletion: permanently deletes one of the signed-in User's Items, at any point, Processing included. The Item leaves their Library, and its Thumbnail, Text, Tag links and Rejected tags go with it; the User's Tags stay. There's no undo. Only the web app's Session may call it: it declares `preHandler: sessionOnlyAuthMiddleware(container)`, like [`GET /items`](#get-items), so the extension's API key can save Items but never delete them (see [Web-Session-only routes](#web-session-only-routes)). It keeps the app-wide rate limit. The path is validated by `DeleteItemParamsSchema` (an `itemId` that's a uuid). Served by `itemsRoutes` → `ItemsController` → `DeleteItemUseCase`, which:
+
+1. deletes the User's Item through `IItemRepository.delete(userId, itemId)`: one `DELETE ... WHERE id = ? AND user_id = ?`, returning whether it deleted a row. The `item_tags` and `rejected_item_tags` foreign keys cascade, so its Tag links and Rejected tags go in the same statement (see [Database](./database.md#item-deletion));
+2. throws `NotFoundError` if no row was deleted: the Item doesn't exist, was already deleted, or is another User's;
+3. otherwise deletes its Thumbnail object from the private `thumbnails` bucket (`IThumbnailStore.delete`, `SupabaseThumbnailStore`, Supabase Storage's `remove([key])` with the service role key) at its fixed key, `thumbnailKeyOf({ userId, itemId })` (`src/domain/rules/thumbnailKey.ts`, `{userId}/{itemId}.webp`, mirroring the worker's rule). It never reads the row's `thumbnail_key`, so an Item with a stale or null key still has its object deleted, including the one a rerun of Processing leaves behind when it ends with no Thumbnail. A missing object counts as deleted.
+
+The row goes first, then the object. If Processing uploads a Thumbnail after the row is gone, the worker finds the Item missing and deletes that object itself. It checks at the Ready write, on a retry, and after the last attempt (see [Queue](./queue.md#an-item-deleted-mid-processing)). Only a job that stalls and never runs again leaves its upload behind.
+
+Deleting the Thumbnail is best-effort. If Storage fails, the request still answers 204, and the use case logs a warning on the request's logger, `"couldn't delete a Thumbnail"`, with `userId`, `itemId`, `thumbnailKey` and `err` (`describeError`), so the orphan can be found and cleaned up later. With no Thumbnail store (Supabase Storage isn't configured, so `TOKENS.ThumbnailStore` is unbound), the step is skipped. The API warns about that once, at boot.
+
+Tags only the AI used that are left on no Items aren't deleted here: `GET /tags` leaves them out, and the User's next Tag creation deletes them (see [`POST /items/:itemId/tags`](#post-itemsitemidtags)).
+
+```
+DELETE /items/3b241101-e2bb-4255-8caf-4136c566a962
+
+204 No Content
+```
+
+- Success → `204 No Content` with an empty body; the Item is gone from `GET /items` at once.
+- An Item that doesn't exist, was already deleted, or belongs to another User → `404 not_found`, never 403, so the API doesn't reveal whose an Item is. Nothing is deleted, in the database or in Storage.
+- An `itemId` that isn't a uuid → `400 validation_failed`.
+- No valid Session (or an invalid API key) → `401 unauthorized`.
+- A valid API key → `403 forbidden`, and nothing is deleted.
 
 ## Tags
 

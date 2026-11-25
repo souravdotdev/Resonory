@@ -25,7 +25,7 @@ function itemsHolding(item: TaggableItem | null = ARTICLE) {
   return {
     findById: vi.fn(async () => null),
     findTaggable: vi.fn(async (ref: ItemRef) => (item && owns(ref) ? { ...item } : null)),
-    markReady: vi.fn(async () => {}),
+    markReady: vi.fn(async () => true),
     markFailed: vi.fn(async () => {}),
     findProcessingBefore: vi.fn(async () => []),
     markFailedIfProcessing: vi.fn(async () => false),
