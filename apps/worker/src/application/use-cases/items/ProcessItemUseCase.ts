@@ -252,7 +252,7 @@ export class ProcessItemUseCase {
     { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
-    if (!(await this.items.markReady(ref, ready))) return this.deleted(ready.thumbnailKey);
+    if (!(await this.items.markReady(ref, ready))) return this.endAsDeleted(ready.thumbnailKey);
     const tagging = await this.queueTagging(ref);
     return { outcome: "ready", ...ready, ...extraction, ...tagging };
   }
@@ -265,7 +265,7 @@ export class ProcessItemUseCase {
    * with its key for the processor to log, never thrown, so the job still ends
    * as missing and isn't retried.
    */
-  private async deleted(thumbnailKey: string | null): Promise<ProcessItemResult> {
+  private async endAsDeleted(thumbnailKey: string | null): Promise<ProcessItemResult> {
     if (thumbnailKey === null || !this.thumbnails) return { outcome: "missing" };
     try {
       await this.thumbnails.delete(thumbnailKey);
