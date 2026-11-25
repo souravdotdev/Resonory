@@ -1628,6 +1628,26 @@ describe("DELETE /items/:itemId", () => {
         "7f1c2b9e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/00000000-0000-4000-8000-000000000001.webp",
       ]);
     });
+
+    it("deletes no object when the Item isn't found", async () => {
+      const thumbnails = thumbnailStoreRecording();
+      const { remove } = await scene(signedIn(), { thumbnailStore: thumbnails.store });
+
+      const res = await remove("00000000-0000-4000-8000-000000000099");
+
+      expect(res.statusCode).toBe(404);
+      expect(thumbnails.deleted).toEqual([]);
+    });
+
+    // As when Supabase Storage isn't configured.
+    it("still deletes the Item with no Thumbnail store", async () => {
+      const { remove, library } = await scene(signedIn(), { thumbnailStore: undefined });
+
+      const res = await remove();
+
+      expect(res.statusCode).toBe(204);
+      expect(await library()).toEqual([]);
+    });
   });
 
   it("is 404 not_found for an Item that doesn't exist", async () => {
