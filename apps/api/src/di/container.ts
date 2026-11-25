@@ -54,7 +54,8 @@ export function createContainer(): Container {
 
   container.bind<Env>(TOKENS.Env).toConstantValue(env);
   container.bind<Database>(TOKENS.Database).toConstantValue(db);
-  container.bind<Logger>(TOKENS.Logger).toConstantValue(createLogger({ name: "api" }));
+  const logger = createLogger({ name: "api" });
+  container.bind<Logger>(TOKENS.Logger).toConstantValue(logger);
   container.bind<RateLimitRedis>(TOKENS.RateLimitRedis).toConstantValue(rateLimitRedis);
   container
     .bind<ItemProcessingQueue>(TOKENS.ItemProcessingQueue)
@@ -96,6 +97,11 @@ export function createContainer(): Container {
       .bind<IThumbnailStore>(TOKENS.ThumbnailStore)
       .to(SupabaseThumbnailStore)
       .inSingletonScope();
+  } else {
+    // Storage is optional, so a missing setting is easy to miss; say so once, at boot.
+    logger.warn(
+      "Supabase Storage isn't configured; Item cards get no Thumbnails, and Item deletion leaves Thumbnail objects behind",
+    );
   }
 
   container
