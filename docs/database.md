@@ -38,7 +38,7 @@ Enums: `item_type` (`article`, `post`, `video`, `image`, `audio`, `pdf`, `code`,
 
 `item_tags` has the primary key (`item_id`, `tag_id`) and two composite foreign keys that share its `user_id` column, so a link can never join one User's Item to another User's Tag:
 
-- `item_tags_item_id_user_id_items_fk`: (`item_id`, `user_id`) references `items` (`id`, `user_id`), on delete cascade. Deleting an Item removes its links but keeps the Tags, including Tags left with no Items.
+- `item_tags_item_id_user_id_items_fk`: (`item_id`, `user_id`) references `items` (`id`, `user_id`), on delete cascade. Deleting an Item ([Item deletion](#item-deletion)) removes its links but keeps the Tags, including Tags left with no Items.
 - `item_tags_tag_id_user_id_tags_fk`: (`tag_id`, `user_id`) references `tags` (`id`, `user_id`), on delete cascade. Deleting a Tag removes its links.
 
 Deleting a User cascades to their Tags and Items, and so to all their links. The index `item_tags_tag_id_idx` serves "every Item with this Tag"; lookups by `item_id` use the primary key.
@@ -58,6 +58,17 @@ A Rejected tag doesn't stop the User putting that Tag back on the Item, and does
 `waitlist_entries` has the unique constraint `waitlist_entries_email_unique` on `email`, so an email is on the list at most once. The waitlist app inserts with `ON CONFLICT DO NOTHING` on it and answers the same way either way, so the endpoint never reveals whether an email was already on the list. The insert reports whether it created a row, and only then is the Welcome email sent. After the provider accepts it, `welcome_emailed_at` is set to `now()` (only while it is still null, so the first time is kept). An entry whose `welcome_emailed_at` is null never got the email, because sending failed, the provider limit was reached or no API key was set, so those entries can be found and re-sent later: `SELECT email FROM waitlist_entries WHERE welcome_emailed_at IS NULL`. Entries from before the column existed are null too.
 
 Conventions for new tables: `uuid` primary keys with `defaultRandom()`, snake_case column names, `timestamptz NOT NULL DEFAULT now()` timestamps (except nullable event markers such as `users.deleted_at`, which stay null until the event happens; see [Auth ADR 0001](./contexts/auth/adr/0001-soft-delete-users-with-30-day-restore.md)), and `onDelete: "cascade"` on foreign keys to `users.id`. A table file references `users` by importing it from `./auth` within `packages/db/src/schema/`.
+
+### Item deletion
+
+Item deletion (`DELETE /items/:itemId`, see [API](./api.md#delete-itemsitemid)) is a hard delete: there's no soft-delete marker on `items`, no undo and no trash, unlike a User's `deleted_at`. The API's `DrizzleItemRepository.delete(userId, itemId)` runs one `DELETE FROM items WHERE id = ? AND user_id = ?` returning the row's id, so it reports whether it deleted the User's Item, and another User's Item is never touched. The row takes the Item's Text (`extracted_text`) and its `search_vector` with it. No schema change was needed: the existing cascades do the rest in the same statement.
+
+- `item_tags_item_id_user_id_items_fk` removes the Item's Tag links. The Tags themselves stay, so the User can keep using them on other Items.
+- `rejected_item_tags_item_id_user_id_items_fk` removes the Item's Rejected tags.
+
+A Tag only the AI used (`tags.origin` `ai`) that's left on no Items isn't deleted in the same statement. The existing lazy clean-up handles it: the next write that creates one of the User's Tags deletes it under the User's lock, and `GET /tags` and the names sent to the AI leave it out until then (see `tags.origin` above). A Tag the User applied is kept on no Items.
+
+The Item's Thumbnail isn't in the database: the API deletes its object from Storage after the row (see [API](./api.md#delete-itemsitemid)).
 
 ## Migration workflow
 
