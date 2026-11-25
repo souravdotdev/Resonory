@@ -248,7 +248,11 @@ export class ProcessItemUseCase {
     { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
-    await this.items.markReady(ref, ready);
+    if (!(await this.items.markReady(ref, ready))) {
+      // Deleted mid-Processing: what this run uploaded would be left an orphan.
+      if (ready.thumbnailKey !== null) await this.thumbnails?.delete(ready.thumbnailKey);
+      return { outcome: "missing" };
+    }
     const tagging = await this.queueTagging(ref);
     return { outcome: "ready", ...ready, ...extraction, ...tagging };
   }

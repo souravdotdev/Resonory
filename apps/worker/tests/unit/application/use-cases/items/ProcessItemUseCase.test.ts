@@ -41,7 +41,13 @@ function itemsInMemory(sourceUrl: string) {
     type: null,
     status: "processing",
   };
-  const owns = ({ itemId, userId }: ItemRef) => itemId === item.id && userId === item.userId;
+  let deleted = false;
+  const owns = ({ itemId, userId }: ItemRef) =>
+    !deleted && itemId === item.id && userId === item.userId;
+  // The User deletes the Item (Item deletion): from then on it's found by nothing and updated by nothing.
+  const deleteItem = () => {
+    deleted = true;
+  };
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => (owns(ref) ? { ...item } : null)),
     markReady: vi.fn(async (ref: ItemRef, { type, metadata, thumbnailKey, text }: ReadyItem) => {
@@ -54,7 +60,7 @@ function itemsInMemory(sourceUrl: string) {
     findProcessingBefore: vi.fn(async () => []),
     markFailedIfProcessing: vi.fn(async () => false),
   };
-  return { repository, item };
+  return { repository, item, deleteItem };
 }
 
 // A URL fetcher answering every fetch with the same page.
@@ -722,6 +728,45 @@ describe("ProcessItemUseCase, missing Items", () => {
   });
 });
 
+describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
+  const PHOTO_URL = "https://cdn.example.com/photos/sunset.png";
+  const photo = file("image/png", new Uint8Array([0x89, 0x50, 0x4e, 0x47]), PHOTO_URL);
+
+  // An Item whose User deletes it while its page is being fetched, after Processing loaded it.
+  function deletedWhileFetching(page: FetchedPage) {
+    const { repository, deleteItem } = itemsInMemory("https://example.com/sunset");
+    const fetcher = {
+      fetchPage: vi.fn(async (_sourceUrl: string) => {
+        deleteItem();
+        return page;
+      }),
+    } satisfies IUrlFetcher;
+    return { repository, fetcher };
+  }
+
+  it("deletes the Thumbnail it uploaded and ends as missing", async () => {
+    const { repository, fetcher } = deletedWhileFetching(photo);
+    const { store, objects } = thumbnailsInMemory();
+    const queue = queueRecording();
+    const useCase = useCaseFor(
+      repository,
+      fetcher,
+      undefined,
+      { images: imagesAnswering(), resizer: resizerAnswering(), store },
+      undefined,
+      undefined,
+      queue,
+    );
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({ outcome: "missing" });
+    expect(store.put).toHaveBeenCalledWith(ITEM_KEY, CARD_THUMBNAIL);
+    expect(objects).toEqual(new Map());
+    expect(queue.enqueueTagItem).not.toHaveBeenCalled();
+  });
+});
+
 describe("ProcessItemUseCase, Items that are already Ready", () => {
   it("leaves a Ready Item alone: no fetch, no write, no Tag Item job", async () => {
     const { repository, item } = itemsInMemory("https://example.com/page");
@@ -850,7 +895,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     const { repository, item } = itemsInMemory("https://example.com/sunset");
     // A repository that loads the row whatever User the job names, as if a payload were ever off.
     vi.mocked(repository.findById).mockImplementation(async () => ({ ...item }));
-    const { store, objects } = thumbnailsInMemory();
+    const { store } = thumbnailsInMemory();
     const useCase = useCaseFor(repository, photo(), undefined, {
       images: imagesAnswering(),
       resizer: resizerAnswering(),
@@ -859,7 +904,8 @@ describe("ProcessItemUseCase, Thumbnail", () => {
 
     await useCase.execute({ itemId: ITEM_ID, userId: OTHER_USER_ID });
 
-    expect([...objects.keys()]).toEqual([ITEM_KEY]);
+    // Uploaded at the row's key (the job's Ready write then finds no row of its User's, so it's deleted again).
+    expect(store.put.mock.calls.map(([key]) => key)).toEqual([ITEM_KEY]);
   });
 
   it.each([
