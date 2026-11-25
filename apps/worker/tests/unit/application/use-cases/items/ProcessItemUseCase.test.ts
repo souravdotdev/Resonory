@@ -726,6 +726,48 @@ describe("ProcessItemUseCase, missing Items", () => {
     expect(result).toEqual({ outcome: "missing" });
     expect(item).toMatchObject({ status: "processing", type: null });
   });
+
+  it("deletes what an earlier attempt uploaded when a retry finds the Item gone", async () => {
+    // The first attempt uploaded, then threw before its Ready write; the User deleted the Item meanwhile.
+    const { repository, deleteItem } = itemsInMemory("https://example.com/sunset");
+    deleteItem();
+    const { store, objects } = thumbnailsInMemory();
+    objects.set(ITEM_KEY, CARD_THUMBNAIL);
+    const useCase = useCaseFor(repository, fetcherAnswering(htmlPage()), undefined, { store });
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({ outcome: "missing" });
+    expect(objects).toEqual(new Map());
+  });
+
+  it("hands back a failed delete of a missing Item's Thumbnail, still ending as missing", async () => {
+    const { repository, deleteItem } = itemsInMemory("https://example.com/sunset");
+    deleteItem();
+    const { store } = thumbnailsInMemory();
+    const failure = new Error("Storage answered 500");
+    store.delete.mockRejectedValue(failure);
+    const useCase = useCaseFor(repository, fetcherAnswering(htmlPage()), undefined, { store });
+
+    const result = await useCase.execute(REF);
+
+    expect(result).toEqual({
+      outcome: "missing",
+      orphanedThumbnail: { key: ITEM_KEY, error: failure },
+    });
+  });
+
+  it("deletes only at the job's own key, so another User's Thumbnail is never touched", async () => {
+    const { repository } = itemsInMemory("https://example.com/sunset");
+    const { store, objects } = thumbnailsInMemory();
+    objects.set(ITEM_KEY, CARD_THUMBNAIL);
+    const useCase = useCaseFor(repository, fetcherAnswering(htmlPage()), undefined, { store });
+
+    await useCase.execute({ itemId: ITEM_ID, userId: OTHER_USER_ID });
+
+    expect(store.delete).toHaveBeenCalledWith(`${OTHER_USER_ID}/${ITEM_ID}.webp`);
+    expect(objects).toEqual(new Map([[ITEM_KEY, CARD_THUMBNAIL]]));
+  });
 });
 
 describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
@@ -785,10 +827,10 @@ describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
     });
   });
 
-  it("deletes nothing when the run uploaded no Thumbnail", async () => {
-    // Another run's object at the Item's key is the API's to delete, not this run's.
+  it("deletes an earlier attempt's object even when this run uploaded no Thumbnail", async () => {
     const { repository, fetcher } = deletedWhileFetching(htmlPage());
-    const { store } = thumbnailsInMemory();
+    const { store, objects } = thumbnailsInMemory();
+    objects.set(ITEM_KEY, CARD_THUMBNAIL);
     const useCase = useCaseFor(repository, fetcher, undefined, {
       images: imagesAnswering(),
       resizer: resizerAnswering(),
@@ -799,7 +841,7 @@ describe("ProcessItemUseCase, an Item deleted mid-Processing", () => {
 
     expect(result).toEqual({ outcome: "missing" });
     expect(store.put).not.toHaveBeenCalled();
-    expect(store.delete).not.toHaveBeenCalled();
+    expect(objects).toEqual(new Map());
   });
 });
 
@@ -931,7 +973,7 @@ describe("ProcessItemUseCase, Thumbnail", () => {
     const { repository, item } = itemsInMemory("https://example.com/sunset");
     // A repository that loads the row whatever User the job names, as if a payload were ever off.
     vi.mocked(repository.findById).mockImplementation(async () => ({ ...item }));
-    const { store } = thumbnailsInMemory();
+    const { store, objects } = thumbnailsInMemory();
     const useCase = useCaseFor(repository, photo(), undefined, {
       images: imagesAnswering(),
       resizer: resizerAnswering(),
@@ -940,8 +982,10 @@ describe("ProcessItemUseCase, Thumbnail", () => {
 
     await useCase.execute({ itemId: ITEM_ID, userId: OTHER_USER_ID });
 
-    // Uploaded at the row's key (the job's Ready write then finds no row of its User's, so it's deleted again).
+    // Uploaded at the row's key. The job's Ready write then finds no row of its User's, and the
+    // clean-up deletes only at the job's own key, so the real owner's Thumbnail stays.
     expect(store.put.mock.calls.map(([key]) => key)).toEqual([ITEM_KEY]);
+    expect(objects).toEqual(new Map([[ITEM_KEY, CARD_THUMBNAIL]]));
   });
 
   it.each([
