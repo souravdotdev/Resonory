@@ -17,7 +17,7 @@ apps/api/src/
     tokens.ts           TOKENS: one Symbol per bound dependency
     container.ts        createContainer(): the only place concrete classes are bound
   domain/
-    entities/           User.ts (User, SignInProfile), Item.ts (Item, ItemSummary), Tag.ts
+    entities/           User.ts (User, SignInProfile), Item.ts (Item, ItemSummary, ItemRef), Tag.ts
     repositories/       IUserRepository.ts, IItemRepository.ts, ITagRepository.ts
     providers/          ISessionProvider.ts, IThumbnailUrlProvider.ts, IThumbnailStore.ts, IQueueProvider.ts
     errors/             AppError and its subclasses (barrel: @/domain/errors)
@@ -34,7 +34,8 @@ apps/api/src/
     database/           Database.ts (the handle type), db.ts (the runtime Drizzle instance)
     queue/              BullMqQueueProvider.ts, itemProcessingQueue.ts (the BullMQ Item processing queue)
     repositories/       DrizzleUserRepository.ts, DrizzleItemRepository.ts, DrizzleTagRepository.ts
-    storage/            SupabaseThumbnailUrlProvider.ts (signs Thumbnail links), SupabaseThumbnailStore.ts (deletes them)
+    storage/            thumbnailStorage.ts (THUMBNAILS_BUCKET, the narrow ThumbnailStorage client type),
+                        SupabaseThumbnailUrlProvider.ts (signs Thumbnail links), SupabaseThumbnailStore.ts (deletes them)
     mappers/            userMapper.ts, itemMapper.ts, tagMapper.ts (row -> entity)
   interface/
     routes/             auth.routes.ts, me.routes.ts, items.routes.ts, tags.routes.ts (Fastify plugins)
