@@ -20,7 +20,7 @@ function itemsInMemory(type: ItemType | null = null) {
   const owns = ({ itemId, userId }: ItemRef) => itemId === item.id && userId === item.userId;
   const repository: IItemRepository = {
     findById: vi.fn(async (ref: ItemRef) => (owns(ref) ? { ...item } : null)),
-    markReady: vi.fn(async () => {}),
+    markReady: vi.fn(async () => true),
     markFailed: vi.fn(async (ref: ItemRef, failedType: ItemType) => {
       if (owns(ref)) {
         item.status = "failed";

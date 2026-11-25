@@ -8,9 +8,11 @@ export interface IItemRepository {
   findTaggable(ref: ItemRef): Promise<TaggableItem | null>;
   /**
    * Marks the User's Item Ready with what Processing learned (Item type, title,
-   * description, Thumbnail key and Text), all in one update.
+   * description, Thumbnail key and Text), all in one update. False when no row
+   * was updated: the Item doesn't exist (it was deleted mid-Processing) or
+   * isn't theirs.
    */
-  markReady(ref: ItemRef, ready: ReadyItem): Promise<void>;
+  markReady(ref: ItemRef, ready: ReadyItem): Promise<boolean>;
   /** Marks the User's Item Failed with this Item type. */
   markFailed(ref: ItemRef, type: ItemType): Promise<void>;
   /**

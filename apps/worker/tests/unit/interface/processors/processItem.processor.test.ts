@@ -156,6 +156,32 @@ describe("a Process Item job", () => {
     ]);
   });
 
+  it("warns, under a stable key and with the key, when a deleted Item's Thumbnail couldn't be deleted", async () => {
+    const KEY = `${USER_ID}/${ITEM_ID}.webp`;
+    const { container, logger } = testContainer(async () => ({
+      outcome: "missing",
+      orphanedThumbnailKey: KEY,
+      thumbnailDeleteError: new Error("Storage answered 500"),
+    }));
+
+    await processItem(container, { itemId: ITEM_ID, userId: USER_ID });
+
+    expect(logger.logs).toEqual([
+      {
+        level: "warn",
+        bindings: { itemId: ITEM_ID },
+        fields: { event: "thumbnail_delete_failed", thumbnailKey: KEY, err: "Error" },
+        msg: "couldn't delete the Thumbnail of an Item deleted mid-Processing; it's left an orphan",
+      },
+      {
+        level: "info",
+        bindings: { itemId: ITEM_ID },
+        fields: {},
+        msg: "Item no longer exists; nothing to process",
+      },
+    ]);
+  });
+
   it("logs, under a stable key, that an already Ready Item has nothing to process", async () => {
     const { container, logger } = testContainer(async () => ({ outcome: "already_ready" }));
 

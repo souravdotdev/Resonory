@@ -77,6 +77,10 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * and no Tag Item job is queued. A Processing or Failed Item runs as usual,
  * so a Failed Item that a late job finishes becomes Ready.
  *
+ * An Item deleted while it runs (Item deletion) is found gone by its Ready
+ * write: the Thumbnail this run uploaded is deleted again, nothing is queued,
+ * and Processing ends as missing, which isn't retried.
+ *
  * Once the Item is Ready, its AI tagging is queued as a job of its own
  * (`tag-item`), on every path that reaches Ready, so a slow or failing model
  * never holds Ready up. A Failed Item retried to Ready is queued again. If the
@@ -248,9 +252,31 @@ export class ProcessItemUseCase {
     { text, ...extraction }: TextOutcome,
   ): Promise<ProcessItemResult> {
     const ready: ReadyItem = { ...preview, text };
-    await this.items.markReady(ref, ready);
+    if (!(await this.items.markReady(ref, ready))) return this.deleted(ready.thumbnailKey);
     const tagging = await this.queueTagging(ref);
     return { outcome: "ready", ...ready, ...extraction, ...tagging };
+  }
+
+  /**
+   * Ends Processing for an Item deleted while it ran, which its Ready write
+   * found gone: deletes the Thumbnail this run uploaded, if any, which would
+   * otherwise be left an orphan (the API deletes the row before the object, so
+   * every ordering of the two ends with none). A failed delete is handed back
+   * with its key for the processor to log, never thrown, so the job still ends
+   * as missing and isn't retried.
+   */
+  private async deleted(thumbnailKey: string | null): Promise<ProcessItemResult> {
+    if (thumbnailKey === null || !this.thumbnails) return { outcome: "missing" };
+    try {
+      await this.thumbnails.delete(thumbnailKey);
+      return { outcome: "missing" };
+    } catch (error) {
+      return {
+        outcome: "missing",
+        orphanedThumbnailKey: thumbnailKey,
+        thumbnailDeleteError: error,
+      };
+    }
   }
 
   /** Queues the Item's AI tagging, with only its ids; a failure is handed back, never thrown. */
