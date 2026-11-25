@@ -109,9 +109,42 @@ describe("the production container", () => {
   );
 
   it(
-    "resolves the Item deletion use case",
+    "deletes Thumbnail objects with Supabase Storage when it's configured",
     async () => {
       const { container, tokens } = await productionContainer();
+      const { SupabaseThumbnailStore } =
+        await import("@/infrastructure/storage/SupabaseThumbnailStore");
+
+      expect(container.get(tokens.ThumbnailStore)).toBeInstanceOf(SupabaseThumbnailStore);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+
+  // Item deletion then skips the Thumbnail object.
+  it(
+    "binds no Thumbnail store without Supabase Storage configured",
+    async () => {
+      const { container, tokens } = await productionContainer({
+        SUPABASE_URL: undefined,
+        SUPABASE_SERVICE_ROLE_KEY: undefined,
+      });
+
+      expect(container.isBound(tokens.ThumbnailStore)).toBe(false);
+    },
+    SLOW_CONTAINER_TEST_TIMEOUT,
+  );
+
+  // Item deletion works with or without a Thumbnail store.
+  it.each([
+    ["with Supabase Storage configured", {}],
+    [
+      "without Supabase Storage configured",
+      { SUPABASE_URL: undefined, SUPABASE_SERVICE_ROLE_KEY: undefined },
+    ],
+  ])(
+    "resolves the Item deletion use case %s",
+    async (_case, overrides) => {
+      const { container, tokens } = await productionContainer(overrides);
       const { DeleteItemUseCase } = await import("@/application/use-cases/items/DeleteItemUseCase");
 
       expect(container.get(tokens.DeleteItemUseCase)).toBeInstanceOf(DeleteItemUseCase);

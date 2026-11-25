@@ -14,6 +14,7 @@ import { UntagItemUseCase } from "@/application/use-cases/tags/UntagItemUseCase"
 import { TOKENS } from "@/di/tokens";
 import type { IQueueProvider } from "@/domain/providers/IQueueProvider";
 import type { ISessionProvider } from "@/domain/providers/ISessionProvider";
+import type { IThumbnailStore } from "@/domain/providers/IThumbnailStore";
 import type { IThumbnailUrlProvider } from "@/domain/providers/IThumbnailUrlProvider";
 import type { IItemRepository } from "@/domain/repositories/IItemRepository";
 import type { ITagRepository } from "@/domain/repositories/ITagRepository";
@@ -34,6 +35,7 @@ import { itemProcessingQueue } from "@/infrastructure/queue/itemProcessingQueue"
 import { DrizzleItemRepository } from "@/infrastructure/repositories/DrizzleItemRepository";
 import { DrizzleTagRepository } from "@/infrastructure/repositories/DrizzleTagRepository";
 import { DrizzleUserRepository } from "@/infrastructure/repositories/DrizzleUserRepository";
+import { SupabaseThumbnailStore } from "@/infrastructure/storage/SupabaseThumbnailStore";
 import {
   SupabaseThumbnailUrlProvider,
   type ThumbnailStorage,
@@ -71,7 +73,8 @@ export function createContainer(): Container {
   container.bind<ITagRepository>(TOKENS.TagRepository).to(DrizzleTagRepository).inSingletonScope();
   container.bind<IQueueProvider>(TOKENS.QueueProvider).to(BullMqQueueProvider).inSingletonScope();
 
-  // Without Supabase Storage there's no Thumbnail provider, and Item cards carry no Thumbnail.
+  // Without Supabase Storage there's no Thumbnail provider, and Item cards carry no Thumbnail;
+  // nor a Thumbnail store, and Item deletion skips the Thumbnail object.
   if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     const supabaseUrl = env.SUPABASE_URL;
     const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -90,6 +93,10 @@ export function createContainer(): Container {
     container
       .bind<IThumbnailUrlProvider>(TOKENS.ThumbnailUrlProvider)
       .to(SupabaseThumbnailUrlProvider)
+      .inSingletonScope();
+    container
+      .bind<IThumbnailStore>(TOKENS.ThumbnailStore)
+      .to(SupabaseThumbnailStore)
       .inSingletonScope();
   }
 
