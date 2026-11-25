@@ -77,6 +77,10 @@ import { thumbnailKeyOf } from "@/domain/rules/thumbnailKey";
  * and no Tag Item job is queued. A Processing or Failed Item runs as usual,
  * so a Failed Item that a late job finishes becomes Ready.
  *
+ * An Item deleted while it runs (Item deletion) is found gone by its Ready
+ * write: the Thumbnail this run uploaded is deleted again, nothing is queued,
+ * and Processing ends as missing, which isn't retried.
+ *
  * Once the Item is Ready, its AI tagging is queued as a job of its own
  * (`tag-item`), on every path that reaches Ready, so a slow or failing model
  * never holds Ready up. A Failed Item retried to Ready is queued again. If the
