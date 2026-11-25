@@ -19,12 +19,12 @@ apps/api/src/
   domain/
     entities/           User.ts (User, SignInProfile), Item.ts (Item, ItemSummary), Tag.ts
     repositories/       IUserRepository.ts, IItemRepository.ts, ITagRepository.ts
-    providers/          ISessionProvider.ts, IThumbnailUrlProvider.ts, IQueueProvider.ts
+    providers/          ISessionProvider.ts, IThumbnailUrlProvider.ts, IThumbnailStore.ts, IQueueProvider.ts
     errors/             AppError and its subclasses (barrel: @/domain/errors)
-    rules/              signInDecision.ts, tagName.ts (pure functions)
+    rules/              signInDecision.ts, tagName.ts, thumbnailKey.ts (pure functions)
   application/
     use-cases/auth/     AdmitSignInUseCase, ResolveSignedInUserUseCase, GetMeUseCase
-    use-cases/items/    SaveItemUseCase, ListItemsUseCase
+    use-cases/items/    SaveItemUseCase, ListItemsUseCase, DeleteItemUseCase
     use-cases/tags/     ListTagsUseCase, TagItemUseCase, UntagItemUseCase
     dto/auth/           MeOutput.ts
     dto/items/          ItemCardOutput.ts (toItemCardOutput, toItemCardOutputWithThumbnailUrl), ListItemsOutput.ts
@@ -34,7 +34,7 @@ apps/api/src/
     database/           Database.ts (the handle type), db.ts (the runtime Drizzle instance)
     queue/              BullMqQueueProvider.ts, itemProcessingQueue.ts (the BullMQ Item processing queue)
     repositories/       DrizzleUserRepository.ts, DrizzleItemRepository.ts, DrizzleTagRepository.ts
-    storage/            SupabaseThumbnailUrlProvider.ts (signs Thumbnail links)
+    storage/            SupabaseThumbnailUrlProvider.ts (signs Thumbnail links), SupabaseThumbnailStore.ts (deletes them)
     mappers/            userMapper.ts, itemMapper.ts, tagMapper.ts (row -> entity)
   interface/
     routes/             auth.routes.ts, me.routes.ts, items.routes.ts, tags.routes.ts (Fastify plugins)
@@ -45,7 +45,7 @@ apps/api/src/
 
 What each layer holds:
 
-- **`domain/`** holds the business vocabulary and nothing else. It has entities (plain interfaces, dates as `Date`), ports (`I`-prefixed interfaces: repositories for storage, providers for every other outside service), errors and pure rules. Examples of rules: `decideSignIn(deletedAt, now)` returns `allow`, `restore` or `refuse`, with `GRACE_PERIOD_DAYS = 30`. `isDeleted(user)` says whether a User is deleted. `slugifyTagName` and `TAG_NAME_PATTERN` define Tag names. `MAX_TAGS_PER_ITEM = 20` and `MAX_TAGS_PER_USER = 1000` are the Tag limits. The domain imports nothing outside itself.
+- **`domain/`** holds the business vocabulary and nothing else. It has entities (plain interfaces, dates as `Date`), ports (`I`-prefixed interfaces: repositories for storage, providers for every other outside service), errors and pure rules. Examples of rules: `decideSignIn(deletedAt, now)` returns `allow`, `restore` or `refuse`, with `GRACE_PERIOD_DAYS = 30`. `isDeleted(user)` says whether a User is deleted. `slugifyTagName` and `TAG_NAME_PATTERN` define Tag names. `MAX_TAGS_PER_ITEM = 20` and `MAX_TAGS_PER_USER = 1000` are the Tag limits. `thumbnailKeyOf` is where an Item's Thumbnail is kept, mirroring the worker's rule. The domain imports nothing outside itself.
 - **`domain/errors/`** has `AppError(message, code)` with `ForbiddenError`, `NotFoundError`, `RepositoryError`, `UnauthorizedError` and `UserPermanentlyDeletedError`, and the Tag errors `InvalidTagNameError`, `ItemTagLimitError` and `UserTagLimitError`. A domain error carries a code (`AppErrorCode`), never an HTTP status.
 - **`application/`** holds the use cases and their DTOs. A use case is an `@injectable()` class named `XUseCase` with one `execute(input)` method. It gets its ports through `@inject(TOKENS.X)` constructor parameters. It returns an output DTO shaped for its view (for example `MeOutput`, `ItemCardOutput`), not an entity. Input types sit beside the use case (`AdmitSignInInput`). Output DTOs sit in `dto/<feature>/`. One exception, by design: `ResolveSignedInUserUseCase` returns the domain `User` entity, because the auth middleware attaches that User to the request for the use cases behind protected routes. Those use cases take the User as input (`GetMeUseCase.execute(user)`). The entity never reaches the wire: each route's use case still returns an output DTO.
 - **`infrastructure/`** holds the adapters: classes and functions that implement a domain port with a real tool. Examples: `DrizzleUserRepository implements IUserRepository`, `BetterAuthSessionProvider implements ISessionProvider`, and `createAuth`, which builds the Better Auth instance with every auth option ([ADR 0003](./adr/0003-auth-lives-on-the-api-with-subdomain-cookies.md)). The row mappers (`toUser`, `toItem`, `toItemSummary`, `toTag`, `toTagLink`) turn `@resonory/db` rows into entities. Tables, the Postgres client and the Redis connection come from `packages/db` (see [Database](./database.md)).
@@ -53,7 +53,7 @@ What each layer holds:
 
 `di/` sits outside the four layers. It is the composition root: the only code that knows every concrete class.
 
-Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `ListItemsUseCase` (over `IItemRepository`, `ITagRepository` and `IThumbnailUrlProvider`) behind `GET /items`, the Library; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider. `ListItemsUseCase` signs every Thumbnail in the Library in one `resolveMany` call, then builds each card with `toItemCardOutputWithThumbnailUrl`.
+Items has a domain (`Item`, `Tag`, the Tag name rule), the `IItemRepository` and `IQueueProvider` ports with their adapters, the Item card output DTO, row mappers, and use cases and routes: `SaveItemUseCase` behind `POST /items`; `ListItemsUseCase` (over `IItemRepository`, `ITagRepository` and `IThumbnailUrlProvider`) behind `GET /items`, the Library; `DeleteItemUseCase` (over `IItemRepository` and `IThumbnailStore`) behind `DELETE /items/:itemId`, Item deletion; `TagItemUseCase` (over `IItemRepository` and the `ITagRepository` port, `DrizzleTagRepository`) behind `POST /items/:itemId/tags`; `UntagItemUseCase` (same ports) behind `DELETE /items/:itemId/tags/:tagId`; and `ListTagsUseCase` (over `ITagRepository`) behind `GET /tags`. `IThumbnailUrlProvider`'s adapter, `SupabaseThumbnailUrlProvider`, signs 1-hour links into the private `thumbnails` bucket. It's bound only when Supabase Storage is configured; with no provider, `toItemCardOutput` gives every card a null Thumbnail URL. A just-saved Item has no Thumbnail key, so `SaveItemUseCase` passes no provider. `ListItemsUseCase` signs every Thumbnail in the Library in one `resolveMany` call, then builds each card with `toItemCardOutputWithThumbnailUrl`. `IThumbnailStore`'s adapter, `SupabaseThumbnailStore`, deletes one Thumbnail object from the same bucket; it's bound under the same condition, and with no store `DeleteItemUseCase` deletes the Item and skips its Thumbnail object. `DeleteItemUseCase.execute(input, logger)` takes the request's logger as an argument ([ADR 0006](./adr/0006-a-shared-logger-package-with-correlation-by-argument.md)), to log a Thumbnail it couldn't delete.
 
 ## The dependency rule
 
@@ -87,14 +87,14 @@ To fix it, define a port in the domain and put the tool code in an infrastructur
 
 ## Tokens, the container and scopes
 
-Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemProcessingQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `SaveItemUseCase`, `ListItemsUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
+Interfaces don't exist at runtime, so the container looks each dependency up by a token. `di/tokens.ts` exports `TOKENS`, one `Symbol` per bound dependency. A port's symbol is named after its interface (`TOKENS.UserRepository = Symbol("IUserRepository")`). Today the tokens are `Env`, `Database`, `UserRepository`, `Auth`, `SessionProvider`, `AdmitSignInUseCase`, `ResolveSignedInUserUseCase`, `GetMeUseCase`, `MeController`, `ItemRepository`, `ItemProcessingQueue`, `QueueProvider`, `ThumbnailStorage`, `ThumbnailUrlProvider`, `ThumbnailStore`, `SaveItemUseCase`, `ListItemsUseCase`, `DeleteItemUseCase`, `ItemsController`, `TagRepository`, `TagItemUseCase`, `UntagItemUseCase`, `ListTagsUseCase`, `TagsController`, `RateLimitRedis` and `Logger`.
 
 `di/container.ts` exports `createContainer()`, an InversifyJS `Container`. It is the only place in application code that creates an application class. It binds:
 
 - **Constants** (`toConstantValue`): the validated `Env`, the `Database` (`db` from `infrastructure/database/db.ts`), the rate-limit Redis and the BullMQ Item processing queue (`itemProcessingQueue`).
 - **The Better Auth instance** (`toDynamicValue(...).inSingletonScope()`): built once, by `createAuth(database, config, { admitSignIn })` from the bound `Env` and `Database`. Its session-create hook gets `admitSignIn` as `{ execute }`, which asks the container for a fresh `AdmitSignInUseCase` on every sign-in. The binding ends `satisfies { api: SessionApi }`, so tsc checks that the instance still fits what `BetterAuthSessionProvider` needs.
 - **Adapters and controllers as singletons** (`.to(Class).inSingletonScope()`): `DrizzleUserRepository`, `DrizzleItemRepository`, `DrizzleTagRepository`, `BetterAuthSessionProvider`, `BullMqQueueProvider`, `MeController`, `ItemsController`, `TagsController`. One instance lives for the life of the process.
-- **Thumbnail signing, only when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set**: `ThumbnailStorage` (a Supabase `StorageClient`, `toDynamicValue(...).inSingletonScope()`, ending `satisfies ThumbnailStorage`) and `SupabaseThumbnailUrlProvider` as a singleton. Unset, neither token is bound.
+- **Thumbnail signing and deleting, only when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set**: `ThumbnailStorage` (a Supabase `StorageClient`, `toDynamicValue(...).inSingletonScope()`, ending `satisfies ThumbnailStorage`), and `SupabaseThumbnailUrlProvider` and `SupabaseThumbnailStore` as singletons. Unset, none of the three tokens is bound.
 - **Use cases as transient** (`.to(Class).inTransientScope()`): each `container.get` builds a new one, so a use case never carries state from one request to the next.
 
 Setup rules that keep this working:
@@ -160,12 +160,13 @@ apps/worker/src/
                         tagging sends, and TAGGING_TEXT_LENGTH, how much Text it holds; Item types
                         and statuses),
                         PageHead.ts (a page head's extracted tags)
-    repositories/       IItemRepository.ts (findById, findTaggable, markReady, markFailed),
+    repositories/       IItemRepository.ts (findById, findTaggable, markReady (false when the Item
+                        is gone), markFailed),
                         ITagRepository.ts (listNames, listRejectedNames, applyAsAi)
     providers/          IUrlFetcher.ts (fetchPage → FetchedPage: html | file | unsuccessful),
                         IJsonFetcher.ts (fetchJson), IOEmbedProvider.ts (fetchOEmbed),
                         IImageFetcher.ts (fetchImage), IThumbnailResizer.ts (toCardThumbnail),
-                        IThumbnailStore.ts (put), IPageHeadParser.ts (parseHead: an already-captured
+                        IThumbnailStore.ts (put, delete), IPageHeadParser.ts (parseHead: an already-captured
                         page's HTML → PageHead, the same shape IUrlFetcher's HtmlPage carries, so
                         already-rendered content (issue #143/#145) skips the fetch but not this step),
                         ITextExtractor.ts (extractText: an already-captured page's HTML → its
