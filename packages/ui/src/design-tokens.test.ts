@@ -148,6 +148,23 @@ const sorted = (lines: string[]) => [...lines].sort();
 
 const upper = (hex: string) => hex.toUpperCase();
 
+// Shadows and the scrim are drawn in plain black at an opacity; it is the one
+// colour the sidecar may use that is not a DESIGN.md token.
+const SHADOW_BLACK = "#000000";
+
+const toHex = (channels: string[]) =>
+  `#${channels.map((c) => Number(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+
+// Every colour the sidecar renders, as #RRGGBB: hex and rgb()/rgba() in either
+// space- or comma-separated form.
+function renderedColours(text: string): string[] {
+  const hexes = [...text.matchAll(/#[0-9a-f]{6}\b/gi)].map(([hex]) => upper(hex));
+  const rgbs = [...text.matchAll(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/gi)].map((m) =>
+    toHex(m.slice(1, 4)),
+  );
+  return [...hexes, ...rgbs];
+}
+
 describe("Impeccable sidecar palette", () => {
   const palette = Object.fromEntries(
     Object.entries(tokens.colors as Record<string, string>).map(([name, hex]) => [
@@ -167,12 +184,11 @@ describe("Impeccable sidecar palette", () => {
   });
 
   it("uses only DESIGN.md colours in its shadows and component snippets", () => {
-    const rendered = JSON.stringify([sidecar.extensions, sidecar.components]);
-    const hexes = [...rendered.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => upper(m[0]));
-    const known = new Set(Object.values(palette));
+    const colours = renderedColours(JSON.stringify([sidecar.extensions, sidecar.components]));
+    const known = new Set([...Object.values(palette), SHADOW_BLACK]);
 
-    expect(hexes.length).toBeGreaterThan(0);
-    expect([...new Set(hexes.filter((hex) => !known.has(hex)))]).toEqual([]);
+    expect(colours.length).toBeGreaterThan(0);
+    expect([...new Set(colours.filter((colour) => !known.has(colour)))]).toEqual([]);
   });
 });
 
