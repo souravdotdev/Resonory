@@ -37,6 +37,12 @@ function references(node: unknown): string[] {
   return [];
 }
 
+// In the prose a reference is a dotted path in braces ({colors.accent}); braces
+// around anything else, such as a CSS rule, are not one.
+function proseReferences(body: string): string[] {
+  return [...body.matchAll(/\{([a-z][\w-]*(?:\.[\w-]+)+)\}/g)].map((m) => m[1] ?? "");
+}
+
 // DESIGN.md's frontmatter colour names, so a typo in a pair below fails type-checking.
 type ColorName =
   | "canvas"
@@ -170,6 +176,12 @@ describe("DESIGN.md token contract", () => {
     const dangling = refs.filter((ref) => lookup(ref) === undefined);
 
     expect(refs.length).toBeGreaterThan(0);
+    expect(dangling).toEqual([]);
+  });
+
+  it("resolves every {path.to.token} reference in the prose to a defined token", () => {
+    const dangling = proseReferences(designBody).filter((ref) => lookup(ref) === undefined);
+
     expect(dangling).toEqual([]);
   });
 });
