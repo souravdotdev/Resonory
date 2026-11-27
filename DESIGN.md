@@ -548,3 +548,17 @@ The popup (`extension-popup`): 360px wide, the canvas, 16px padding, `body-sm` L
 - **Signed out:** no page row. A sentence in Sand saying what to do ("Paste your API key to start saving pages."), then a text input labelled "API key" and a primary "Save key" button 12px below it. The input's error and the key's "Saved." confirmation follow the input and success rules above.
 - **Toolbar badge:** a save also shows on the toolbar icon: "✓" on Saved Green for 3 seconds after a save, or "!" on Error Red until the next click, the badge's text set in the canvas colour on both.
 - The options page uses the same signed-out content, centred in a 480px column on a full tab.
+
+### Emails
+
+The Welcome email, the early-access email and the Rediscover digest are dark like the product, built from what mail apps render: tables, inline styles and solid hex colours (no alpha, no CSS variables, no shadows).
+
+- **Dark ground** (`email-container`): the canvas (#151414) set twice, as `bgcolor` on the `body` and on the full-width wrapping table, and as an inline `background`, so clients that strip one keep the other. The head declares `<meta name="color-scheme" content="dark">`, `<meta name="supported-color-schemes" content="dark">` and `:root { color-scheme: dark; }`, so clients that respect it don't invert the message. The 600px column sits directly on the canvas with no card behind the copy, so the Rust heading and name sit on the one ground where Rust text is allowed.
+- **Type:** headings in Spectral with Georgia as the fallback (`'Spectral', Georgia, 'Times New Roman', serif`); everything else in Work Sans with Arial (`'Work Sans', Helvetica, Arial, sans-serif`); recorded values in `'JetBrains Mono', Consolas, 'Courier New', monospace`. Most clients won't load the web fonts, so the fallbacks are the design, not an accident: sizes and weights are chosen to read well in Georgia and Arial.
+- **Heading:** Spectral 600 at 28px (never under 24px), line-height 1.2, in Rust, centred. The founder asked for a brand-coloured heading; at 24px and up on the canvas, Rust passes the large-text rule.
+- **Body:** 15px, line-height 24px, Linen, centred, at most 480px wide inside the column. Links are Parchment with an underline.
+- **Button (bulletproof):** a single-cell table whose cell carries `bgcolor="#A8492B"`, a 10px radius and the link inside it, with 12px by 24px padding on the link itself, 15px Arial 600 in On Rust (#FFFFFF), no underline, so the whole area is clickable and still shows as a Rust button where radii are ignored. One per email, and only when the email asks the User to do something (the early-access email's "Open Resonory").
+- **Signature:** the founder's name in Rust at 24px, weight 700, Spectral (Georgia), 32px below the body, and the role ("Founder, Resonory") 4px below in 13px Arial, Taupe. The name stays at the large bold size because Rust text below 24px fails contrast.
+- **Rediscover digest Items:** each Item a row on Card Brown (12px radius, 16px padding, 12px apart): its title as a Parchment link in 15px Arial 600, its source and saved date in 12px mono, Taupe. A 120px-wide Thumbnail sits at the left of the row where the Item has one. No Rust on the rows; the digest's heading carries it.
+- **Fine print** (why the User gets the email, how to stop it): 12px Arial in Dust, on the canvas below the column's content.
+- The logo lockup is a PNG at 152 by 29px with `alt="Resonory"`, the email's one image apart from digest Thumbnails.
