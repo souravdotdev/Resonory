@@ -570,3 +570,45 @@ The Welcome email, the early-access email and the Rediscover digest are dark lik
 - **Colour:** `currentColor`, taking the colour of the text it sits with: Sand in icon buttons, Parchment on hover, On Rust on a primary button, Saved Green or Error Red in a status line. Never Rust: an icon is never the resurfacing signal.
 - **Labelling:** a decorative icon beside text is `aria-hidden`; an icon alone in a button carries the button's `aria-label`.
 - **Exceptions:** the wall's small stroked count icons and the Resonory symbol are drawn as inline SVG, because they depict the product rather than act in it.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** keep Rust (#A8492B) to two jobs: the view's one primary fill (hover and press #863A22, label #FFFFFF), and an Item coming back (the lit card's 1px edge and `0 0 28px rgb(168 73 43 / 0.45)` glow, its thread, its rising dot, the logo's dot).
+- **Do** set Rust as text only at 24px and up, on the canvas (#151414): the headline's highlighted verbs and the emails' heading and founder name.
+- **Do** focus every interactive element with a 2px solid #E9D8C4 outline at a 2px offset.
+- **Do** give every input, checkbox and field a 1px #736D68 Control Edge, and every error a #D36E6E edge and message.
+- **Do** separate surfaces by tone first: #151414, #1A1918, #201E1D, #262422.
+- **Do** set meta on cards in Taupe (#988E81, `mono-sm` 11/16); keep Dust (#877E74) for fine print on the canvas.
+- **Do** set every timestamp, source domain, URL, count and keycap in JetBrains Mono: 11/16 on cards, 13/20 elsewhere.
+- **Do** nest rounded elements concentrically: a 14px panel with a 6px inset holds a 10px button.
+- **Do** use `cubic-bezier(0.32, 0.72, 0, 1)` at 150, 300, 600 or 900ms for every transition; only the wall's drift (44s, `ease-in-out`) and the thread's spark (1.4s, `linear`) differ.
+- **Do** press buttons to `scale(0.97)` and give every animation a still final state under `prefers-reduced-motion: reduce`.
+- **Do** lay the Library out as `repeat(auto-fill, minmax(240px, 1fr))` with a 16px gap, on the 640, 1024 and 1440px breakpoints.
+- **Do** set the emails' ground with `bgcolor="#151414"` and `color-scheme: dark`, with Georgia and Arial named as fallbacks.
+- **Do** use Phosphor icons, regular weight, at 16 or 20px, in `currentColor`.
+
+### Don't:
+
+- **Don't** use Rust for a link, a focus ring, a label, an icon, a border on a field, or any text under 24px; on a card it is 2.69 to 3.05:1.
+- **Don't** set Dust (#877E74) on any card or panel (3.88 to 4.40:1); use Taupe (#988E81).
+- **Don't** mark an interactive boundary with the hairline (#282624, 1.03 to 1.22:1); it is decoration.
+- **Don't** signal an error in Rust, or use Error Red (#D36E6E) for anything but errors and destructive actions.
+- **Don't** put two filled Rust buttons in one view; the second is secondary (#262422 with a #736D68 edge).
+- **Don't** introduce a new grey, an opacity of white, or a light theme; text is one of the five beige tiers, and the system is dark only.
+- **Don't** set human-facing sentences in mono, or slant a headline's highlighted words (they are upright Rust).
+- **Don't** place an uppercase `label` (12/16, 0.04em) above a headline as an eyebrow; it is for tags, Item type badges, form labels and table headers.
+- **Don't** add white glows, coloured shadows other than the lit glow, or a blurred scrim; the scrim is flat `rgb(0 0 0 / 0.6)`.
+- **Don't** use photographs on the waitlist wall (its pictures are the sun-over-ridge placeholder), or overlay text and badges on a Library Thumbnail.
+- **Don't** animate layout properties, or use any easing but the spring outside the two exceptions.
+- **Don't** use Caveat anywhere but the one sentence above the waitlist headline.
+
+### Known gaps
+
+DESIGN.md is ahead of the code. These are known follow-ups, not mistakes to copy:
+
+- **The logo** in the brand assets folder (and the extension's `resonory-logo-extended.png` and the emails' `email-logo.png`) is still in the old colours (#141414, #D4621A, #FAFAF7) and needs recolouring and re-exporting in #151414, #A8492B and #E9D8C4.
+- **The waitlist's theme stylesheet** (`apps/waitlist/src/app/globals.css`'s `@theme`, mirrored in `apps/waitlist/src/brand/colors.ts`) still defines the old tokens and Geist: #141414 ground, #D4621A accent, #FAFAF7 text at 66% and 56% strengths, #FF6B6B errors, 13px panels and 11px cards on phones, a white primary button, an off-white focus ring at a 3px offset. Its Welcome email (`apps/waitlist/src/waitlist/welcome-email.ts`) still sets Geist and the founder's name in orange at 15px on a #1F1F1F card. Its motion uses durations off the scale (1.2s rise-ins, 500ms field and Cue fades, 0.7 to 1.5s for the joined card's dot, check and ring), and the demo's caret blinks on a 1.1s step timing, which this system doesn't sanction; all of these map onto the four durations on migration.
+- **The UI package** (`packages/ui`: `Button` and `Card`) still has unstyled light-theme placeholders (#ccc and #e5e5e5 borders, 6px and 8px radii), and the web app (`apps/web`) has no Library shell yet: a 720px list on system fonts with `color-scheme: light dark`.
+- **The extension** (`apps/extension/lib/apiKeyForm.css`, `lib/badge.ts`) still uses the old colours, a 280px popup and green (#16A34A) and red (#DC2626) badges with white text. Today the popup only shows the signed-out API key form, and a save's only feedback is the toolbar badge; the saving, saved, already saved and error popup states above are the target, and "already saved" also needs the API to recognise a repeat save.
