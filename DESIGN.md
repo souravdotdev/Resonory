@@ -390,3 +390,24 @@ The popup (`extension-popup`) is 360px wide, its height set by its content, on t
 ### Emails
 
 Every email (the Welcome email, the early-access email, the Rediscover digest) is a single 600px column (`email-container`), centred on a full-width canvas table, 32px padding (16px when the screen is narrower than the column). Content stacks top to bottom, centred: the logo lockup, the heading 32px below it, the body 12px below that, then the button or the Items, then the founder's signature 32px below. There are no side-by-side columns; mail apps break them.
+
+## Elevation & Depth
+
+Depth is tonal first. At rest, a surface sits one step above whatever it is on: canvas, then surface-soft, then surface-card, then surface-strong, each a few points lighter and warmer. Most of the system needs nothing more. A 1px hairline may sharpen an edge, but it reads as one more step, not as a line.
+
+Only things that float get a shadow: the floating palettes (the nav pill, the toast, menus), the Cue, and dialogs. Their shadows are long, low and black, with a heavy negative spread, so the surface reads as lifted without a visible halo, often with a 1px black ring to cut it from the wall behind. Palettes that float over the card wall are frosted: a 90 to 94% fill of their surface with a 14 to 16px backdrop blur, so the wall shows through faintly. Nothing else is translucent.
+
+### Shadow vocabulary
+
+- **Field rest** (`box-shadow: inset 0 1px 0 rgb(233 216 196 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.8)`): the waitlist's email field (`input-search`): a faint Parchment top highlight and a drop beneath.
+- **Palette** (`box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35)`): floating palettes: the sticky nav pill on the secondary pages, the toast, menus.
+- **Window** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45), 0 30px 60px -30px rgb(0 0 0 / 0.9)`): the browser window in the waitlist demo.
+- **Cue** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)`): the Cue, the highest surface on its screen.
+- **Dialog** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 40px 80px -24px rgb(0 0 0 / 0.9)`): dialogs, always over the scrim.
+- **Scrim** (`background: rgb(0 0 0 / 0.6)`): the full-screen layer under a dialog or the detail sheet below 1024px. Flat black, no blur.
+- **Lit glow** (`box-shadow: 0 0 0 1px #A8492B, 0 0 28px rgb(168 73 43 / 0.45)`; a 22px blur on phones): an Item that has come back. The only coloured light in the system.
+- **Pile edges** (`box-shadow: 0 5px 0 -2px #201E1D, 0 5px 0 -1px rgb(233 216 196 / 0.1), 0 10px 0 -5px #201E1D, 0 10px 0 -4px rgb(233 216 196 / 0.08)`): a stacked card on the waitlist wall, two card edges peeking out below it. It depicts the pile of Items (the same stack as the logo's bars) and is used only on stacked Item cards.
+
+### Named Rules
+
+**The Only Light Is Rust Rule.** Shadows are black and soft. There are no white glows and no coloured light anywhere except the Rust lit glow on an Item that has come back, and its thread. Focus is an outline, never a glow.
