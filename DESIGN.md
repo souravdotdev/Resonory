@@ -256,33 +256,59 @@ Density is calm, with air. Motion is slow and springy: one curve, a handful of d
 
 ## Colors
 
-A strict monochrome of near-black tonal surfaces and one off-white at set strengths, with a single warm orange that means "this came back".
+A warm dark ground, a single beige family for text, and one rust accent that means "act" or "this came back". Every pair below that sets text or marks a boundary is bounded by WCAG contrast, and the pairs not listed as allowed are forbidden.
 
-### Primary
+### Surfaces
 
-- **Resurfacing Orange** (accent): the brand accent, fixed by PRODUCT.md. On the screen it appears only where something resurfaces: the logo's rising dot, the two highlighted verbs in the headline ("saved", "brings"), the lit card's 1px edge and its 28px orange glow at 38%, the thread that draws from the demo to that card, and the small dot that rises on its corner.
-- **Ember Orange** (accent-hover): the lighter step of the accent, defined for hover on an accent-coloured element. Nothing on the waitlist uses it.
+- **Unlit Room** (canvas, #151414): the page ground on every surface: the web app, the waitlist, the extension popup and the emails. The only surface `text-faint` may sit on.
+- **Soft Band** (surface-soft, #1A1918): a barely lifted band: dividers, tag chips at rest, quiet table stripes.
+- **Card Brown** (surface-card, #201E1D): the default card and panel: Item cards, inputs, dialogs, the nav pill.
+- **Strong Brown** (surface-strong, #262422): emphasised cards, selected tabs and chips, the Cue, toasts, secondary and danger buttons.
+- **Hairline** (hairline, #282624): decorative 1px edges only. At 1.03 to 1.22:1 it reads as one more elevation step, not as a line a User can find, so it never marks something interactive.
+- **Control Edge** (control-border, #736D68): the boundary of anything a User types into or ticks: inputs, checkboxes, radio buttons, fields. 3.03:1 on surface-strong up to 3.6:1 on canvas, so it clears the 3:1 non-text minimum on every surface. It is used only on interactive boundaries.
 
-### Neutral
+### Text
 
-- **Archive Black** (ground): the page ground, fixed by PRODUCT.md. Also the footer pill's fill, the inside of the browser page, the icon tile in the Cue, and the text colour on off-white buttons.
-- **Card Grey** (card): the saved cards on the wall, the email field, the browser window chrome, the nav pill (at 90% with a 14px backdrop blur).
-- **Raised Grey** (card-raised): one step up: the active browser tab, the toolbar, the Cue (at 94% with a 16px blur), avatars, favicons, skeleton text bars and progress tracks.
-- **Border Grey** (border): an opaque edge, used for the scrollbar thumb and the secondary pages' outline button and link underlines.
-- **Paper White** (text): all primary text and the logo's bars, fixed by PRODUCT.md. As a fill it is the primary button. The headline runs a left-to-right gradient from Paper White to Ash.
-- **Ash** (muted): the end of the headline gradient, and body text on the secondary (privacy, 404) pages.
-- **Mute** (mute, Paper White at 66%): the lead paragraph, the proof line under the field, the "Check your inbox" confirmation line, the "unopened" badge.
-- **Faint** (faint, Paper White at 56%): meta in mono (sites, dates, counts), placeholders, idle icons, the footer's copyright.
-- **Line** (line, Paper White at 9%): the default hairline on cards, the nav and footer pills, tiles and dividers.
-- **Line Strong** (line-strong, Paper White at 16%): the edge of anything the visitor acts on or should read first: the email field, the browser window, the Cue, avatar and favicon rings. The field brightens its edge on hover (26%) and focus (44%), and turns to 72% on error.
+- **Parchment** (text-heading, #E9D8C4): headlines, primary text, Item titles and the focus ring. 11.1 to 13.2:1.
+- **Linen** (text-body, #DACAB8): running text. 9.7 to 11.5:1.
+- **Sand** (text-secondary, #C3B5A4): sub-headings and supporting copy. 7.7 to 9.2:1.
+- **Taupe** (text-muted, #988E81): captions, labels and the meta line on cards, and the label of a disabled accent control. 4.8 to 5.7:1, so it is the smallest tier allowed on a card.
+- **Dust** (text-faint, #877E74): fine print and timestamps, **on canvas only** (4.61:1). On any card it drops below 4.5:1 (3.9 to 4.4:1), so meta on cards uses Taupe instead.
+
+### Accent
+
+- **Rust** (accent, #A8492B): the primary action's fill and the resurfacing signal: the logo's rising dot, the lit card's 1px edge and glow, the thread that draws to it, the dot that rises on its corner. As text it is allowed only at display sizes (24px and up) on canvas, where its 3.2:1 passes the large-text rule; on cards it is 2.69 to 3.05:1, so it is never a link, a focus ring, a label or small text.
+- **Fired Rust** (accent-active, #863A22): hover and press on a filled accent control.
+- **Unlit Rust** (accent-disabled, #282624): a disabled accent control's fill, the same value as the hairline, with its label in Taupe.
+- **On Rust** (on-accent, #FFFFFF): text and icons on Rust (5.75:1) and Fired Rust (7.95:1).
+
+### Status
+
+- **Saved Green** (success, #5DB872): confirmations and successful saves.
+- **Amber** (warning, #D4A017): caution. Rare.
+- **Error Red** (danger, #D36E6E): error text, error borders and destructive actions. 4.58:1 on surface-strong up to 5.45:1 on canvas, so error text is readable on every surface.
+
+### Allowed pairs
+
+These are the pairs the token-contract test (`packages/ui/src/design-tokens.test.ts`) holds DESIGN.md to. A pair not on this list is not allowed.
+
+- Parchment, Linen, Sand and Taupe on every surface (canvas, surface-soft, surface-card, surface-strong): 4.5:1.
+- Dust on canvas: 4.5:1. Never on a card.
+- Rust text on canvas: 3:1, display sizes (24px and up) only.
+- On Rust on Rust and on Fired Rust: 4.5:1.
+- Control Edge on every surface: 3:1.
+- The Parchment focus ring on every surface: 3:1.
+- Error Red on every surface: 4.5:1.
 
 ### Named Rules
 
-**The One Signal Rule.** Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead. The one exception to the page's colours is the success green (`#3FB26B`), used only for the check on the signup's success card, so the confirmation reads as success. The welcome email is the one other place orange is used on purpose: its heading and the founder's name are set in the brand orange, at the founder's request, so the email reads as Resonory's even where the page's dark look can't be shown.
+**The Rust Means Back or Act Rule.** Rust has two meanings: the primary action (one filled button per view) and an Item coming back. It is never a link colour, a focus ring, a label, an icon colour or small text. If a new surface wants rust anywhere else, use Parchment instead. Links are Parchment with an underline.
 
-**The One White Rule.** Secondary text and edges are the same off-white at fixed strengths (66, 56, 16, 9 percent), not new greys. A new tier of emphasis takes a new opacity of Paper White, not a new hex.
+**The One Beige Family Rule.** Text comes in five warm tiers, Parchment to Dust, and nothing else. A new level of emphasis picks one of the five; it does not introduce a new grey or an opacity of white.
 
-**The Error Is Red Rule.** Errors are red, at the founder's request: the field's edge goes to the error red (`#FF6B6B`) at 70% and the message is set in that red with a warning icon. Red is used for errors and nothing else; it never competes with the orange, which still means an Item came back.
+**The Errors Are Red Rule.** Errors and destructive actions are Error Red, and red means nothing else. It never competes with Rust, which still means "act" or "came back".
+
+**The Borders Are Steps Rule.** Surfaces separate by tonal steps first. The hairline is decoration; anything a User acts on carries the Control Edge, and anything focused carries the Parchment ring.
 
 ## Typography
 
