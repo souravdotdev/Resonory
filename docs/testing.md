@@ -95,7 +95,7 @@ What jsdom can't show is checked in a real browser against `next build` + `next 
 **`packages/ui`** — its `vitest.config.ts` declares two projects: `components` (`src/**/*.test.tsx`, the `./react` preset) and `tokens` (`src/**/*.test.ts`, the `./node` preset).
 
 - `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
-- `design-tokens.test.ts` — the token contract for the repo-root `DESIGN.md`: its frontmatter parses as YAML, every `{path.to.token}` reference resolves, and each pair on a declared allowed-pairs list meets its WCAG contrast threshold (text tiers on every surface at 4.5:1, `text-faint` on canvas only, accent text on canvas at 3:1, `on-accent` on `accent` and `accent-active`, and `control-border`, the `text-heading` focus ring and `danger` on every surface). It checks only references and contrast, never section wording or order, so the prose can change freely.
+- `design-tokens.test.ts` — the token contract for the repo-root `DESIGN.md`: its frontmatter parses as YAML, every `{path.to.token}` reference resolves, and each pair on a declared allowed-pairs list meets its WCAG contrast threshold (text tiers on every surface at 4.5:1, `text-faint` on canvas only, accent text on canvas at 3:1, `on-accent` on `accent` and `accent-active`, `control-border`, the `text-heading` focus ring, `danger` and `success` on every surface, `text-muted` on `accent-disabled`, and `canvas` on `success` and `danger` for the extension's toolbar badge). It checks only references and contrast, never section wording or order, so the prose can change freely.
 
 ## Integration tests (`apps/api`)
 

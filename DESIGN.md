@@ -299,6 +299,9 @@ These are the pairs the token-contract test (`packages/ui/src/design-tokens.test
 - Control Edge on every surface: 3:1.
 - The Parchment focus ring on every surface: 3:1.
 - Error Red on every surface: 4.5:1.
+- Saved Green on every surface: 4.5:1.
+- Taupe on Unlit Rust (a disabled accent control's label): 4.5:1.
+- Unlit Room on Saved Green and on Error Red (the extension's toolbar badge): 4.5:1.
 
 ### Named Rules
 
