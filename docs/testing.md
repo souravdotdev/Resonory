@@ -6,7 +6,7 @@
 
 Two presets, mirroring the eslint-config split between plain Node packages and `apps/web`:
 
-- `./node` (`node.mjs`) — plain Node test environment. Used by `packages/shared`, `packages/db`, `apps/api`, `apps/worker`.
+- `./node` (`node.mjs`) — plain Node test environment. Used by `packages/shared`, `packages/db`, `apps/api`, `apps/worker`, and the token-contract test in `packages/ui`.
 - `./react` (`react.mjs`) — `jsdom` environment + `@vitejs/plugin-react`, built on top of `./node` via `mergeConfig`. Used by `packages/ui`, `apps/web`, `apps/waitlist`.
 
 Every package with tests has its own small `vitest.config.ts` importing one of these, and a `test` script (`vitest run`). `apps/api`'s also merges in the `@/` alias (pointing at `src/`) that its `tsconfig.json` declares.
@@ -92,7 +92,10 @@ The Drizzle-backed store (`src/waitlist/drizzle-store.ts`) isn't tested, like th
 
 What jsdom can't show is checked in a real browser against `next build` + `next start` (with `DATABASE_URL` pointing at the local Docker Postgres, never a `.env` file): screenshots at the sizes above (phone, tablet and desktop, from 320×568 to 2560×1440), mid-match and under reduced motion, confirm the screen doesn't scroll where the content fits (an 844×390 landscape phone scrolls rather than clip the form), no card sits under the copy, form, demo, nav or footer, and no text in a card or the Cue is cut off mid-word; a 4× CPU-throttled capture of the loop checks its frame times and that the page doesn't shift on load; and one signup through the form stores a Waitlist Entry and shows the success card (the test row is deleted afterwards).
 
-**`packages/ui`** — `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
+**`packages/ui`** — its `vitest.config.ts` declares two projects: `components` (`src/**/*.test.tsx`, the `./react` preset) and `tokens` (`src/**/*.test.ts`, the `./node` preset).
+
+- `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
+- `design-tokens.test.ts` — the token contract for the repo-root `DESIGN.md`: its frontmatter parses as YAML, every `{path.to.token}` reference resolves, in the frontmatter and in the prose body (where only a dotted path in braces counts, so a CSS rule such as `:root { color-scheme: dark; }` is not one), and each pair in its `ALLOWED_PAIRS` list meets its WCAG contrast threshold (that list, not this page, is the set of allowed pairs; add a pair there when DESIGN.md starts allowing one). It also holds the Impeccable sidecar (`.impeccable/design.json`) to DESIGN.md: the sidecar's `narrative.northStar`, `rules` (name and body) and `dos` and `donts` must equal DESIGN.md's `**Creative North Star: "…"**` line, every `**The [Name] Rule.** [body]` paragraph and every `- **Do**` and `- **Don't**` bullet, word for word, so editing either side alone fails it (regenerate the sidecar whenever DESIGN.md's rules or Do's and Don'ts change). Its palette is held the same way: every `extensions.colorMeta` entry's `canonical` hex must equal DESIGN.md's frontmatter colour of that name (the same names, none missing or extra), and every colour in its shadows and component snippets must be one of those colours or the plain black that shadows and the scrim are drawn in: `#rrggbb`, `#rrggbbaa` (alpha ignored) and `rgb()`/`rgba()` with whole-number channels are all read, and any other form (a 3-digit hex, percentage or decimal channels) fails, so a palette edit on either side alone fails (regenerate the sidecar whenever a colour changes too). It checks only references, contrast and those agreements, never section wording or order, so the prose can change freely. Because it reads files outside `packages/ui`, `packages/ui/turbo.json` adds `DESIGN.md` and `.impeccable/design.json` to the ui `test` task's inputs, so editing either one reruns it instead of replaying a cached pass; a new file the test reads goes there too.
 
 ## Integration tests (`apps/api`)
 
