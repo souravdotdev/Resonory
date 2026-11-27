@@ -536,3 +536,15 @@ When the Library has no Items, or a Tag filter matches none, the grid's place ho
 - **Style** (`toast`): Strong Brown, 12px radius, 10px by 14px padding, the Palette shadow, `body-sm` Linen, up to 400px wide. An optional leading 16px icon: a Saved Green check for a confirmation, an Error Red warning for a failure, whose message is then set in Error Red too. An optional ghost action sits at the right.
 - **Placement:** bottom centre, 24px from the bottom edge (16px on phones, full width less 32px). Toasts stack 8px apart, newest at the bottom.
 - **Behaviour:** it rises 8px and fades in over 300ms, stays 4 seconds (a failure stays until dismissed), and fades out over 300ms. It is announced through a `status` live region (`alert` for a failure). Toasts are quiet: one line, no title, never Rust.
+
+### Extension popup
+
+The popup (`extension-popup`): 360px wide, the canvas, 16px padding, `body-sm` Linen, the logo lockup at the top. Below it, every state shows the page being saved as a Card Brown row (12px radius, 12px padding): the page's title in `card-title` Parchment (two lines at most) over its domain in `mono-sm` Taupe. Under the row, 12px below, sits the state's line and any actions.
+
+- **Saving:** the row's title and domain are known at once; the state line is a 16px spinner and "Saving…" in Sand. The spinner turns on the spring at 900ms per turn and is replaced by "Saving…" alone under reduced motion.
+- **Saved:** a 20px Saved Green check and "Saved to your Library" in Saved Green, with a ghost "Open Library" button. The row gains no Rust: a new save is a confirmation, not a return.
+- **Already saved:** "Already in your Library" in Parchment with "saved 3 months ago" in `mono-sm` Taupe, and the row carries the lit treatment: the Lit glow and the 6px Rust dot rising into its corner over 900ms. This is an Item coming back, the one place Rust appears in the popup. A ghost "Open in Library" button follows.
+- **Error:** a 20px warning icon and the reason in Error Red ("Couldn't save this page. Check your connection."), with a secondary "Try again" button.
+- **Signed out:** no page row. A sentence in Sand saying what to do ("Paste your API key to start saving pages."), then a text input labelled "API key" and a primary "Save key" button 12px below it. The input's error and the key's "Saved." confirmation follow the input and success rules above.
+- **Toolbar badge:** a save also shows on the toolbar icon: "✓" on Saved Green for 3 seconds after a save, or "!" on Error Red until the next click, the badge's text set in the canvas colour on both.
+- The options page uses the same signed-out content, centred in a 480px column on a full tab.
