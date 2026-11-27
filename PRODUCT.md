@@ -43,14 +43,16 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
 
 - **Name:** Resonory.
 - **Colours (fixed):**
-  - `#141414`: the ground.
-  - `#D4621A`: the accent.
-  - `#FAFAF7`: text and the mark.
-- **Logo:** an orange dot rising above stacked off-white bars, i.e. a saved thing resurfacing from the pile. Vector sources are in `assets/Resonory-Logo/`:
+  - `#151414`: the ground.
+  - `#A8492B`: the accent (rust).
+  - `#E9D8C4`: text and the mark.
+- **Logo:** a rust dot rising above stacked beige bars, i.e. a saved thing resurfacing from the pile. Vector sources are in `assets/Resonory-Logo/`:
   - `02-Horizontal-Lockup/Transparent/resonory-horizontal_full-colour-on-dark_transparent.svg`
   - `01-Symbol/Transparent/resonory-symbol_full-colour-on-dark_transparent.svg`
 
   Both carry a `#141414` background rect, which is stripped for use on a page.
+
+  **Known gap:** the logo assets in `assets/Resonory-Logo/` are still in the old colours (`#141414`, `#D4621A`, `#FAFAF7`) and need re-exporting in the new ones.
 
 - **Voice:** calm, plain and slightly warm. Behaviour first ("you saved it, you forgot it"), no hype words, sentence case.
 - **Quality bar** for marketing surfaces: Linear and Raycast.
