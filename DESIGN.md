@@ -411,3 +411,16 @@ Only things that float get a shadow: the floating palettes (the nav pill, the to
 ### Named Rules
 
 **The Only Light Is Rust Rule.** Shadows are black and soft. There are no white glows and no coloured light anywhere except the Rust lit glow on an Item that has come back, and its thread. Focus is an outline, never a glow.
+
+### Motion
+
+Movement is how depth changes, so it lives here. Everything moves on one curve, the spring: `cubic-bezier(0.32, 0.72, 0, 1)`, a quick start that settles slowly. Only opacity and transform animate (plus colour, border and shadow on hover), never layout.
+
+- **150ms:** hover and colour changes: a button's fill, a chip's text, an edge brightening.
+- **300ms:** small state changes: the 0.97 press scale and its release, a chip being selected, a toast or a dialog fading and scaling in from 0.98.
+- **600ms:** surfaces arriving: the detail panel sliding in from the right (from below as a sheet), the Cue's fade, the joined card replacing the waitlist form.
+- **900ms:** Resurfacing: a card lighting up, its thread drawing in, its dot rising, the Cue moving into place, the wall fading in, and the staggered rise of the waitlist's parts on load. Rest is slow on purpose; this is the moment the product exists for.
+
+Two motions run on their own timing, and they are the only exceptions to the spring: the card wall's drift (44s, `ease-in-out`, alternating, a few pixels to and fro) and the spark that runs along a drawn thread (1.4s, `linear`, repeating). A looping skeleton pulse on a Processing card uses the spring at 900ms, alternating.
+
+**Reduced motion.** Under `prefers-reduced-motion: reduce` nothing animates or transitions, and every part shows in its final, still state: the wall in place without drift, a lit card already lit with its thread drawn (no spark) and its dot risen, the Cue in place, skeleton bars at full opacity, panels and dialogs present without a slide or fade. State still changes; it just changes at once. Nothing that carries meaning is conveyed by motion alone.
