@@ -511,3 +511,28 @@ The unit of the Library and of the waitlist wall, and the brand's main material.
 ### Browser demo (waitlist)
 
 A stylised browser window (tab strip, toolbar, address pill, page) built entirely from the system's surfaces, hairlines and mono meta, on the Window shadow, with the Resonory symbol as its extension button. The traffic-light dots are the only colours outside the system, and they belong to this depiction of a browser alone.
+
+### Cue (signature)
+
+- **Style** (`cue`): Strong Brown at 94% with a 16px backdrop blur, a hairline edge, 14px radius, 10px by 12px padding, the Cue shadow. A 32px canvas tile (8px radius) holds the logo symbol; beside it, 12px away, "You saved something like this" in `card-title` Parchment with a `mono-sm` "now" stamp in Taupe at the right, the quoted Item title in `body-sm` Sand (two lines at most), and a `mono-sm` line in Taupe naming the type and when it was saved ("X post · saved 3 months ago").
+- **Entry:** it fades in over 600ms and moves into place over 900ms on the spring, sliding in from the right on desktop and from above on phones, after the lit card it names has begun to light. The Cue and the lit card always name the same Item.
+- **Use:** only for a Cue in the glossary's sense, Resurfacing triggered by what the User is doing outside Resonory. It is never a generic notification; quiet confirmations are toasts.
+
+### Related Items
+
+A section at the foot of the detail panel: the heading "Related Items" in `heading` Parchment, 24px above a list of up to five rows, 4px apart. Each row is a link: a 48px Thumbnail tile (8px radius; a Strong Brown tile with the type's 20px icon in Taupe when the Item has no Thumbnail), and beside it, 12px away, the title in `card-title` Parchment (two lines at most) over the source domain in `mono-sm` Taupe. Rows have 8px padding and a 10px radius; hover fills them Strong Brown. With no Related Items the section is not shown at all, rather than saying "none".
+
+### Empty state
+
+When the Library has no Items, or a Tag filter matches none, the grid's place holds a centred column up to 400px wide, 96px from the top: one line in `display` (Spectral 600, 32/38) in Parchment ("Nothing saved yet." or "Nothing tagged that yet."), a sentence in `body` Sand 12px below saying what to do next, and, for the empty Library, a secondary "Save your first link" button 24px below (the top bar's Save stays the one Rust fill). No illustration, no icon in a circle.
+
+### Delete-confirm dialog
+
+- **Style** (`dialog`): Card Brown, 14px radius, 400px wide (at most the screen width less 32px), 24px padding, the Dialog shadow over the Scrim. The title in `heading` Parchment ("Delete this Item?"), the consequence 8px below in `body` Linen ("Its Thumbnail and Text go with it. This can't be undone."), and the actions 24px below, right-aligned 8px apart: a ghost "Cancel" and a danger "Delete". Below 640px the actions stretch to full width, Delete on top.
+- **Behaviour:** it is a modal `alertdialog`: focus moves to Cancel when it opens and is trapped inside; Escape and a click on the Scrim cancel; focus returns to whatever opened it. It fades in and scales from 0.98 over 300ms on the spring, with the Scrim fading over the same 300ms. While the delete runs, Delete is busy ("Deleting…").
+
+### Toast
+
+- **Style** (`toast`): Strong Brown, 12px radius, 10px by 14px padding, the Palette shadow, `body-sm` Linen, up to 400px wide. An optional leading 16px icon: a Saved Green check for a confirmation, an Error Red warning for a failure, whose message is then set in Error Red too. An optional ghost action sits at the right.
+- **Placement:** bottom centre, 24px from the bottom edge (16px on phones, full width less 32px). Toasts stack 8px apart, newest at the bottom.
+- **Behaviour:** it rises 8px and fades in over 300ms, stays 4 seconds (a failure stays until dismissed), and fades out over 300ms. It is announced through a `status` live region (`alert` for a failure). Toasts are quiet: one line, no title, never Rust.
