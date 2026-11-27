@@ -239,20 +239,20 @@ components:
 
 **Creative North Star: "The Pile That Answers Back"**
 
-Resonory is drawn as a dark, quiet archive: a wall of the visitor's own saved cards, dimmed almost to nothing on a near-black ground, with the product's interface floating over it as a few frosted palettes. Nothing on the screen is loud except the one thing the product exists to do. When an Item comes back, its card lights up orange, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment is the whole visual identity; everything else is held in greys so it can land.
+Resonory is drawn as a warm, dark, quiet archive: a pile of the User's own saved Items on a near-black ground the colour of an unlit room, read by lamplight. Text is not white but a family of warm beiges, from a parchment heading down to a faint fine print, so the screen reads like paper in low light rather than a glowing display. Nothing on the screen is loud except the one thing the product exists to do. When an Item comes back, its card lights up in rust, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment, and the one button that asks the User to act, are the only places the warm rust appears; everything else is held in browns and beiges so it can land.
 
-The system is monochrome by construction. Off-white (#FAFAF7) is the only bright neutral and is set at fixed strengths (66%, 56%, 16%, 9%) for secondary text, meta and edges, rather than introducing more greys. Surfaces separate by small tonal steps (ground, card, card-raised) and hairline borders, and depth comes from long, soft, dark drops under the floating palettes. Type is Geist throughout, with Geist Mono for everything the product "knows" about an Item: when, where from, how much was read, the keycap.
+The system is tonal by construction. Surfaces separate by small, warm steps (canvas, surface-soft, surface-card, surface-strong) rather than by borders, and a 1px hairline is a decorative edge only, never the thing that tells a User where to click or type: interactive boundaries carry their own control border. Type is split by meaning. Spectral, a serif, carries language about what a save means (page titles, section headings, empty states, the wordmark). Work Sans carries the interface. JetBrains Mono carries everything the product records about an Item: when, where from, how much was read.
 
-Density is calm, with air. The screen is a single viewport, the wall supplies texture and proof at once but leaves a clear ring around the copy and the demo (48px on the sides that face the wall, with a card's turn left empty now and then down each column), and motion is slow and springy: parts rise in on load, the wall drifts a few pixels over 44 seconds, and the only fast thing is the spark that runs along the orange thread.
+Density is calm, with air. Motion is slow and springy: one curve, a handful of durations, and a still final state for every animation under reduced motion.
 
 **Key Characteristics:**
 
-- Near-black ground with a dimmed wall of saved cards as the backdrop, never an empty field or a gradient.
-- One accent, orange, reserved for resurfacing: the logo dot, the two verbs of the headline, the lit card, its thread and its rising dot.
-- Primary actions are off-white fills with dark text; orange never fills a button.
-- Floating palettes: pill nav, search-style field, browser window, Cue, all on tonal surfaces with hairline edges and soft drops.
-- Geist for language, Geist Mono for metadata and keycaps, and one handwritten line: Caveat, used only for the opening sentence above the headline.
-- One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change; every animation has a still state under reduced motion.
+- A warm near-black canvas (#151414) with tonal surface steps; dark only, emails included. There is no light theme.
+- One beige family for text (#E9D8C4 down to #877E74), every tier at 4.5:1 or better where it is allowed.
+- One accent, rust (#A8492B), with two meanings only: the primary action's fill, and an Item coming back.
+- Spectral for meaning, Work Sans for interface, JetBrains Mono for what the machine records, and one handwritten Caveat line above the waitlist headline.
+- Focus is always a 2px text-heading outline, never rust.
+- One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change.
 
 ## Colors
 
