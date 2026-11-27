@@ -155,10 +155,13 @@ const SHADOW_BLACK = "#000000";
 const toHex = (channels: string[]) =>
   `#${channels.map((c) => Number(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
 
-// Every colour the sidecar renders, as #RRGGBB: hex and rgb()/rgba() in either
-// space- or comma-separated form.
+// Every colour the sidecar renders, as #RRGGBB: hex (an #rrggbbaa's alpha is
+// dropped) and rgb()/rgba() in either space- or comma-separated form. A colour
+// written any other way, such as #rgb, comes back as written so the check fails on it.
 function renderedColours(text: string): string[] {
-  const hexes = [...text.matchAll(/#[0-9a-f]{6}\b/gi)].map(([hex]) => upper(hex));
+  const hexes = [...text.matchAll(/#[0-9a-f]+/gi)].map(([hex]) =>
+    hex.length === 7 || hex.length === 9 ? upper(hex.slice(0, 7)) : hex,
+  );
   const rgbs = [...text.matchAll(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/gi)].map((m) =>
     toHex(m.slice(1, 4)),
   );
