@@ -479,3 +479,35 @@ A small key etched into the interface, purely decorative (`aria-hidden`), set in
 - **Error:** the edge turns Error Red and a message row below (8px gap) shows a 16px warning icon and the message in `body-sm`, both Error Red. The field gets `aria-invalid` and is described by the message. The error clears on the next edit.
 - **Disabled:** Soft Band fill, hairline edge, Taupe text, no hover.
 - **Success, the waitlist's joined card:** the form is replaced (600ms) by a panel of the same shape on Card Brown: a 24px Saved Green check, the confirmation in `card-title` Parchment and the follow-up in `body-sm` Sand, while the logo's Rust dot rises out of its stack once. The proof line under the form (how many have joined) is `mono` in Taupe.
+
+### Tag chips
+
+- **Unselected** (`tag-chip`): Soft Band fill, a 1px hairline edge, the Tag name in `label` style (uppercase, 0.04em) in Sand, a pill 28px tall with 12px side padding. Hover lifts the text to Parchment (150ms).
+- **Selected** (`tag-chip-selected`): Strong Brown fill, a 1px Control Edge, Parchment text and a leading 16px check icon 4px from the name, so selection reads by edge, icon and text, never by the barely-visible tonal step alone.
+- A chip in the filter row is a toggle button with `aria-pressed`; "All" is selected when no Tag is. Chips in the detail panel are the same component, 8px apart, wrapping.
+
+### Item type badges
+
+- **Style** (`type-badge`): the Item type's name in `label` style, Taupe on a Strong Brown fill, 6px radius, 2px by 6px padding. Text only: no icon and no per-type colour, so the five read as one family.
+- **Labels:** ARTICLE, POST, LINK, VIDEO, AUDIO, and in the same way IMAGE, PDF, CODE and FILE for the other Item types. A badge always shows the Item's type, never its card style (an Instagram save is a POST).
+- **When:** on every Ready or Failed Item's card and in the detail panel, before the source domain. A Processing Item has no type yet, so it has no badge.
+
+### Item card (signature)
+
+The unit of the Library and of the waitlist wall, and the brand's main material.
+
+- **Library** (`item-card`): Card Brown fill, 12px radius, a 1px hairline edge. The Thumbnail, when there is one, runs edge to edge across the top in a 16:9 frame; below it, 12px padding holds a row with the type badge and the source domain (`mono-sm`, Taupe, truncated), the title in `card-title` Parchment clamped to three whole lines (never cut mid-word; an Item without a title shows its Source URL in `mono-sm`), and the meta line in `mono-sm` Taupe ("saved in March"), 8px apart. The whole card is one link that opens the detail panel. Hover steps the fill to Strong Brown (150ms); focus is the shared Parchment outline round the card; library cards do not scale on press.
+- **Processing** (`item-card-processing`): the same shape and fill, with the source domain in `mono-sm` Taupe, then skeleton bars in Strong Brown (3px radius, 8px tall, at 100%, 100% and 60% width, 6px apart) where the title and meta will be, and a 16:9 skeleton block where a Thumbnail may be. The bars pulse between 60% and 100% opacity at 900ms on the spring, alternating. It is announced as "Processing" to assistive tech. When processing ends, the real content fades in over 300ms in the same footprint.
+- **Failed:** a Ready card's layout with no Thumbnail, the meta line replaced by "Couldn't read this page" in `body-sm` Error Red, and a ghost "Retry" button.
+- **Wall** (the waitlist): the same material at wall sizes, drawn in card styles (how a card is drawn, not its Item type): post (avatar, author, time, title, mono counts with 16px stroked icons), video (a placeholder Thumbnail with a duration and a watched-progress bar), article and link (favicon, domain in mono, title, reading progress), PDF (a Parchment page glyph with skeleton lines) and Instagram (a tall placeholder with carousel dots). Each ends in a `mono-sm` meta line in Taupe ("saved in March", "stopped at 6:40"). At rest each card sits at its own low opacity, as decoration hidden from assistive tech. Scanned, it brightens and lifts 2px. Some cards are stacked, drawn with the Pile edges shadow.
+- **Lit** (an Item that came back, on the wall or in the Library): the card goes fully opaque, gains the Lit glow (a 1px Rust edge and the 28px Rust glow), rises 4 to 6px and scales to 1.035, and a 6px Rust dot rises into its top-right corner. On the wall a 1.5px Rust thread draws to it from the demo, and a spark runs along the thread. Every change is opacity or transform, over 900ms on the spring. Lit is the only state that uses Rust on a card, and it never colours text.
+
+### Navigation
+
+- **Waitlist nav** (`nav-pill`): a single floating pill, Card Brown at 90% with a 14px backdrop blur and a hairline edge, 48px tall on phones and 50px from 640px, padded 6px on the button's side and 16px on the logo's. It holds the logo lockup (20 to 22px tall) on the left and the "Join the waitlist" secondary pill button (36px, with a circular ↵ keycap from 640px) on the right, which moves focus straight to the email field. The logo link fades to 88% on hover. On the secondary pages it is sticky at the top with the Palette shadow.
+- **App top bar** (`app-topbar`): the canvas, 56px tall, `body-sm` Parchment, laid out as in Layout. It has no fill change or shadow of its own; a hairline appears under it once the Library scrolls.
+- **Footer** (the waitlist): a content-sized pill on the canvas with a hairline edge, floating at the bottom centre: an underlined "Privacy" link in Parchment (underline at 35%, full on hover) and the copyright in `mono-sm`, Dust, which may be used here because the footer's ground is the canvas.
+
+### Browser demo (waitlist)
+
+A stylised browser window (tab strip, toolbar, address pill, page) built entirely from the system's surfaces, hairlines and mono meta, on the Window shadow, with the Resonory symbol as its extension button. The traffic-light dots are the only colours outside the system, and they belong to this depiction of a browser alone.
