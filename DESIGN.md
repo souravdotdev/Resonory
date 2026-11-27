@@ -2,56 +2,83 @@
 name: Resonory
 description: You saved it. Resonory brings it back.
 colors:
-  ground: "#141414"
-  card: "#1f1f1f"
-  card-raised: "#272727"
-  border: "#313131"
-  text: "#fafaf7"
-  muted: "#9b9b9b"
-  accent: "#d4621a"
-  accent-hover: "#e0712b"
-  mute: "rgb(250 250 247 / 0.66)"
-  faint: "rgb(250 250 247 / 0.56)"
-  line: "rgb(250 250 247 / 0.09)"
-  line-strong: "rgb(250 250 247 / 0.16)"
+  canvas: "#151414"
+  surface-soft: "#1A1918"
+  surface-card: "#201E1D"
+  surface-strong: "#262422"
+  hairline: "#282624"
+  control-border: "#736D68"
+  text-heading: "#E9D8C4"
+  text-body: "#DACAB8"
+  text-secondary: "#C3B5A4"
+  text-muted: "#988E81"
+  text-faint: "#877E74"
+  accent: "#A8492B"
+  accent-active: "#863A22"
+  accent-disabled: "#282624"
+  on-accent: "#FFFFFF"
+  success: "#5DB872"
+  warning: "#D4A017"
+  danger: "#D36E6E"
 typography:
-  display:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "clamp(36px, 8.4cqi, 54px)"
+  display-xl:
+    fontFamily: "'Spectral', Georgia, 'Times New Roman', serif"
+    fontSize: "clamp(36px, 8.4cqi, 56px)"
     fontWeight: 600
-    lineHeight: 1.04
-    letterSpacing: "-0.04em"
+    lineHeight: 1.06
+    letterSpacing: "-0.02em"
+  display:
+    fontFamily: "'Spectral', Georgia, 'Times New Roman', serif"
+    fontSize: "32px"
+    fontWeight: 600
+    lineHeight: "38px"
+    letterSpacing: "-0.01em"
+  heading:
+    fontFamily: "'Spectral', Georgia, 'Times New Roman', serif"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: "26px"
   body-lead:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Work Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
     fontSize: "17px"
     fontWeight: 400
-    lineHeight: 1.55
+    lineHeight: "28px"
   body:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Work Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
     fontSize: "15px"
     fontWeight: 400
-    lineHeight: 1.5
-  label:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14.5px"
-    fontWeight: 500
-    lineHeight: 1
+    lineHeight: "24px"
+  body-sm:
+    fontFamily: "'Work Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: "20px"
   card-title:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "12.5px"
+    fontFamily: "'Work Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: "20px"
+  label:
+    fontFamily: "'Work Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: "16px"
+    letterSpacing: "0.04em"
+  mono:
+    fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace"
+    fontSize: "13px"
     fontWeight: 400
-    lineHeight: 1.38
-  meta:
-    fontFamily: "Geist Mono, ui-monospace, monospace"
-    fontSize: "10px"
+    lineHeight: "20px"
+  mono-sm:
+    fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace"
+    fontSize: "11px"
     fontWeight: 400
-    lineHeight: 1.2
-  note:
-    fontFamily: "Geist Mono, ui-monospace, monospace"
-    fontSize: "12.5px"
-    fontWeight: 400
-    lineHeight: 1.2
-    fontFeature: '"tnum"'
+    lineHeight: "16px"
+  hand:
+    fontFamily: "'Caveat', 'Work Sans', cursive"
+    fontSize: "28px"
+    fontWeight: 500
+    lineHeight: 1.15
 rounded:
   keycap: "6px"
   tile: "8px"
@@ -60,58 +87,150 @@ rounded:
   panel: "14px"
   pill: "9999px"
 spacing:
+  "1": "4px"
+  "2": "8px"
+  "3": "12px"
+  "4": "16px"
+  "6": "24px"
+  "8": "32px"
+  "12": "48px"
+  "16": "64px"
+  "24": "96px"
   inset: "6px"
-  panel-gap: "8px"
-  gutter-mobile: "20px"
-  gutter-desktop: "clamp(32px, 5.56vw, 80px)"
 components:
   button-primary:
-    backgroundColor: "{colors.text}"
-    textColor: "{colors.ground}"
-    typography: "{typography.label}"
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.on-accent}"
+    typography: "{typography.card-title}"
     rounded: "{rounded.button-inset}"
     height: "40px"
-    padding: "0 8px 0 16px"
-  button-pill:
-    backgroundColor: "{colors.text}"
-    textColor: "{colors.ground}"
-    typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    height: "36px"
-    padding: "0 5px 0 15px"
-  keycap:
-    textColor: "{colors.ground}"
-    typography: "{typography.meta}"
-    rounded: "{rounded.keycap}"
-    height: "22px"
-    width: "22px"
+    padding: "0 16px"
+  button-primary-active:
+    backgroundColor: "{colors.accent-active}"
+    textColor: "{colors.on-accent}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 16px"
+  button-primary-disabled:
+    backgroundColor: "{colors.accent-disabled}"
+    textColor: "{colors.text-muted}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 16px"
+  button-secondary:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-heading}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 16px"
+  button-ghost:
+    textColor: "{colors.text-body}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 12px"
+  button-danger:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.danger}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 16px"
+  button-icon:
+    textColor: "{colors.text-secondary}"
+    rounded: "{rounded.button-inset}"
+    size: "36px"
+  text-input:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-body}"
+    typography: "{typography.body}"
+    rounded: "{rounded.button-inset}"
+    height: "40px"
+    padding: "0 12px"
   input-search:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.text}"
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-heading}"
     typography: "{typography.body}"
     rounded: "{rounded.panel}"
     padding: "6px 6px 6px 16px"
+  tag-chip:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.text-secondary}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    height: "28px"
+    padding: "0 12px"
+  tag-chip-selected:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-heading}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    height: "28px"
+    padding: "0 12px"
+  type-badge:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-muted}"
+    typography: "{typography.label}"
+    rounded: "{rounded.keycap}"
+    padding: "2px 6px"
   nav-pill:
-    backgroundColor: "{colors.card}"
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-heading}"
     rounded: "{rounded.pill}"
     height: "50px"
     padding: "6px 6px 6px 16px"
-  footer-pill:
-    backgroundColor: "{colors.ground}"
-    textColor: "{colors.faint}"
-    rounded: "{rounded.pill}"
-    padding: "6px 14px"
+  app-topbar:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.text-heading}"
+    typography: "{typography.body-sm}"
+    height: "56px"
+    padding: "0 24px"
   item-card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.text}"
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-heading}"
     typography: "{typography.card-title}"
     rounded: "{rounded.card}"
-    padding: "11px 12px"
+    padding: "12px"
+  item-card-processing:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-muted}"
+    typography: "{typography.card-title}"
+    rounded: "{rounded.card}"
+    padding: "12px"
   cue:
-    backgroundColor: "{colors.card-raised}"
-    textColor: "{colors.text}"
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-heading}"
+    typography: "{typography.body-sm}"
     rounded: "{rounded.panel}"
     padding: "10px 12px"
+  dialog:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-body}"
+    typography: "{typography.body}"
+    rounded: "{rounded.panel}"
+    width: "400px"
+    padding: "24px"
+  toast:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-body}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.card}"
+    padding: "10px 14px"
+  extension-popup:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.text-body}"
+    typography: "{typography.body-sm}"
+    width: "360px"
+    padding: "16px"
+  email-container:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.text-body}"
+    typography: "{typography.body}"
+    width: "600px"
+    padding: "32px"
 ---
 
 # Design System: Resonory
