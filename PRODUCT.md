@@ -50,7 +50,7 @@ Internal shorthand (never page copy): "mymind makes you search. Resonory finds y
   - `02-Horizontal-Lockup/Transparent/resonory-horizontal_full-colour-on-dark_transparent.svg`
   - `01-Symbol/Transparent/resonory-symbol_full-colour-on-dark_transparent.svg`
 
-  Both carry a `#141414` background rect, which is stripped for use on a page.
+  As exported today, in the old colours, both files carry a `#141414` background rect (the old ground, not `#151414`), which is stripped for use on a page.
 
   **Known gap:** the logo assets in `assets/Resonory-Logo/` are still in the old colours (`#141414`, `#D4621A`, `#FAFAF7`) and need re-exporting in the new ones.
 
