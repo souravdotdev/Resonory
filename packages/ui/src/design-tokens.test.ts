@@ -156,15 +156,17 @@ const toHex = (channels: string[]) =>
   `#${channels.map((c) => Number(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
 
 // Every colour the sidecar renders, as #RRGGBB: hex (an #rrggbbaa's alpha is
-// dropped) and rgb()/rgba() in either space- or comma-separated form. A colour
-// written any other way, such as #rgb, comes back as written so the check fails on it.
+// dropped) and rgb()/rgba() with whole-number channels, space- or comma-separated.
+// A colour written any other way, such as #rgb or rgb(66% 29% 17%), comes back as
+// written so the check fails on it.
 function renderedColours(text: string): string[] {
   const hexes = [...text.matchAll(/#[0-9a-f]+/gi)].map(([hex]) =>
     hex.length === 7 || hex.length === 9 ? upper(hex.slice(0, 7)) : hex,
   );
-  const rgbs = [...text.matchAll(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/gi)].map((m) =>
-    toHex(m.slice(1, 4)),
-  );
+  const rgbs = [...text.matchAll(/rgba?\([^)]*\)/gi)].map(([call]) => {
+    const channels = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)\s*(?:[,/][^)]*)?\)$/i.exec(call);
+    return channels ? toHex(channels.slice(1, 4)) : call;
+  });
   return [...hexes, ...rgbs];
 }
 
