@@ -312,28 +312,36 @@ These are the pairs the token-contract test (`packages/ui/src/design-tokens.test
 
 ## Typography
 
-**Display Font:** Geist (with ui-sans-serif, system-ui)
-**Body Font:** Geist (with ui-sans-serif, system-ui)
-**Label/Mono Font:** Geist Mono (with ui-monospace)
+**Serif:** Spectral (with Georgia, 'Times New Roman', serif)
+**Sans:** Work Sans (with ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif)
+**Mono:** JetBrains Mono (with ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace)
+**Hand:** Caveat, one line only
 
-**Character:** One neutral, precise grotesque at tight tracking for everything a person says, and its mono sibling for everything a machine records. The split is semantic: if it is a timestamp, a source, a count, a file state or a key, it is mono.
+**Character:** The family is chosen by what the words are. Spectral sets language about meaning: what a save is, what came back, what an empty library is waiting for. Work Sans sets the interface: buttons, fields, running text, card titles. JetBrains Mono sets what the product records about an Item: its source domain, its URL, when it was saved, how far it was read. If it is a timestamp, a domain, a count or a key, it is mono.
 
 ### Hierarchy
 
-- **Display** (600, 36px on phones (scaled with the column under 375px), clamp(36px, 8.4cqi, 54px) from 640px, line-height 1.04, -0.04em): the one headline. Filled with a Paper White to Ash gradient; the highlighted verbs are set in orange with the italic removed, so emphasis comes from colour, not slant.
-- **Body lead** (400, 15px on phones, 17px from 640px, line-height 1.5 to 1.55, Mute): the subheadline under the headline, capped at 30em and set with pretty wrapping.
-- **Hand line** (Caveat 500, 22px on phones, 20px on short phones, 28px from 640px, line-height 1.15, Mute): the one handwritten sentence above the headline, "Remember that link you were sure you'd need?". It is the only text set in Caveat; the founder asked for handwriting there, so it is the one exception to Geist-only. It is upright, never italic.
-- **Body** (400, 15 to 15.5px): the email input and general running text.
-- **Label** (500, 13.5 to 14.5px): button text and the confirmation heading.
-- **Card title** (400, 12 to 12.5px, line-height 1.36 to 1.38): titles on Item cards and the Cue; clamped to two or three whole lines, never cut mid-word.
-- **Meta** (Geist Mono 400, 9.5 to 10px, Faint): sites, dates, read progress, durations, counts, the "now" stamp, the "unopened" badge.
-- **Note** (Geist Mono 400, 11.5 to 12.5px, tabular figures, Mute): the proof line under the signup field and the footer's copyright.
+- **Display XL** (display-xl, Spectral 600, clamp(36px, 8.4cqi, 56px), line-height 1.06, -0.02em): the waitlist and marketing hero headline only. Never in the app.
+- **Display** (display, Spectral 600, 32/38, -0.01em): page titles, empty states and the wordmark.
+- **Heading** (heading, Spectral 600, 20/26): section headings and panel titles.
+- **Body lead** (body-lead, Work Sans 400, 17/28): the paragraph under a hero headline, capped at about 30em.
+- **Body** (body, Work Sans 400, 15/24): running text, field text and dialog copy.
+- **Body small** (body-sm, Work Sans 400, 13/20): supporting copy, toasts, the Cue, the extension popup.
+- **Card title** (card-title, Work Sans 500, 14/20): Item titles on cards (clamped to whole lines, never cut mid-word) and button labels.
+- **Label** (label, Work Sans 500, 12/16, 0.04em, uppercase): tags, Item type badges, form labels and table headers. Nothing else.
+- **Mono** (mono, JetBrains Mono 400, 13/20): source domains, URLs and timestamps in running layouts.
+- **Mono small** (mono-sm, JetBrains Mono 400, 11/16): the meta line on cards ("example.com · saved in March").
+- **Hand** (hand, Caveat 500, 22px on phones up to 28px from 640px, line-height 1.15): the one handwritten sentence above the waitlist headline. Upright, never italic.
 
 ### Named Rules
 
-**The Machine Speaks Mono Rule.** Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the invitation, "Join the waitlist. Be among the first to use Resonory.", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.
+**The Machine Speaks Mono Rule.** Anything the product records about an Item (when, where from, how far read, how many) is JetBrains Mono, at mono-sm on cards and mono elsewhere. Sentences a person reads are never mono.
 
-**The Colour, Not Slant Rule.** Emphasis inside the headline is an `em` coloured orange with the italic removed. Use it only for the verbs of saving and bringing back.
+**The Colour, Not Slant Rule.** Emphasis inside a headline is colour, not italic: an `em` set upright in Rust, and only inside a display-size headline about saving and bringing back, where Rust text passes the large-text rule.
+
+**The Label Is Not an Eyebrow Rule.** The uppercase label style is for tags, Item type badges, form labels and table headers only. It is never placed above a headline as a kicker or eyebrow; headings stand unboxed.
+
+**The Caveat Once Rule.** Caveat appears exactly once, in the sentence above the waitlist headline. Nowhere else, in no other surface.
 
 ## Layout
 
