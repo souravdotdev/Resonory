@@ -143,6 +143,13 @@ components:
     textColor: "{colors.text-secondary}"
     rounded: "{rounded.button-inset}"
     size: "36px"
+  keycap:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.text-secondary}"
+    typography: "{typography.mono-sm}"
+    rounded: "{rounded.keycap}"
+    height: "22px"
+    padding: "0 6px"
   text-input:
     backgroundColor: "{colors.surface-card}"
     textColor: "{colors.text-body}"
