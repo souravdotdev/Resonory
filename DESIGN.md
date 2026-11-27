@@ -424,3 +424,23 @@ Movement is how depth changes, so it lives here. Everything moves on one curve, 
 Two motions run on their own timing, and they are the only exceptions to the spring: the card wall's drift (44s, `ease-in-out`, alternating, a few pixels to and fro) and the spark that runs along a drawn thread (1.4s, `linear`, repeating). A looping skeleton pulse on a Processing card uses the spring at 900ms, alternating.
 
 **Reduced motion.** Under `prefers-reduced-motion: reduce` nothing animates or transitions, and every part shows in its final, still state: the wall in place without drift, a lit card already lit with its thread drawn (no spark) and its dot risen, the Cue in place, skeleton bars at full opacity, panels and dialogs present without a slide or fade. State still changes; it just changes at once. Nothing that carries meaning is conveyed by motion alone.
+
+## Shapes
+
+Everything is soft-cornered and nested concentrically: an element inside a rounded container takes the container's radius minus the inset between them, so the curves stay parallel. A 14px panel with a 6px inset holds a 10px button; that is the canonical pairing, and it is why the waitlist field and the nav pill pad 6px on their button side and more on their text side.
+
+- **Pill** (`rounded.pill`, 9999px): things that frame the screen or toggle a filter: the nav pill, the footer pill, buttons inside a pill, tag chips, the browser demo's address bar.
+- **Panel** (`rounded.panel`, 14px): surfaces a User reads or types into at length: the waitlist email field and its joined card, the Cue, dialogs and the Library's detail panel as a sheet.
+- **Card** (`rounded.card`, 12px): Item cards, the browser demo's window, toasts.
+- **Button inset** (`rounded.button-inset`, 10px): buttons, text inputs and icon buttons.
+- **Tile** (`rounded.tile`, 8px): small tiles: a Thumbnail inset inside a card, the Related Items thumbnail, the Cue's logo tile, icon tiles.
+- **Keycap** (`rounded.keycap`, 6px): keycaps and Item type badges. Favicons take 4px and skeleton bars 2 to 3px.
+
+The same radius holds at every breakpoint.
+
+**Borders are 1px**, always: a hairline where the edge is decoration, a control-border where it marks something a User types into or ticks, Error Red on a field in error. Nothing is drawn with a 2px border; the 2px line in the system is the focus outline.
+
+### Imagery
+
+- **On the waitlist wall,** Item cards never carry photographs. Their picture is a flat, seeded "sun over a ridge" placeholder: a sun disc in Parchment at 20% and a ridge in Parchment at 9% over surface-strong, with the ground below the ridge in canvas at 45%. It is a stand-in that says "a picture was here" without a real one.
+- **In the Library,** Item cards show the Item's real Thumbnail, cropped with `object-fit: cover` to a 16:9 frame that runs edge to edge across the top of the card and shares its 12px top corners. An Item without a Thumbnail shows no picture area and no placeholder: its card is text only, and the grid's rows absorb the difference. Thumbnails are never overlaid with text or badges.
