@@ -5,7 +5,11 @@ import { parse } from "yaml";
 const designMd = readFileSync(new URL("../../../DESIGN.md", import.meta.url), "utf8");
 const sidecar = JSON.parse(
   readFileSync(new URL("../../../.impeccable/design.json", import.meta.url), "utf8"),
-) as { narrative?: Narrative };
+) as {
+  extensions?: { colorMeta?: Record<string, { canonical?: string }> };
+  components?: unknown;
+  narrative?: Narrative;
+};
 
 // DESIGN.md split once: its YAML frontmatter (the tokens) and the prose body after it.
 function split(markdown: string): { tokens: Record<string, unknown>; body: string } {
@@ -140,6 +144,36 @@ function prose(body: string): Required<Narrative> {
 const byName = (rules: Rule[]) =>
   rules.map(({ name, body }) => ({ name, body })).sort((a, b) => a.name.localeCompare(b.name));
 const sorted = (lines: string[]) => [...lines].sort();
+
+const upper = (hex: string) => hex.toUpperCase();
+
+describe("Impeccable sidecar palette", () => {
+  const palette = Object.fromEntries(
+    Object.entries(tokens.colors as Record<string, string>).map(([name, hex]) => [
+      name,
+      upper(hex),
+    ]),
+  );
+
+  it("gives every DESIGN.md colour, and only those, its frontmatter hex", () => {
+    const colorMeta = sidecar.extensions?.colorMeta ?? {};
+    const canonical = Object.fromEntries(
+      Object.entries(colorMeta).map(([name, meta]) => [name, upper(meta.canonical ?? "")]),
+    );
+
+    expect(Object.keys(palette).length).toBeGreaterThan(0);
+    expect(canonical).toEqual(palette);
+  });
+
+  it("uses only DESIGN.md colours in its shadows and component snippets", () => {
+    const rendered = JSON.stringify([sidecar.extensions, sidecar.components]);
+    const hexes = [...rendered.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => upper(m[0]));
+    const known = new Set(Object.values(palette));
+
+    expect(hexes.length).toBeGreaterThan(0);
+    expect([...new Set(hexes.filter((hex) => !known.has(hex)))]).toEqual([]);
+  });
+});
 
 describe("Impeccable sidecar narrative", () => {
   const documented = prose(designBody);

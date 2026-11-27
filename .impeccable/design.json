@@ -7,6 +7,7 @@
       "canvas": {
         "role": "neutral",
         "displayName": "Unlit Room",
+        "canonical": "#151414",
         "description": "the page ground on every surface: the web app, the waitlist, the extension popup and the emails. The only surface `text-faint` may sit on.",
         "tonalRamp": [
           "oklch(15% 0.001 17)",
@@ -22,6 +23,7 @@
       "surface-soft": {
         "role": "neutral",
         "displayName": "Soft Band",
+        "canonical": "#1A1918",
         "description": "a barely lifted band: dividers, tag chips at rest, quiet table stripes.",
         "tonalRamp": [
           "oklch(15% 0.001 68)",
@@ -37,6 +39,7 @@
       "surface-card": {
         "role": "neutral",
         "displayName": "Card Brown",
+        "canonical": "#201E1D",
         "description": "the default card and panel: Item cards, inputs, dialogs, the nav pill.",
         "tonalRamp": [
           "oklch(15% 0.002 49)",
@@ -52,6 +55,7 @@
       "surface-strong": {
         "role": "neutral",
         "displayName": "Strong Brown",
+        "canonical": "#262422",
         "description": "emphasised cards, selected tabs and chips, the Cue, toasts, secondary and danger buttons.",
         "tonalRamp": [
           "oklch(15% 0.003 68)",
@@ -67,6 +71,7 @@
       "hairline": {
         "role": "neutral",
         "displayName": "Hairline",
+        "canonical": "#282624",
         "description": "decorative 1px edges only. At 1.03 to 1.22:1 it reads as one more elevation step, not as a line a User can find, so it never marks something interactive.",
         "tonalRamp": [
           "oklch(15% 0.003 68)",
@@ -82,6 +87,7 @@
       "control-border": {
         "role": "neutral",
         "displayName": "Control Edge",
+        "canonical": "#736D68",
         "description": "the boundary of anything a User types into or ticks: inputs, checkboxes, radio buttons, fields. 3.03:1 on surface-strong up to 3.6:1 on canvas, so it clears the 3:1 non-text minimum on every surface. It is used only on interactive boundaries.",
         "tonalRamp": [
           "oklch(15% 0.006 62)",
@@ -97,6 +103,7 @@
       "text-heading": {
         "role": "neutral",
         "displayName": "Parchment",
+        "canonical": "#E9D8C4",
         "description": "headlines, primary text, Item titles and the focus ring. 11.1 to 13.2:1.",
         "tonalRamp": [
           "oklch(15% 0.018 72)",
@@ -112,6 +119,7 @@
       "text-body": {
         "role": "neutral",
         "displayName": "Linen",
+        "canonical": "#DACAB8",
         "description": "running text. 9.7 to 11.5:1.",
         "tonalRamp": [
           "oklch(15% 0.017 71)",
@@ -127,6 +135,7 @@
       "text-secondary": {
         "role": "neutral",
         "displayName": "Sand",
+        "canonical": "#C3B5A4",
         "description": "sub-headings and supporting copy. 7.7 to 9.2:1.",
         "tonalRamp": [
           "oklch(15% 0.016 73)",
@@ -142,6 +151,7 @@
       "text-muted": {
         "role": "neutral",
         "displayName": "Taupe",
+        "canonical": "#988E81",
         "description": "captions, labels and the meta line on cards, and the label of a disabled accent control. 4.8 to 5.7:1, so it is the smallest tier allowed on a card.",
         "tonalRamp": [
           "oklch(15% 0.012 75)",
@@ -157,6 +167,7 @@
       "text-faint": {
         "role": "neutral",
         "displayName": "Dust",
+        "canonical": "#877E74",
         "description": "fine print and timestamps, **on canvas only** (4.61:1). On any card it drops below 4.5:1 (3.9 to 4.4:1), so meta on cards uses Taupe instead.",
         "tonalRamp": [
           "oklch(15% 0.010 70)",
@@ -172,6 +183,7 @@
       "accent": {
         "role": "primary",
         "displayName": "Rust",
+        "canonical": "#A8492B",
         "description": "the primary action's fill and the resurfacing signal: the logo's rising dot, the lit card's 1px edge and glow, the thread that draws to it, the dot that rises on its corner. As text it is allowed only at display sizes (24px and up) on canvas, where its 3.2:1 passes the large-text rule; on cards it is 2.69 to 3.05:1, so it is never a link, a focus ring, a label or small text.",
         "tonalRamp": [
           "oklch(15% 0.073 38)",
@@ -187,6 +199,7 @@
       "accent-active": {
         "role": "primary",
         "displayName": "Fired Rust",
+        "canonical": "#863A22",
         "description": "hover and press on a filled accent control.",
         "tonalRamp": [
           "oklch(15% 0.061 38)",
@@ -202,6 +215,7 @@
       "accent-disabled": {
         "role": "primary",
         "displayName": "Unlit Rust",
+        "canonical": "#282624",
         "description": "a disabled accent control's fill, the same value as the hairline, with its label in Taupe.",
         "tonalRamp": [
           "oklch(15% 0.003 68)",
@@ -217,6 +231,7 @@
       "on-accent": {
         "role": "primary",
         "displayName": "On Rust",
+        "canonical": "#FFFFFF",
         "description": "text and icons on Rust (5.75:1) and Fired Rust (7.95:1).",
         "tonalRamp": [
           "oklch(15% 0.000 0)",
@@ -232,6 +247,7 @@
       "success": {
         "role": "status",
         "displayName": "Saved Green",
+        "canonical": "#5DB872",
         "description": "confirmations and successful saves.",
         "tonalRamp": [
           "oklch(15% 0.074 149)",
@@ -247,6 +263,7 @@
       "warning": {
         "role": "status",
         "displayName": "Amber",
+        "canonical": "#D4A017",
         "description": "caution. Rare.",
         "tonalRamp": [
           "oklch(15% 0.080 84)",
@@ -262,6 +279,7 @@
       "danger": {
         "role": "status",
         "displayName": "Error Red",
+        "canonical": "#D36E6E",
         "description": "error text, error borders and destructive actions. 4.58:1 on surface-strong up to 5.45:1 on canvas, so error text is readable on every surface.",
         "tonalRamp": [
           "oklch(15% 0.070 21)",
