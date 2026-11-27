@@ -37,7 +37,28 @@ function references(node: unknown): string[] {
   return [];
 }
 
-function color(name: string): string {
+// DESIGN.md's frontmatter colour names, so a typo in a pair below fails type-checking.
+type ColorName =
+  | "canvas"
+  | "surface-soft"
+  | "surface-card"
+  | "surface-strong"
+  | "hairline"
+  | "control-border"
+  | "text-heading"
+  | "text-body"
+  | "text-secondary"
+  | "text-muted"
+  | "text-faint"
+  | "accent"
+  | "accent-active"
+  | "accent-disabled"
+  | "on-accent"
+  | "success"
+  | "warning"
+  | "danger";
+
+function color(name: ColorName): string {
   const value = lookup(`colors.${name}`);
   if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) {
     throw new Error(`colors.${name} is not a #rrggbb colour (got ${String(value)})`);
@@ -46,13 +67,18 @@ function color(name: string): string {
 }
 
 // WCAG 2.x relative luminance and contrast ratio.
-function linear(hex: string, offset: number): number {
+// The sRGB channel at `offset` in a #rrggbb colour, converted to linear light.
+function srgbChannelToLinear(hex: string, offset: number): number {
   const channel = parseInt(hex.slice(offset, offset + 2), 16) / 255;
   return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
 }
 
 function luminance(hex: string): number {
-  return 0.2126 * linear(hex, 1) + 0.7152 * linear(hex, 3) + 0.0722 * linear(hex, 5);
+  return (
+    0.2126 * srgbChannelToLinear(hex, 1) +
+    0.7152 * srgbChannelToLinear(hex, 3) +
+    0.0722 * srgbChannelToLinear(hex, 5)
+  );
 }
 
 function contrast(a: string, b: string): number {
@@ -60,12 +86,17 @@ function contrast(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-type Pair = { foreground: string; background: string; minimum: number; role: string };
+type Pair = { foreground: ColorName; background: ColorName; minimum: number; role: string };
 
-const SURFACES = ["canvas", "surface-soft", "surface-card", "surface-strong"];
-const TEXT_ON_EVERY_SURFACE = ["text-heading", "text-body", "text-secondary", "text-muted"];
+const SURFACES: ColorName[] = ["canvas", "surface-soft", "surface-card", "surface-strong"];
+const TEXT_ON_EVERY_SURFACE: ColorName[] = [
+  "text-heading",
+  "text-body",
+  "text-secondary",
+  "text-muted",
+];
 
-const onEverySurface = (foreground: string, minimum: number, role: string): Pair[] =>
+const onEverySurface = (foreground: ColorName, minimum: number, role: string): Pair[] =>
   SURFACES.map((background) => ({ foreground, background, minimum, role }));
 
 // The contract: every colour pair DESIGN.md allows. Forbidden pairs (text-faint
