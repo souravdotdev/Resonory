@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 const designMd = readFileSync(new URL("../../../DESIGN.md", import.meta.url), "utf8");
+const sidecar = JSON.parse(
+  readFileSync(new URL("../../../.impeccable/design.json", import.meta.url), "utf8"),
+) as { narrative?: Narrative };
 
 function frontmatter(markdown: string): Record<string, unknown> {
   const match = /^---\n(?<yaml>[\s\S]*?)\n---\n/.exec(markdown);
@@ -77,6 +80,48 @@ const ALLOWED_PAIRS: Pair[] = [
   { foreground: "canvas", background: "success", minimum: 4.5, role: "toolbar badge" },
   { foreground: "canvas", background: "danger", minimum: 4.5, role: "toolbar badge" },
 ];
+
+type Rule = { name: string; body: string };
+type Narrative = { northStar?: string; rules?: Rule[]; dos?: string[]; donts?: string[] };
+
+// The narrative DESIGN.md's prose states: its North Star line, every
+// "**The [Name] Rule.** [body]" paragraph, and its Do and Don't bullets.
+function prose(markdown: string): Required<Narrative> {
+  const body = markdown.replace(/^---\n[\s\S]*?\n---\n/, "");
+  const northStar = /\*\*Creative North Star: "(?<name>[^"]+)"\*\*/.exec(body)?.groups?.name ?? "";
+  const rules = [...body.matchAll(/^\*\*(?<name>The [^*]+? Rule)\.\*\* (?<text>.+)$/gm)].map(
+    (m) => ({ name: m.groups?.name ?? "", body: m.groups?.text ?? "" }),
+  );
+  const bullets = (lead: string) =>
+    [...body.matchAll(new RegExp(`^- (\\*\\*${lead}\\*\\* .+)$`, "gm"))].map((m) => m[1] ?? "");
+  return { northStar, rules, dos: bullets("Do"), donts: bullets("Don't") };
+}
+
+const byName = (rules: Rule[]) =>
+  rules.map(({ name, body }) => ({ name, body })).sort((a, b) => a.name.localeCompare(b.name));
+const sorted = (lines: string[]) => [...lines].sort();
+
+describe("Impeccable sidecar narrative", () => {
+  const documented = prose(designMd);
+  const narrative = sidecar.narrative ?? {};
+
+  it("carries DESIGN.md's North Star", () => {
+    expect(documented.northStar).not.toBe("");
+    expect(narrative.northStar).toBe(documented.northStar);
+  });
+
+  it("carries every named rule word for word", () => {
+    expect(documented.rules.length).toBeGreaterThan(0);
+    expect(byName(narrative.rules ?? [])).toEqual(byName(documented.rules));
+  });
+
+  it("carries every Do and Don't word for word", () => {
+    expect(documented.dos.length).toBeGreaterThan(0);
+    expect(documented.donts.length).toBeGreaterThan(0);
+    expect(sorted(narrative.dos ?? [])).toEqual(sorted(documented.dos));
+    expect(sorted(narrative.donts ?? [])).toEqual(sorted(documented.donts));
+  });
+});
 
 describe("DESIGN.md token contract", () => {
   it.each(ALLOWED_PAIRS)(
