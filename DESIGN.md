@@ -444,3 +444,38 @@ The same radius holds at every breakpoint.
 
 - **On the waitlist wall,** Item cards never carry photographs. Their picture is a flat, seeded "sun over a ridge" placeholder: a sun disc in Parchment at 20% and a ridge in Parchment at 9% over surface-strong, with the ground below the ridge in canvas at 45%. It is a stand-in that says "a picture was here" without a real one.
 - **In the Library,** Item cards show the Item's real Thumbnail, cropped with `object-fit: cover` to a 16:9 frame that runs edge to edge across the top of the card and shares its 12px top corners. An Item without a Thumbnail shows no picture area and no placeholder: its card is text only, and the grid's rows absorb the difference. Thumbnails are never overlaid with text or badges.
+
+## Components
+
+Every component below is built from the frontmatter tokens; the token names in brackets are its frontmatter entries. Every interactive component shares one focus treatment: on `:focus-visible`, a 2px solid Parchment (`text-heading`) outline at a 2px offset, following the component's radius. It appears at once, without a transition, and it is never Rust.
+
+### Buttons
+
+Quiet, solid and tactile. Every button is 40px tall (36px inside a pill), labelled in `card-title` (Work Sans 500, 14/20), with a 10px radius (a pill inside a pill), and a 20px icon where it has one, 8px from the label.
+
+- **Primary** (`button-primary`): Rust fill, On Rust label. The one filled Rust button per view: the action the view exists for (Save in the Library, Join on the waitlist form, the email's call to action). It may carry a trailing ↵ keycap.
+- **Primary, hover and press** (`button-primary-active`): the fill steps to Fired Rust on hover (150ms) and stays there while pressed.
+- **Primary, disabled** (`button-primary-disabled`): Unlit Rust fill, Taupe label, no hover, no press scale, a default cursor. A busy button ("Saving…", "Joining…") takes the disabled look, swaps its label and drops its keycap.
+- **Secondary** (`button-secondary`): Strong Brown fill, Parchment label, a 1px Control Edge. Hover brightens the edge to Taupe. Used for every action that is not the view's primary, including the waitlist nav's "Join the waitlist" pill, so the form's submit stays the page's one Rust fill.
+- **Ghost** (`button-ghost`): no fill, no edge, Linen label, 12px side padding. Hover fills it one tonal step above the surface it sits on and lifts the label to Parchment. For low-weight actions: Cancel, "Open Library", inline actions in a toast.
+- **Danger** (`button-danger`): Strong Brown fill, Error Red label and a 1px Error Red edge, so it reads as destructive on any surface. Hover steps the fill down to Card Brown, where Error Red still holds 4.9:1; the label and edge stay Error Red. Used only to confirm a destructive action (Delete in the delete-confirm dialog), never for the action that opens that dialog, which is a ghost or icon button.
+- **Icon** (`button-icon`): a 36px square, 10px radius, no fill, a 20px icon in Sand. Hover fills it Strong Brown and lifts the icon to Parchment. It always has an `aria-label`, and a tooltip on hover from 640px.
+
+**States, for every button:** hover changes colour over 150ms on the spring; press scales to 0.97 over 300ms and springs back on release; focus is the shared Parchment outline; disabled removes hover and press and sets the label in Taupe. A disabled button stays in the tab order only when its reason is explained nearby.
+
+### Keycap (signature)
+
+A small key etched into the interface, purely decorative (`aria-hidden`), set in `mono-sm` (JetBrains Mono 11/16).
+
+- **Standalone** (`keycap`): Strong Brown fill, Sand glyph, a 1px hairline edge, 6px radius, 22px tall with a 22px minimum width and 6px side padding. For keyboard hints beside text ("↵ to save").
+- **Inside a button:** the keycap takes the button's label colour (On Rust on a primary): its edge is that colour at 18% and its fill that colour at 7%, so it reads as a key pressed into the button. 6px radius in a 10px button, a 26px circle in a pill button, 8px from the label and 6px from the button's trailing edge. It hides below 360px wide.
+
+### Inputs and fields
+
+- **Text input** (`text-input`): Card Brown fill, a 1px Control Edge, 10px radius, 40px tall, 12px side padding, `body` text in Linen, placeholder in Taupe. Its label sits 8px above it in `label` style, Sand; help text sits 8px below in `body-sm`, Taupe.
+- **Search field, the waitlist email field** (`input-search`): Card Brown fill, a 1px Control Edge, 14px radius, the Field rest shadow, `body` text in Parchment, padding 6px on the button's side and 16px on the text's. A 20px envelope icon in Taupe leads from 640px; the primary button docks inside on the right with a 10px radius. Capped at 520px.
+- **Hover:** the edge brightens to Taupe (150ms).
+- **Focus:** the shared Parchment outline, 2px at a 2px offset, round the whole field (`:focus-within` for the search field, whose drop shadow stays). The edge does not turn Rust or glow.
+- **Error:** the edge turns Error Red and a message row below (8px gap) shows a 16px warning icon and the message in `body-sm`, both Error Red. The field gets `aria-invalid` and is described by the message. The error clears on the next edit.
+- **Disabled:** Soft Band fill, hairline edge, Taupe text, no hover.
+- **Success, the waitlist's joined card:** the form is replaced (600ms) by a panel of the same shape on Card Brown: a 24px Saved Green check, the confirmation in `card-title` Parchment and the follow-up in `body-sm` Sand, while the logo's Rust dot rises out of its stack once. The proof line under the form (how many have joined) is `mono` in Taupe.
