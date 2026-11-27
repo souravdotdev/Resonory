@@ -7,13 +7,17 @@ const sidecar = JSON.parse(
   readFileSync(new URL("../../../.impeccable/design.json", import.meta.url), "utf8"),
 ) as { narrative?: Narrative };
 
-function frontmatter(markdown: string): Record<string, unknown> {
-  const match = /^---\n(?<yaml>[\s\S]*?)\n---\n/.exec(markdown);
+// DESIGN.md split once: its YAML frontmatter (the tokens) and the prose body after it.
+function split(markdown: string): { tokens: Record<string, unknown>; body: string } {
+  const match = /^---\n(?<yaml>[\s\S]*?)\n---\n(?<body>[\s\S]*)$/.exec(markdown);
   if (match?.groups?.yaml === undefined) throw new Error("DESIGN.md has no YAML frontmatter");
-  return parse(match.groups.yaml) as Record<string, unknown>;
+  return {
+    tokens: parse(match.groups.yaml) as Record<string, unknown>,
+    body: match.groups.body ?? "",
+  };
 }
 
-const tokens = frontmatter(designMd);
+const { tokens, body: designBody } = split(designMd);
 
 function lookup(path: string): unknown {
   return path
@@ -86,8 +90,7 @@ type Narrative = { northStar?: string; rules?: Rule[]; dos?: string[]; donts?: s
 
 // The narrative DESIGN.md's prose states: its North Star line, every
 // "**The [Name] Rule.** [body]" paragraph, and its Do and Don't bullets.
-function prose(markdown: string): Required<Narrative> {
-  const body = markdown.replace(/^---\n[\s\S]*?\n---\n/, "");
+function prose(body: string): Required<Narrative> {
   const northStar = /\*\*Creative North Star: "(?<name>[^"]+)"\*\*/.exec(body)?.groups?.name ?? "";
   const rules = [...body.matchAll(/^\*\*(?<name>The [^*]+? Rule)\.\*\* (?<text>.+)$/gm)].map(
     (m) => ({ name: m.groups?.name ?? "", body: m.groups?.text ?? "" }),
@@ -102,7 +105,7 @@ const byName = (rules: Rule[]) =>
 const sorted = (lines: string[]) => [...lines].sort();
 
 describe("Impeccable sidecar narrative", () => {
-  const documented = prose(designMd);
+  const documented = prose(designBody);
   const narrative = sidecar.narrative ?? {};
 
   it("carries DESIGN.md's North Star", () => {
