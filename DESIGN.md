@@ -292,7 +292,7 @@ A warm dark ground, a single beige family for text, and one rust accent that mea
 ### Status
 
 - **Saved Green** (success, #5DB872): confirmations and successful saves.
-- **Amber** (warning, #D4A017): caution. Rare.
+- **Amber** (warning, #D4A017): caution, and rare: the text and icon of a notice that asks the User to take care but is not an error, such as a toast or message row about something that has not failed. Text and icons only, never a fill or a border, and never for a failure, which is Error Red. 6.51:1 on surface-strong up to 7.74:1 on canvas, so caution text is readable on every surface.
 - **Error Red** (danger, #D36E6E): error text, error borders and destructive actions. 4.58:1 on surface-strong up to 5.45:1 on canvas, so error text is readable on every surface.
 
 ### Allowed pairs
@@ -307,6 +307,7 @@ These are the pairs the token-contract test (`packages/ui/src/design-tokens.test
 - The Parchment focus ring on every surface: 3:1.
 - Error Red on every surface: 4.5:1.
 - Saved Green on every surface: 4.5:1.
+- Amber text and icons on every surface: 4.5:1.
 - Taupe on Unlit Rust (a disabled accent control's label): 4.5:1.
 - Unlit Room on Saved Green and on Error Red (the extension's toolbar badge): 4.5:1.
 

@@ -121,6 +121,7 @@ const ALLOWED_PAIRS: Pair[] = [
   ...onEverySurface("text-heading", 3, "focus ring"),
   ...onEverySurface("danger", 4.5, "error text"),
   ...onEverySurface("success", 4.5, "confirmation text"),
+  ...onEverySurface("warning", 4.5, "caution text and icon"),
   { foreground: "text-muted", background: "accent-disabled", minimum: 4.5, role: "disabled label" },
   { foreground: "canvas", background: "success", minimum: 4.5, role: "toolbar badge" },
   { foreground: "canvas", background: "danger", minimum: 4.5, role: "toolbar badge" },

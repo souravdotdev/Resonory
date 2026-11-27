@@ -264,7 +264,7 @@
         "role": "status",
         "displayName": "Amber",
         "canonical": "#D4A017",
-        "description": "caution. Rare.",
+        "description": "caution, and rare: the text and icon of a notice that asks the User to take care but is not an error, such as a toast or message row about something that has not failed. Text and icons only, never a fill or a border, and never for a failure, which is Error Red. 6.51:1 on surface-strong up to 7.74:1 on canvas, so caution text is readable on every surface.",
         "tonalRamp": [
           "oklch(15% 0.080 84)",
           "oklch(26% 0.117 84)",
