@@ -6,7 +6,7 @@
 
 Two presets, mirroring the eslint-config split between plain Node packages and `apps/web`:
 
-- `./node` (`node.mjs`) — plain Node test environment. Used by `packages/shared`, `packages/db`, `apps/api`, `apps/worker`.
+- `./node` (`node.mjs`) — plain Node test environment. Used by `packages/shared`, `packages/db`, `apps/api`, `apps/worker`, and the token-contract test in `packages/ui`.
 - `./react` (`react.mjs`) — `jsdom` environment + `@vitejs/plugin-react`, built on top of `./node` via `mergeConfig`. Used by `packages/ui`, `apps/web`, `apps/waitlist`.
 
 Every package with tests has its own small `vitest.config.ts` importing one of these, and a `test` script (`vitest run`). `apps/api`'s also merges in the `@/` alias (pointing at `src/`) that its `tsconfig.json` declares.
@@ -92,7 +92,10 @@ The Drizzle-backed store (`src/waitlist/drizzle-store.ts`) isn't tested, like th
 
 What jsdom can't show is checked in a real browser against `next build` + `next start` (with `DATABASE_URL` pointing at the local Docker Postgres, never a `.env` file): screenshots at the sizes above (phone, tablet and desktop, from 320×568 to 2560×1440), mid-match and under reduced motion, confirm the screen doesn't scroll where the content fits (an 844×390 landscape phone scrolls rather than clip the form), no card sits under the copy, form, demo, nav or footer, and no text in a card or the Cue is cut off mid-word; a 4× CPU-throttled capture of the loop checks its frame times and that the page doesn't shift on load; and one signup through the form stores a Waitlist Entry and shows the success card (the test row is deleted afterwards).
 
-**`packages/ui`** — `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
+**`packages/ui`** — its `vitest.config.ts` declares two projects: `components` (`src/**/*.test.tsx`, the `./react` preset) and `tokens` (`src/**/*.test.ts`, the `./node` preset).
+
+- `button.test.tsx` — a basic render/click/disabled-state test proving the `jsdom` + React preset works, independent of any app.
+- `design-tokens.test.ts` — the token contract for the repo-root `DESIGN.md`: its frontmatter parses as YAML, every `{path.to.token}` reference resolves, and each pair on a declared allowed-pairs list meets its WCAG contrast threshold (text tiers on every surface at 4.5:1, `text-faint` on canvas only, accent text on canvas at 3:1, `on-accent` on `accent` and `accent-active`, and `control-border`, the `text-heading` focus ring and `danger` on every surface). It checks only references and contrast, never section wording or order, so the prose can change freely.
 
 ## Integration tests (`apps/api`)
 
