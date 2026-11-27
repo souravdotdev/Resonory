@@ -352,3 +352,41 @@ These are the pairs the token-contract test (`packages/ui/src/design-tokens.test
 **The Label Is Not an Eyebrow Rule.** The uppercase label style is for tags, Item type badges, form labels and table headers only. It is never placed above a headline as a kicker or eyebrow; headings stand unboxed.
 
 **The Caveat Once Rule.** Caveat appears exactly once, in the sentence above the waitlist headline. Nowhere else, in no other surface.
+
+## Layout
+
+Every surface sits on the 4px spacing scale (4, 8, 12, 16, 24, 32, 48, 64, 96) and nothing else; the one off-scale value is the 6px `inset` that keeps a button concentric inside its panel. Layout is calm and spacious: content groups breathe at 24 to 48px, related controls sit 8px apart, and floating palettes stack 8px apart.
+
+### Breakpoints
+
+- **Below 640px:** phones. One column, 16px side gutters (20px on the waitlist).
+- **640px (`sm`):** tablets and landscape phones. Desktop component and type sizes switch on here.
+- **1024px (`lg`):** desktop. Side-by-side layouts (the waitlist's two columns, the library's detail panel beside the grid) start here.
+- **1440px:** the widest frame. Content stops growing and centres; extra width becomes margin.
+
+Base text is 15px on phones and 16px from 640px on the marketing pages; the app keeps the 15px body everywhere.
+
+### Waitlist and marketing pages
+
+The waitlist is a single screen that fills one dynamic viewport (`min-height: 100dvh`) and only grows, so the page scrolls, when the viewport is too short for the form. The card wall is absolutely positioned behind everything and laid out to keep clear of the nav, the copy column, the demo and the footer: 48px of air round the copy and the demo, 20px round the nav and footer, and about a third of the cards left out so the content never sits in a crowd. The copy therefore always sits on the canvas, never over a card, which is what lets the headline's Rust words pass.
+
+From 1024px the main area is a two-column grid: the copy column up to 640px and a fixed 488px demo column, vertically centred, an 8px gap, 88px top and bottom padding, 32px right padding and a left gutter of clamp(32px, 5.56vw, 80px), growing past 1440px to half the extra width, so the pair stays where the 1440px frame puts it. The copy column is a size container, so the `display-xl` headline scales with its width (8.4cqi). Below 1024px the layout stacks in one centred column, 520px at most: 20px side gutters, 80px top padding to clear the nav (64px on a screen under 600px tall), the copy, then the demo 24px below, as wide as the form and reduced to its search bar. Room is kept under the demo for the cards it finds (264px on a phone, 220px from 640px) and given up first on a short screen.
+
+From 640px the wall is a wall of columns centred on the screen, with the promised cards in a row under the demo; below 640px it is four phone cards in two columns under the demo, as wide as it. The nav pill floats at the top (12px inset on phones, 20px from 640px), centred at up to 720px; the footer pill floats 8 to 14px from the bottom, sized to its content. The secondary pages (privacy, 404) are a single 640px reading column under a sticky nav pill.
+
+### Web app: the Library
+
+The app shell is a sticky top bar over a scrolling Library, all on the canvas.
+
+- **Top bar** (`app-topbar`): 56px tall, 24px side padding (16px below 640px). The logo lockup (22px tall) on the left; the search field in the middle (`text-input` with a leading 20px magnifier, up to 480px wide, collapsing to an icon button below 640px); on the right the Save button (the view's one `button-primary`) and the account `button-icon`. It separates from the Library by a 1px hairline only once the page has scrolled.
+- **Tag filter row:** directly under the top bar, a single row of `tag-chip`s 8px apart, "All" first, 16px of vertical padding. It scrolls sideways on overflow (no visible scrollbar, a 24px fade at the clipped edge) rather than wrapping.
+- **Item grid:** `grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))` with a 16px gap, 24px side padding (16px below 640px), capped at 1440px wide and centred. Items are newest first. Below 640px the 240px minimum gives one column on most phones.
+- **Item detail panel:** opening an Item shows its detail beside the grid from 1024px, as a 400px panel docked to the right edge under the top bar (`surface-card`, a hairline left edge, its own scroll), and the grid reflows into the remaining width. Below 1024px it is a full-screen sheet over the Library with a back icon button. Inside, 24px padding and 24px between groups: the Thumbnail, the title in `heading`, the source domain and saved date in `mono`, the description in `body`, the Item's tags, the actions (secondary "Open", danger "Delete") and then Related Items.
+
+### Chrome extension popup
+
+The popup (`extension-popup`) is 360px wide, its height set by its content, on the canvas with 16px padding: the logo lockup (20px tall) at the top, 16px above the state's content, and any actions in a row 8px apart at the bottom. The options page uses the same content centred in a 480px column on a full tab.
+
+### Emails
+
+Every email (the Welcome email, the early-access email, the Rediscover digest) is a single 600px column (`email-container`), centred on a full-width canvas table, 32px padding (16px when the screen is narrower than the column). Content stacks top to bottom, centred: the logo lockup, the heading 32px below it, the body 12px below that, then the button or the Items, then the founder's signature 32px below. There are no side-by-side columns; mail apps break them.
