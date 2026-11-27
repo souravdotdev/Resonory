@@ -1,278 +1,427 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T00:00:00Z",
+  "generatedAt": "2026-11-27T15:20:21Z",
   "title": "Design System: Resonory",
   "extensions": {
     "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Unlit Room",
+        "description": "the page ground on every surface: the web app, the waitlist, the extension popup and the emails. The only surface `text-faint` may sit on.",
+        "tonalRamp": [
+          "oklch(15% 0.001 17)",
+          "oklch(26% 0.001 17)",
+          "oklch(37% 0.002 17)",
+          "oklch(48% 0.002 17)",
+          "oklch(60% 0.002 17)",
+          "oklch(72% 0.001 17)",
+          "oklch(84% 0.001 17)",
+          "oklch(95% 0.000 17)"
+        ]
+      },
+      "surface-soft": {
+        "role": "neutral",
+        "displayName": "Soft Band",
+        "description": "a barely lifted band: dividers, tag chips at rest, quiet table stripes.",
+        "tonalRamp": [
+          "oklch(15% 0.001 68)",
+          "oklch(26% 0.002 68)",
+          "oklch(37% 0.002 68)",
+          "oklch(48% 0.002 68)",
+          "oklch(60% 0.002 68)",
+          "oklch(72% 0.002 68)",
+          "oklch(84% 0.001 68)",
+          "oklch(95% 0.001 68)"
+        ]
+      },
+      "surface-card": {
+        "role": "neutral",
+        "displayName": "Card Brown",
+        "description": "the default card and panel: Item cards, inputs, dialogs, the nav pill.",
+        "tonalRamp": [
+          "oklch(15% 0.002 49)",
+          "oklch(26% 0.003 49)",
+          "oklch(37% 0.003 49)",
+          "oklch(48% 0.004 49)",
+          "oklch(60% 0.004 49)",
+          "oklch(72% 0.003 49)",
+          "oklch(84% 0.002 49)",
+          "oklch(95% 0.001 49)"
+        ]
+      },
+      "surface-strong": {
+        "role": "neutral",
+        "displayName": "Strong Brown",
+        "description": "emphasised cards, selected tabs and chips, the Cue, toasts, secondary and danger buttons.",
+        "tonalRamp": [
+          "oklch(15% 0.003 68)",
+          "oklch(26% 0.004 68)",
+          "oklch(37% 0.005 68)",
+          "oklch(48% 0.005 68)",
+          "oklch(60% 0.005 68)",
+          "oklch(72% 0.004 68)",
+          "oklch(84% 0.003 68)",
+          "oklch(95% 0.001 68)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "description": "decorative 1px edges only. At 1.03 to 1.22:1 it reads as one more elevation step, not as a line a User can find, so it never marks something interactive.",
+        "tonalRamp": [
+          "oklch(15% 0.003 68)",
+          "oklch(26% 0.004 68)",
+          "oklch(37% 0.004 68)",
+          "oklch(48% 0.005 68)",
+          "oklch(60% 0.005 68)",
+          "oklch(72% 0.004 68)",
+          "oklch(84% 0.003 68)",
+          "oklch(95% 0.001 68)"
+        ]
+      },
+      "control-border": {
+        "role": "neutral",
+        "displayName": "Control Edge",
+        "description": "the boundary of anything a User types into or ticks: inputs, checkboxes, radio buttons, fields. 3.03:1 on surface-strong up to 3.6:1 on canvas, so it clears the 3:1 non-text minimum on every surface. It is used only on interactive boundaries.",
+        "tonalRamp": [
+          "oklch(15% 0.006 62)",
+          "oklch(26% 0.009 62)",
+          "oklch(37% 0.010 62)",
+          "oklch(48% 0.011 62)",
+          "oklch(60% 0.011 62)",
+          "oklch(72% 0.010 62)",
+          "oklch(84% 0.006 62)",
+          "oklch(95% 0.003 62)"
+        ]
+      },
+      "text-heading": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "description": "headlines, primary text, Item titles and the focus ring. 11.1 to 13.2:1.",
+        "tonalRamp": [
+          "oklch(15% 0.018 72)",
+          "oklch(26% 0.026 72)",
+          "oklch(37% 0.031 72)",
+          "oklch(48% 0.033 72)",
+          "oklch(60% 0.033 72)",
+          "oklch(72% 0.030 72)",
+          "oklch(84% 0.020 72)",
+          "oklch(95% 0.010 72)"
+        ]
+      },
+      "text-body": {
+        "role": "neutral",
+        "displayName": "Linen",
+        "description": "running text. 9.7 to 11.5:1.",
+        "tonalRamp": [
+          "oklch(15% 0.017 71)",
+          "oklch(26% 0.024 71)",
+          "oklch(37% 0.029 71)",
+          "oklch(48% 0.030 71)",
+          "oklch(60% 0.030 71)",
+          "oklch(72% 0.027 71)",
+          "oklch(84% 0.018 71)",
+          "oklch(95% 0.009 71)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Sand",
+        "description": "sub-headings and supporting copy. 7.7 to 9.2:1.",
+        "tonalRamp": [
+          "oklch(15% 0.016 73)",
+          "oklch(26% 0.023 73)",
+          "oklch(37% 0.027 73)",
+          "oklch(48% 0.029 73)",
+          "oklch(60% 0.029 73)",
+          "oklch(72% 0.026 73)",
+          "oklch(84% 0.017 73)",
+          "oklch(95% 0.009 73)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Taupe",
+        "description": "captions, labels and the meta line on cards, and the label of a disabled accent control. 4.8 to 5.7:1, so it is the smallest tier allowed on a card.",
+        "tonalRamp": [
+          "oklch(15% 0.012 75)",
+          "oklch(26% 0.018 75)",
+          "oklch(37% 0.021 75)",
+          "oklch(48% 0.022 75)",
+          "oklch(60% 0.022 75)",
+          "oklch(72% 0.020 75)",
+          "oklch(84% 0.013 75)",
+          "oklch(95% 0.007 75)"
+        ]
+      },
+      "text-faint": {
+        "role": "neutral",
+        "displayName": "Dust",
+        "description": "fine print and timestamps, **on canvas only** (4.61:1). On any card it drops below 4.5:1 (3.9 to 4.4:1), so meta on cards uses Taupe instead.",
+        "tonalRamp": [
+          "oklch(15% 0.010 70)",
+          "oklch(26% 0.015 70)",
+          "oklch(37% 0.018 70)",
+          "oklch(48% 0.019 70)",
+          "oklch(60% 0.019 70)",
+          "oklch(72% 0.017 70)",
+          "oklch(84% 0.011 70)",
+          "oklch(95% 0.006 70)"
+        ]
+      },
       "accent": {
         "role": "primary",
-        "displayName": "Resurfacing Orange",
-        "canonical": "#d4621a",
+        "displayName": "Rust",
+        "description": "the primary action's fill and the resurfacing signal: the logo's rising dot, the lit card's 1px edge and glow, the thread that draws to it, the dot that rises on its corner. As text it is allowed only at display sizes (24px and up) on canvas, where its 3.2:1 passes the large-text rule; on cards it is 2.69 to 3.05:1, so it is never a link, a focus ring, a label or small text.",
         "tonalRamp": [
-          "oklch(15% 0.16 48)",
-          "oklch(26% 0.16 48)",
-          "oklch(37% 0.16 48)",
-          "oklch(48% 0.16 48)",
-          "oklch(60% 0.16 48)",
-          "oklch(72% 0.16 48)",
-          "oklch(84% 0.16 48)",
-          "oklch(95% 0.16 48)"
+          "oklch(15% 0.073 38)",
+          "oklch(26% 0.106 38)",
+          "oklch(37% 0.126 38)",
+          "oklch(48% 0.133 38)",
+          "oklch(60% 0.133 38)",
+          "oklch(72% 0.120 38)",
+          "oklch(84% 0.080 38)",
+          "oklch(95% 0.040 38)"
         ]
       },
-      "accent-hover": {
+      "accent-active": {
         "role": "primary",
-        "displayName": "Ember Orange",
-        "canonical": "#e0712b",
+        "displayName": "Fired Rust",
+        "description": "hover and press on a filled accent control.",
         "tonalRamp": [
-          "oklch(15% 0.16 50)",
-          "oklch(26% 0.16 50)",
-          "oklch(37% 0.16 50)",
-          "oklch(48% 0.16 50)",
-          "oklch(60% 0.16 50)",
-          "oklch(72% 0.16 50)",
-          "oklch(84% 0.16 50)",
-          "oklch(95% 0.16 50)"
+          "oklch(15% 0.061 38)",
+          "oklch(26% 0.089 38)",
+          "oklch(37% 0.105 38)",
+          "oklch(48% 0.111 38)",
+          "oklch(60% 0.111 38)",
+          "oklch(72% 0.100 38)",
+          "oklch(84% 0.067 38)",
+          "oklch(95% 0.033 38)"
         ]
       },
-      "ground": {
-        "role": "neutral",
-        "displayName": "Archive Black",
-        "canonical": "#141414",
+      "accent-disabled": {
+        "role": "primary",
+        "displayName": "Unlit Rust",
+        "description": "a disabled accent control's fill, the same value as the hairline, with its label in Taupe.",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(26% 0 0)",
-          "oklch(37% 0 0)",
-          "oklch(48% 0 0)",
-          "oklch(60% 0 0)",
-          "oklch(72% 0 0)",
-          "oklch(84% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.003 68)",
+          "oklch(26% 0.004 68)",
+          "oklch(37% 0.004 68)",
+          "oklch(48% 0.005 68)",
+          "oklch(60% 0.005 68)",
+          "oklch(72% 0.004 68)",
+          "oklch(84% 0.003 68)",
+          "oklch(95% 0.001 68)"
         ]
       },
-      "card": {
-        "role": "neutral",
-        "displayName": "Card Grey",
-        "canonical": "#1f1f1f",
+      "on-accent": {
+        "role": "primary",
+        "displayName": "On Rust",
+        "description": "text and icons on Rust (5.75:1) and Fired Rust (7.95:1).",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(26% 0 0)",
-          "oklch(37% 0 0)",
-          "oklch(48% 0 0)",
-          "oklch(60% 0 0)",
-          "oklch(72% 0 0)",
-          "oklch(84% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.000 0)",
+          "oklch(26% 0.000 0)",
+          "oklch(37% 0.000 0)",
+          "oklch(48% 0.000 0)",
+          "oklch(60% 0.000 0)",
+          "oklch(72% 0.000 0)",
+          "oklch(84% 0.000 0)",
+          "oklch(95% 0.000 0)"
         ]
       },
-      "card-raised": {
-        "role": "neutral",
-        "displayName": "Raised Grey",
-        "canonical": "#272727",
+      "success": {
+        "role": "status",
+        "displayName": "Saved Green",
+        "description": "confirmations and successful saves.",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(26% 0 0)",
-          "oklch(37% 0 0)",
-          "oklch(48% 0 0)",
-          "oklch(60% 0 0)",
-          "oklch(72% 0 0)",
-          "oklch(84% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.074 149)",
+          "oklch(26% 0.107 149)",
+          "oklch(37% 0.128 149)",
+          "oklch(48% 0.134 149)",
+          "oklch(60% 0.134 149)",
+          "oklch(72% 0.121 149)",
+          "oklch(84% 0.081 149)",
+          "oklch(95% 0.040 149)"
         ]
       },
-      "border": {
-        "role": "neutral",
-        "displayName": "Border Grey",
-        "canonical": "#313131",
+      "warning": {
+        "role": "status",
+        "displayName": "Amber",
+        "description": "caution. Rare.",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(26% 0 0)",
-          "oklch(37% 0 0)",
-          "oklch(48% 0 0)",
-          "oklch(60% 0 0)",
-          "oklch(72% 0 0)",
-          "oklch(84% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.080 84)",
+          "oklch(26% 0.117 84)",
+          "oklch(37% 0.139 84)",
+          "oklch(48% 0.146 84)",
+          "oklch(60% 0.146 84)",
+          "oklch(72% 0.132 84)",
+          "oklch(84% 0.088 84)",
+          "oklch(95% 0.044 84)"
         ]
       },
-      "text": {
-        "role": "neutral",
-        "displayName": "Paper White",
-        "canonical": "#fafaf7",
+      "danger": {
+        "role": "status",
+        "displayName": "Error Red",
+        "description": "error text, error borders and destructive actions. 4.58:1 on surface-strong up to 5.45:1 on canvas, so error text is readable on every surface.",
         "tonalRamp": [
-          "oklch(15% 0.004 106)",
-          "oklch(26% 0.004 106)",
-          "oklch(37% 0.004 106)",
-          "oklch(48% 0.004 106)",
-          "oklch(60% 0.004 106)",
-          "oklch(72% 0.004 106)",
-          "oklch(84% 0.004 106)",
-          "oklch(95% 0.004 106)"
+          "oklch(15% 0.070 21)",
+          "oklch(26% 0.102 21)",
+          "oklch(37% 0.121 21)",
+          "oklch(48% 0.127 21)",
+          "oklch(60% 0.127 21)",
+          "oklch(72% 0.115 21)",
+          "oklch(84% 0.076 21)",
+          "oklch(95% 0.038 21)"
         ]
-      },
-      "muted": {
-        "role": "neutral",
-        "displayName": "Ash",
-        "canonical": "#9b9b9b",
-        "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(26% 0 0)",
-          "oklch(37% 0 0)",
-          "oklch(48% 0 0)",
-          "oklch(60% 0 0)",
-          "oklch(72% 0 0)",
-          "oklch(84% 0 0)",
-          "oklch(95% 0 0)"
-        ]
-      },
-      "mute": {
-        "role": "neutral",
-        "displayName": "Mute (Paper White 66%)",
-        "canonical": "rgb(250 250 247 / 0.66)",
-        "tonalRamp": [
-          "rgb(250 250 247 / 0.04)",
-          "rgb(250 250 247 / 0.07)",
-          "rgb(250 250 247 / 0.09)",
-          "rgb(250 250 247 / 0.16)",
-          "rgb(250 250 247 / 0.26)",
-          "rgb(250 250 247 / 0.44)",
-          "rgb(250 250 247 / 0.56)",
-          "rgb(250 250 247 / 0.66)"
-        ]
-      },
-      "faint": {
-        "role": "neutral",
-        "displayName": "Faint (Paper White 56%)",
-        "canonical": "rgb(250 250 247 / 0.56)"
-      },
-      "line": {
-        "role": "neutral",
-        "displayName": "Line (Paper White 9%)",
-        "canonical": "rgb(250 250 247 / 0.09)"
-      },
-      "line-strong": {
-        "role": "neutral",
-        "displayName": "Line Strong (Paper White 16%)",
-        "canonical": "rgb(250 250 247 / 0.16)"
       }
     },
     "typographyMeta": {
+      "display-xl": {
+        "displayName": "Display XL",
+        "purpose": "the waitlist and marketing hero headline only. Never in the app."
+      },
       "display": {
         "displayName": "Display",
-        "purpose": "The one headline: Paper White to Ash gradient, orange upright verbs. 36px on phones."
+        "purpose": "page titles, empty states and the wordmark."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "section headings and panel titles."
       },
       "body-lead": {
         "displayName": "Body lead",
-        "purpose": "The opening sentence above the headline and the sub under it, in Mute, max 30em. 15px on phones."
+        "purpose": "the paragraph under a hero headline, capped at about 30em."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "The email input and running text."
+        "purpose": "running text, field text and dialog copy."
       },
-      "label": {
-        "displayName": "Label",
-        "purpose": "Button text and confirmation heading. 13.5 to 14.5px."
+      "body-sm": {
+        "displayName": "Body small",
+        "purpose": "supporting copy, toasts, the Cue, the extension popup."
       },
       "card-title": {
         "displayName": "Card title",
-        "purpose": "Item card and Cue titles, clamped to whole lines."
+        "purpose": "Item titles on cards (clamped to whole lines, never cut mid-word) and button labels."
       },
-      "meta": {
-        "displayName": "Meta",
-        "purpose": "Mono record of an Item: site, date, progress, counts, keycaps. In Faint."
+      "label": {
+        "displayName": "Label",
+        "purpose": "tags, Item type badges, form labels and table headers. Nothing else."
       },
-      "note": {
-        "displayName": "Note",
-        "purpose": "Mono proof line under the field and the footer copyright, tabular figures."
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "source domains, URLs and timestamps in running layouts."
+      },
+      "mono-sm": {
+        "displayName": "Mono small",
+        "purpose": "the meta line on cards (\"example.com · saved in March\")."
+      },
+      "hand": {
+        "displayName": "Hand",
+        "purpose": "the one handwritten sentence above the waitlist headline. Upright, never italic."
       }
     },
     "shadows": [
       {
         "name": "field-rest",
-        "value": "inset 0 1px 0 rgb(250 250 247 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.8)",
-        "purpose": "The signup field at rest."
-      },
-      {
-        "name": "field-focus",
-        "value": "0 0 0 4px rgb(250 250 247 / 0.07)",
-        "purpose": "The signup field with focus inside."
-      },
-      {
-        "name": "window",
-        "value": "0 0 0 1px rgb(0 0 0 / 0.45), 0 30px 60px -30px rgb(0 0 0 / 0.9)",
-        "purpose": "The browser window in the demo."
-      },
-      {
-        "name": "cue",
-        "value": "0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)",
-        "purpose": "The Cue, highest surface."
+        "value": "inset 0 1px 0 rgb(233 216 196 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.8)",
+        "purpose": "the waitlist's email field (`input-search`): a faint Parchment top highlight and a drop beneath."
       },
       {
         "name": "palette",
         "value": "0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.35)",
-        "purpose": "Floating nav on the secondary pages (--shadow-palette)."
+        "purpose": "floating palettes: the sticky nav pill on the secondary pages, the toast, menus."
+      },
+      {
+        "name": "window",
+        "value": "0 0 0 1px rgb(0 0 0 / 0.45), 0 30px 60px -30px rgb(0 0 0 / 0.9)",
+        "purpose": "the browser window in the waitlist demo."
+      },
+      {
+        "name": "cue",
+        "value": "0 0 0 1px rgb(0 0 0 / 0.4), 0 30px 60px -24px rgb(0 0 0 / 0.95)",
+        "purpose": "the Cue, the highest surface on its screen."
+      },
+      {
+        "name": "dialog",
+        "value": "0 0 0 1px rgb(0 0 0 / 0.4), 0 40px 80px -24px rgb(0 0 0 / 0.9)",
+        "purpose": "dialogs, always over the scrim."
+      },
+      {
+        "name": "scrim",
+        "value": "rgb(0 0 0 / 0.6)",
+        "purpose": "the full-screen layer under a dialog or the detail sheet below 1024px. Flat black, no blur."
       },
       {
         "name": "lit-glow",
-        "value": "0 0 0 1px var(--color-accent), 0 0 28px rgb(212 98 26 / 0.38)",
-        "purpose": "A resurfaced card; 22px blur on phones. The only coloured light."
+        "value": "0 0 0 1px #A8492B, 0 0 28px rgb(168 73 43 / 0.45)",
+        "purpose": "An Item that has come back. The only coloured light in the system. A 22px blur on phones."
       },
       {
         "name": "pile-edges",
-        "value": "0 5px 0 -2px var(--color-card), 0 5px 0 -1px rgb(250 250 247 / 0.1), 0 10px 0 -5px var(--color-card), 0 10px 0 -4px rgb(250 250 247 / 0.08)",
-        "purpose": "A stacked Item card: two card edges peeking out below. Stacked Item cards only."
+        "value": "0 5px 0 -2px #201E1D, 0 5px 0 -1px rgb(233 216 196 / 0.1), 0 10px 0 -5px #201E1D, 0 10px 0 -4px rgb(233 216 196 / 0.08)",
+        "purpose": "a stacked card on the waitlist wall, two card edges peeking out below it. It depicts the pile of Items (the same stack as the logo's bars) and is used only on stacked Item cards."
       }
     ],
     "motion": [
       {
         "name": "ease-spring",
         "value": "cubic-bezier(0.32, 0.72, 0, 1)",
-        "purpose": "The one easing curve for every transition and entrance."
+        "purpose": "The one curve for every transition and entrance: a quick start that settles slowly."
       },
       {
-        "name": "fade-up",
-        "value": "fade-up 1.2s var(--ease-spring) both",
-        "purpose": "Load entrance: 18px rise, staggered 0/100/180/260/340ms down the screen."
+        "name": "duration-150",
+        "value": "150ms",
+        "purpose": "Hover and colour changes: a button's fill, a chip's text, an edge brightening."
       },
       {
-        "name": "duration-hover",
+        "name": "duration-300",
         "value": "300ms",
-        "purpose": "Opacity fades on links and the logo."
+        "purpose": "Small state changes: the 0.97 press scale and its release, a chip being selected, a toast or a dialog fading and scaling in from 0.98."
       },
       {
-        "name": "duration-field",
-        "value": "500ms",
-        "purpose": "Field border and halo changes."
-      },
-      {
-        "name": "duration-press",
+        "name": "duration-600",
         "value": "600ms",
-        "purpose": "Button opacity and press scale; card lit edge."
+        "purpose": "Surfaces arriving: the detail panel sliding in, the Cue's fade, the joined card replacing the waitlist form."
       },
       {
-        "name": "duration-move",
+        "name": "duration-900",
         "value": "900ms",
-        "purpose": "Card lift and Cue movement."
+        "purpose": "Resurfacing: a card lighting up, its thread drawing in, its dot rising, the Cue moving into place, the wall fading in, the waitlist's staggered rise on load."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97)",
+        "purpose": "Every button on press, over 300ms on the spring."
+      },
+      {
+        "name": "skeleton-pulse",
+        "value": "skeleton-pulse 900ms cubic-bezier(0.32, 0.72, 0, 1) infinite alternate",
+        "purpose": "A Processing card's skeleton bars, between 60% and 100% opacity."
       },
       {
         "name": "wall-drift",
         "value": "wall-drift 44s ease-in-out infinite alternate",
-        "purpose": "The wall drifts 5x4px on phones, 9x6px on desktop."
+        "purpose": "The card wall drifts a few pixels to and fro. One of the two exceptions to the spring."
       },
       {
         "name": "thread-spark",
-        "value": "thread-spark 1.4s linear 0.9s infinite",
-        "purpose": "A Paper White spark runs along the drawn orange thread."
-      },
-      {
-        "name": "blink",
-        "value": "blink 1.1s steps(1, end) infinite",
-        "purpose": "The demo's text caret."
+        "value": "thread-spark 1.4s linear infinite",
+        "purpose": "A spark runs along a drawn thread. The other exception to the spring."
       }
     ],
     "breakpoints": [
       {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
         "name": "lg",
         "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1440px"
       }
     ]
   },
@@ -281,119 +430,169 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Off-white submit button docked inside the search-style field, with an ↵ keycap.",
-      "html": "<button class=\"ds-btn-primary\">Join the waitlist <kbd class=\"ds-keycap\">↵</kbd></button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 16px;border:0;border-radius:10px;background:var(--color-text,#fafaf7);color:var(--color-bg,#141414);font:500 14.5px/1 Geist,ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:transform .6s cubic-bezier(.32,.72,0,1),opacity .6s cubic-bezier(.32,.72,0,1)}.ds-btn-primary:hover{opacity:.88}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}.ds-keycap{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:22px;padding:0 6px;border:1px solid rgb(20 20 20/.18);border-radius:6px;background:rgb(20 20 20/.07);font:11.5px/1 'Geist Mono',ui-monospace,monospace;color:#141414}"
+      "description": "The view's one Rust fill (Save, Join, the email's call to action), with a trailing ↵ keycap; Fired Rust on hover and press.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/></svg>Save <kbd class=\"ds-btn-primary-key\" aria-hidden=\"true\">↵</kbd></button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;height:40px;border-radius:10px;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color 150ms cubic-bezier(.32,.72,0,1),border-color 150ms cubic-bezier(.32,.72,0,1),color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1);padding:0 6px 0 16px;border:0;background:#A8492B;color:#FFFFFF}.ds-btn-primary:hover{background:#863A22}.ds-btn-primary:active{background:#863A22;transform:scale(.97)}.ds-btn-primary:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-btn-primary:disabled{background:#282624;color:#988E81;cursor:default;transform:none}.ds-btn-primary-key{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:22px;padding:0 6px;border:1px solid rgb(255 255 255 / .18);border-radius:6px;background:rgb(255 255 255 / .07);font:400 11px/16px 'JetBrains Mono',ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;color:inherit}"
     },
     {
-      "name": "Pill Button",
+      "name": "Secondary Button",
       "kind": "button",
-      "refersTo": "button-pill",
-      "description": "The nav's join button: off-white pill with a circular keycap.",
-      "html": "<a href=\"#\" class=\"ds-btn-pill\">Join the waitlist <kbd class=\"ds-keycap-round\">↵</kbd></a>",
-      "css": ".ds-btn-pill{display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 5px 0 15px;border-radius:9999px;background:#fafaf7;color:#141414;font:500 14px/1 Geist,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:transform .6s cubic-bezier(.32,.72,0,1),opacity .6s cubic-bezier(.32,.72,0,1)}.ds-btn-pill:hover{opacity:.88}.ds-btn-pill:active{transform:scale(.97)}.ds-btn-pill:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}.ds-keycap-round{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid rgb(20 20 20/.18);border-radius:9999px;background:rgb(20 20 20/.07);font:11.5px/1 'Geist Mono',ui-monospace,monospace}"
+      "refersTo": "button-secondary",
+      "description": "Every action that is not the view's primary: Strong Brown fill, Parchment label, a Control Edge that brightens to Taupe on hover.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Save your first link</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:8px;height:40px;border-radius:10px;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color 150ms cubic-bezier(.32,.72,0,1),border-color 150ms cubic-bezier(.32,.72,0,1),color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1);padding:0 16px;border:1px solid #736D68;background:#262422;color:#E9D8C4}.ds-btn-secondary:hover{border-color:#988E81}.ds-btn-secondary:active{transform:scale(.97)}.ds-btn-secondary:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-btn-secondary:disabled{color:#988E81;cursor:default;transform:none}"
     },
     {
-      "name": "Search-style Email Field",
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Confirms a destructive action (Delete in the delete-confirm dialog): Error Red label and edge, the fill stepping down to Card Brown on hover.",
+      "html": "<button class=\"ds-btn-danger\" type=\"button\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z\"/></svg>Delete</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;gap:8px;height:40px;border-radius:10px;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color 150ms cubic-bezier(.32,.72,0,1),border-color 150ms cubic-bezier(.32,.72,0,1),color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1);padding:0 16px;border:1px solid #D36E6E;background:#262422;color:#D36E6E}.ds-btn-danger:hover{background:#201E1D}.ds-btn-danger:active{transform:scale(.97)}.ds-btn-danger:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "A 36px square with a 20px Sand icon and an aria-label; hover fills it Strong Brown and lifts the icon to Parchment.",
+      "html": "<button class=\"ds-btn-icon\" type=\"button\" aria-label=\"Account\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Zm97.76,66.41a79.66,79.66,0,0,0-36.06-28.75,48,48,0,1,0-59.4,0,79.66,79.66,0,0,0-36.06,28.75,88,88,0,1,1,131.52,0Z\"/></svg></button>",
+      "css": ".ds-btn-icon{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:10px;background:transparent;color:#C3B5A4;cursor:pointer;transition:background-color 150ms cubic-bezier(.32,.72,0,1),color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1)}.ds-btn-icon:hover{background:#262422;color:#E9D8C4}.ds-btn-icon:active{transform:scale(.97)}.ds-btn-icon:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}"
+    },
+    {
+      "name": "Text Input",
       "kind": "input",
-      "refersTo": "input-search",
-      "description": "The signup field styled as a search bar, with the button docked inside.",
-      "html": "<div class=\"ds-field\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" class=\"ds-field-icon\"><path d=\"M224 48H32a8 8 0 0 0-8 8v136a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a8 8 0 0 0-8-8Zm-20.57 16L128 133.15 52.57 64ZM216 192H40V74.19l82.59 75.71a8 8 0 0 0 10.82 0L216 74.19Z\"/></svg><input class=\"ds-field-input\" type=\"email\" placeholder=\"you@example.com\"><button class=\"ds-field-btn\">Join the waitlist</button></div>",
-      "css": ".ds-field{display:flex;align-items:center;gap:10px;max-width:520px;padding:6px 6px 6px 16px;border:1px solid rgb(250 250 247/.16);border-radius:14px;background:#1f1f1f;box-shadow:inset 0 1px 0 rgb(250 250 247/.04),0 24px 48px -28px rgb(0 0 0/.8);transition:border-color .5s cubic-bezier(.32,.72,0,1),box-shadow .5s cubic-bezier(.32,.72,0,1)}.ds-field:hover{border-color:rgb(250 250 247/.26)}.ds-field:focus-within{border-color:rgb(250 250 247/.44);box-shadow:0 0 0 4px rgb(250 250 247/.07)}.ds-field-icon{color:rgb(250 250 247/.56);flex-shrink:0}.ds-field-input{flex:1;min-width:0;height:40px;border:0;outline:0;background:transparent;color:#fafaf7;font:15.5px Geist,ui-sans-serif,system-ui,sans-serif}.ds-field-input::placeholder{color:rgb(250 250 247/.56)}.ds-field-btn{height:40px;padding:0 16px;border:0;border-radius:10px;background:#fafaf7;color:#141414;font:500 14.5px Geist,ui-sans-serif,system-ui,sans-serif;cursor:pointer}.ds-field-btn:hover{opacity:.88}.ds-field-btn:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}"
+      "refersTo": "text-input",
+      "description": "Card Brown field with a Control Edge, its label above in the label style and help text below; the edge turns Error Red with a warning row on error.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-api-key\">API key</label><input class=\"ds-input\" id=\"ds-api-key\" placeholder=\"Paste your API key\" aria-describedby=\"ds-api-key-help\"><p class=\"ds-field-help\" id=\"ds-api-key-help\">Find it in your Library's settings.</p><input class=\"ds-input\" aria-label=\"API key, with an error\" aria-invalid=\"true\" value=\"not-a-key\" aria-describedby=\"ds-api-key-error\"><p class=\"ds-field-error\" id=\"ds-api-key-error\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z\"/></svg>That key isn't valid.</p></div>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:8px;max-width:320px}.ds-field-label{font:500 12px/16px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#C3B5A4}.ds-input{height:40px;padding:0 12px;border:1px solid #736D68;border-radius:10px;background:#201E1D;color:#DACAB8;font:400 15px/24px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;transition:border-color 150ms cubic-bezier(.32,.72,0,1)}.ds-input::placeholder{color:#988E81}.ds-input:hover{border-color:#988E81}.ds-input:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-input[aria-invalid=\"true\"]{border-color:#D36E6E}.ds-field-help{margin:0;font:400 13px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#988E81}.ds-field-error{display:flex;align-items:center;gap:6px;margin:0;font:400 13px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#D36E6E}"
     },
     {
-      "name": "Pill Nav",
-      "kind": "nav",
-      "refersTo": "nav-pill",
-      "description": "The floating frosted nav: lockup left, pill join button right.",
-      "html": "<nav class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-logo\"><svg viewBox=\"4 6 40 36\" height=\"20\"><path fill=\"#fafaf7\" d=\"M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z\"/><path fill=\"#d4621a\" d=\"M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z\"/></svg><span>Resonory</span></a><a href=\"#\" class=\"ds-nav-cta\">Join the waitlist</a></nav>",
-      "css": ".ds-nav{display:flex;align-items:center;justify-content:space-between;max-width:720px;height:50px;padding:6px 6px 6px 16px;border:1px solid rgb(250 250 247/.09);border-radius:9999px;background:rgb(31 31 31/.9);backdrop-filter:blur(14px)}.ds-nav-logo{display:flex;align-items:center;gap:8px;color:#fafaf7;font:600 18px Geist,ui-sans-serif,system-ui,sans-serif;text-decoration:none;border-radius:8px;transition:opacity .3s}.ds-nav-logo:hover{opacity:.88}.ds-nav-logo:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}.ds-nav-cta{display:inline-flex;align-items:center;height:36px;padding:0 15px;border-radius:9999px;background:#fafaf7;color:#141414;font:500 14px Geist,ui-sans-serif,system-ui,sans-serif;text-decoration:none}.ds-nav-cta:hover{opacity:.88}.ds-nav-cta:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}"
-    },
-    {
-      "name": "Footer Pill",
-      "kind": "nav",
-      "refersTo": "footer-pill",
-      "description": "Content-sized footer pill: underlined Privacy link and mono copyright.",
-      "html": "<footer class=\"ds-footer\"><a href=\"#\" class=\"ds-footer-link\">Privacy</a><span class=\"ds-footer-copy\">© 2026 Resonory</span></footer>",
-      "css": ".ds-footer{display:inline-flex;align-items:center;gap:16px;padding:6px 14px;border:1px solid rgb(250 250 247/.09);border-radius:9999px;background:#141414;color:rgb(250 250 247/.56);font-size:12px;white-space:nowrap}.ds-footer-link{color:#fafaf7;text-decoration:underline;text-decoration-color:rgb(250 250 247/.35);text-underline-offset:3px;border-radius:8px;transition:text-decoration-color .3s}.ds-footer-link:hover{text-decoration-color:#fafaf7}.ds-footer-link:focus-visible{outline:2px solid #fafaf7;outline-offset:3px}.ds-footer-copy{font-family:'Geist Mono',ui-monospace,monospace}"
+      "name": "Tag Chip",
+      "kind": "chip",
+      "refersTo": "tag-chip",
+      "description": "A Tag filter toggle: Soft Band at rest; selected reads by a Control Edge, a check icon and Parchment text, not the tonal step alone.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" type=\"button\" aria-pressed=\"true\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/></svg>All</button><button class=\"ds-chip\" type=\"button\" aria-pressed=\"false\">Design</button><button class=\"ds-chip\" type=\"button\" aria-pressed=\"false\">Reading</button></div>",
+      "css": ".ds-chips{display:flex;gap:8px}.ds-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 12px;border:1px solid #282624;border-radius:9999px;background:#1A1918;color:#C3B5A4;font:500 12px/16px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:color 150ms cubic-bezier(.32,.72,0,1),background-color 300ms cubic-bezier(.32,.72,0,1),border-color 300ms cubic-bezier(.32,.72,0,1)}.ds-chip:hover{color:#E9D8C4}.ds-chip[aria-pressed=\"true\"]{border-color:#736D68;background:#262422;color:#E9D8C4}.ds-chip:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}"
     },
     {
       "name": "Item Card",
       "kind": "card",
       "refersTo": "item-card",
-      "description": "An Item's card on the wall; hover previews the lit (resurfaced) state.",
-      "html": "<div class=\"ds-save\"><span class=\"ds-save-src\"><i class=\"ds-save-fav\">S</i>soloship.blog</span><span class=\"ds-save-title\">What I learned shipping alone for a year</span><span class=\"ds-save-meta\">saved in March</span><span class=\"ds-save-dot\"></span></div>",
-      "css": ".ds-save{position:relative;display:flex;flex-direction:column;gap:7px;width:180px;padding:11px 12px;border:1px solid rgb(250 250 247/.09);border-radius:12px;background:#1f1f1f;transition:box-shadow .6s cubic-bezier(.32,.72,0,1),border-color .6s cubic-bezier(.32,.72,0,1),transform .9s cubic-bezier(.32,.72,0,1)}.ds-save:hover{border-color:#d4621a;box-shadow:0 0 0 1px #d4621a,0 0 28px rgb(212 98 26/.38);transform:translateY(-2px)}.ds-save-src,.ds-save-meta{display:flex;align-items:center;gap:6px;font:10px 'Geist Mono',ui-monospace,monospace;color:rgb(250 250 247/.56)}.ds-save-fav{display:grid;place-items:center;width:15px;height:15px;border:1px solid rgb(250 250 247/.16);border-radius:4px;background:#272727;font:normal 8.5px Geist,sans-serif;color:#fafaf7}.ds-save-title{font:12.5px/1.38 Geist,ui-sans-serif,system-ui,sans-serif;color:#fafaf7}.ds-save-dot{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:9999px;background:#d4621a;opacity:0;transform:translateY(5px);transition:opacity .9s cubic-bezier(.32,.72,0,1),transform .9s cubic-bezier(.32,.72,0,1)}.ds-save:hover .ds-save-dot{opacity:1;transform:none}"
+      "description": "An Item in the Library: type badge and mono source, Parchment title, Taupe meta; hover steps to Strong Brown, and the lit state (Rust edge, glow, rising dot) marks an Item that came back.",
+      "html": "<div class=\"ds-cards\"><a class=\"ds-card\" href=\"#\"><span class=\"ds-card-row\"><span class=\"ds-badge\">Article</span><span class=\"ds-card-src\">soloship.blog</span></span><span class=\"ds-card-title\">What I learned shipping alone for a year</span><span class=\"ds-card-meta\">saved in March</span></a><a class=\"ds-card ds-card-lit\" href=\"#\"><span class=\"ds-card-row\"><span class=\"ds-badge\">Post</span><span class=\"ds-card-src\">x.com</span></span><span class=\"ds-card-title\">Five retro formats your team won't dread</span><span class=\"ds-card-meta\">saved 3 months ago</span><span class=\"ds-card-dot\" aria-hidden=\"true\"></span></a></div>",
+      "css": ".ds-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;max-width:520px}.ds-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #282624;border-radius:12px;background:#201E1D;text-decoration:none;transition:background-color 150ms cubic-bezier(.32,.72,0,1),box-shadow 900ms cubic-bezier(.32,.72,0,1),transform 900ms cubic-bezier(.32,.72,0,1)}.ds-card:hover{background:#262422}.ds-card:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-card-row{display:flex;align-items:center;gap:8px;min-width:0}.ds-badge{padding:2px 6px;border-radius:6px;background:#262422;color:#988E81;font:500 12px/16px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase}.ds-card-src,.ds-card-meta{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 11px/16px 'JetBrains Mono',ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;color:#988E81}.ds-card-title{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#E9D8C4}.ds-card-lit{border-color:#A8492B;box-shadow:0 0 0 1px #A8492B,0 0 28px rgb(168 73 43 / .45);transform:translateY(-4px) scale(1.035)}.ds-card-dot{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:9999px;background:#A8492B}@media (prefers-reduced-motion:reduce){.ds-card{transition:none}}"
     },
     {
       "name": "Cue",
       "kind": "custom",
       "refersTo": "cue",
-      "description": "The Cue that you already saved something like this.",
-      "html": "<div class=\"ds-notice\"><span class=\"ds-notice-tile\"><svg viewBox=\"4 6 40 36\" height=\"17\"><path fill=\"#fafaf7\" d=\"M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z\"/><path fill=\"#d4621a\" d=\"M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z\"/></svg></span><div class=\"ds-notice-body\"><div class=\"ds-notice-head\"><span>You saved something like this</span><span class=\"ds-notice-mono\">now</span></div><p class=\"ds-notice-title\">“Five retro formats your team won't dread”</p><p class=\"ds-notice-mono\">X post · saved 3 months ago</p></div></div>",
-      "css": ".ds-notice{display:flex;align-items:center;gap:11px;width:344px;padding:10px 12px;border:1px solid rgb(250 250 247/.16);border-radius:14px;background:rgb(39 39 39/.94);backdrop-filter:blur(16px);box-shadow:0 0 0 1px rgb(0 0 0/.4),0 30px 60px -24px rgb(0 0 0/.95);font-family:Geist,ui-sans-serif,system-ui,sans-serif;color:#fafaf7}.ds-notice-tile{display:grid;place-items:center;flex-shrink:0;width:34px;height:34px;border:1px solid rgb(250 250 247/.16);border-radius:9px;background:#141414}.ds-notice-body{display:flex;flex-direction:column;min-width:0;flex:1}.ds-notice-head{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}.ds-notice-head .ds-notice-mono{margin-left:auto}.ds-notice-title{margin:0;font-size:12.5px;line-height:1.4;color:rgb(250 250 247/.82)}.ds-notice-mono{margin:1px 0 0;font:10px 'Geist Mono',ui-monospace,monospace;color:rgb(250 250 247/.56)}"
+      "description": "The Cue that you already saved something like this: frosted Strong Brown on the Cue shadow, the logo tile, a Parchment line, the quoted title in Sand and mono meta in Taupe. The whole Cue opens the Item it names.",
+      "html": "<a class=\"ds-cue\" href=\"#\"><span class=\"ds-cue-tile\"><svg viewBox=\"4 6 40 36\" height=\"16\" aria-hidden=\"true\"><path fill=\"#E9D8C4\" d=\"M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z\"/><path fill=\"#A8492B\" d=\"M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z\"/></svg></span><span class=\"ds-cue-body\"><span class=\"ds-cue-head\"><span>You saved something like this</span><span class=\"ds-cue-mono\">now</span></span><span class=\"ds-cue-title\">“Five retro formats your team won't dread”</span><span class=\"ds-cue-mono\">X post · saved 3 months ago</span></span></a>",
+      "css": ".ds-cue{display:flex;align-items:center;gap:12px;width:344px;padding:10px 12px;border:1px solid #282624;border-radius:14px;background:rgb(38 36 34 / .94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 0 0 1px rgb(0 0 0 / .4),0 30px 60px -24px rgb(0 0 0 / .95);font-family:'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;text-decoration:none;transition:background-color 150ms cubic-bezier(.32,.72,0,1)}.ds-cue:hover{background:#262422}.ds-cue:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-cue-tile{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border-radius:8px;background:#151414}.ds-cue-body{display:flex;flex-direction:column;flex:1;min-width:0}.ds-cue-head{display:flex;align-items:center;gap:8px;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#E9D8C4}.ds-cue-head .ds-cue-mono{margin-left:auto}.ds-cue-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0;font:400 13px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#C3B5A4}.ds-cue-mono{margin:0;font:400 11px/16px 'JetBrains Mono',ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;color:#988E81}"
+    },
+    {
+      "name": "Waitlist Nav",
+      "kind": "nav",
+      "refersTo": "nav-pill",
+      "description": "The floating frosted nav pill: the logo lockup with its Spectral wordmark on the left, the secondary \"Join the waitlist\" pill button on the right.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main\"><a href=\"#\" class=\"ds-nav-logo\"><svg viewBox=\"4 6 40 36\" height=\"20\" aria-hidden=\"true\"><path fill=\"#E9D8C4\" d=\"M6 22L17 22A2 2 0 0 1 17 26L6 26A2 2 0 0 1 6 22ZM31 22L42 22A2 2 0 0 1 42 26L31 26A2 2 0 0 1 31 22ZM6 30L20 30A2 2 0 0 1 20 34L6 34A2 2 0 0 1 6 30ZM28 30L42 30A2 2 0 0 1 42 34L28 34A2 2 0 0 1 28 30ZM6 38L42 38A2 2 0 0 1 42 42L6 42A2 2 0 0 1 6 38Z\"/><path fill=\"#A8492B\" d=\"M19 11A5 5 0 1 0 29 11A5 5 0 1 0 19 11Z\"/></svg><span>Resonory</span></a><a href=\"#\" class=\"ds-nav-cta\">Join the waitlist <kbd class=\"ds-nav-key\" aria-hidden=\"true\">↵</kbd></a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;justify-content:space-between;max-width:720px;height:50px;padding:6px 6px 6px 16px;border:1px solid #282624;border-radius:9999px;background:rgb(32 30 29 / .9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.ds-nav-logo{display:flex;align-items:center;gap:8px;border-radius:8px;color:#E9D8C4;font:600 20px/26px 'Spectral',Georgia,'Times New Roman',serif;text-decoration:none;transition:opacity 150ms cubic-bezier(.32,.72,0,1)}.ds-nav-logo:hover{opacity:.88}.ds-nav-logo:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-nav-cta{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 5px 0 16px;border:1px solid #736D68;border-radius:9999px;background:#262422;color:#E9D8C4;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;text-decoration:none;transition:border-color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1)}.ds-nav-cta:hover{border-color:#988E81}.ds-nav-cta:active{transform:scale(.97)}.ds-nav-cta:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}.ds-nav-key{display:inline-grid;place-items:center;width:26px;height:26px;border:1px solid rgb(233 216 196 / .18);border-radius:9999px;background:rgb(233 216 196 / .07);font:400 11px/16px 'JetBrains Mono',ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;color:inherit}"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "A quiet one-line confirmation on Strong Brown with the Palette shadow: a Saved Green check, Linen text and an optional ghost action. Never Rust.",
+      "html": "<div class=\"ds-toast\" role=\"status\"><svg class=\"ds-toast-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/></svg><span class=\"ds-toast-text\">Saved to your Library</span><button class=\"ds-toast-action\" type=\"button\">Undo</button></div>",
+      "css": ".ds-toast{display:inline-flex;align-items:center;gap:8px;max-width:400px;padding:10px 14px;border-radius:12px;background:#262422;box-shadow:0 24px 48px -16px rgb(0 0 0 / .6),0 2px 8px rgb(0 0 0 / .35);color:#DACAB8;font:400 13px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}.ds-toast-icon{flex-shrink:0;color:#5DB872}.ds-toast-text{flex:1;min-width:0}.ds-toast-action{height:28px;margin:-4px -6px -4px 4px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#DACAB8;font:500 14px/20px 'Work Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color 150ms cubic-bezier(.32,.72,0,1),color 150ms cubic-bezier(.32,.72,0,1),transform 300ms cubic-bezier(.32,.72,0,1)}.ds-toast-action:hover{background:#201E1D;color:#E9D8C4}.ds-toast-action:active{transform:scale(.97)}.ds-toast-action:focus-visible{outline:2px solid #E9D8C4;outline-offset:2px}"
     }
   ],
   "narrative": {
     "northStar": "The Pile That Answers Back",
-    "overview": "Resonory is drawn as a dark, quiet archive: a wall of the visitor's own saved cards, dimmed almost to nothing on a near-black ground, with the product's interface floating over it as a few frosted palettes. Nothing on the screen is loud except the one thing the product exists to do. When a save comes back, it lights up orange, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment is the whole visual identity; everything else is held in greys so it can land.\n\nThe system is monochrome by construction. Off-white (#FAFAF7) is the only bright neutral and is set at fixed strengths (66%, 56%, 16%, 9%) for secondary text, meta and edges, rather than introducing more greys. Surfaces separate by small tonal steps (ground, card, card-raised) and hairline borders, and depth comes from long, soft, dark drops under the floating palettes. Type is Geist throughout, with Geist Mono for everything the product \"knows\" about a save: when, where from, how much was read, the keycap.\n\nDensity is high but calm. The screen is a single viewport, the wall supplies texture and proof at once, and motion is slow and springy: parts rise in on load, the wall drifts a few pixels over 44 seconds, and the only fast thing is the spark that runs along the orange thread.",
+    "overview": "Resonory is drawn as a warm, dark, quiet archive: a pile of the User's own saved Items on a near-black ground the colour of an unlit room, read by lamplight. Text is not white but a family of warm beiges, from a parchment heading down to a faint fine print, so the screen reads like paper in low light rather than a glowing display. Nothing on the screen is loud except the one thing the product exists to do. When an Item comes back, its card lights up in rust, a thread draws to it, and a small dot rises above it, exactly like the dot rising above the stacked bars of the logo. That moment, and the one button that asks the User to act, are the only places the warm rust appears; everything else is held in browns and beiges so it can land.\n\nThe system is tonal by construction. Surfaces separate by small, warm steps (canvas, surface-soft, surface-card, surface-strong) rather than by borders, and a 1px hairline is a decorative edge only, never the thing that tells a User where to click or type: interactive boundaries carry their own control border. Type is split by meaning. Spectral, a serif, carries language about what a save means (page titles, section headings, empty states, the wordmark). Work Sans carries the interface. JetBrains Mono carries everything the product records about an Item: when, where from, how much was read.\n\nDensity is calm, with air. Motion is slow and springy: one curve, a handful of durations, and a still final state for every animation under reduced motion.",
     "keyCharacteristics": [
-      "Near-black ground with a dimmed wall of saved cards as the backdrop, never an empty field or a gradient.",
-      "One accent, orange, reserved for resurfacing: the logo dot, the two verbs of the headline, the lit card, its thread and its rising dot.",
-      "Primary actions are off-white fills with dark text; orange never fills a button.",
-      "Floating palettes: pill nav, search-style field, browser window, Cue, all on tonal surfaces with hairline edges and soft drops.",
-      "Geist for language, Geist Mono for metadata and keycaps.",
-      "One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change; every animation has a still state under reduced motion."
+      "A warm near-black canvas (#151414) with tonal surface steps; dark only, emails included. There is no light theme.",
+      "One beige family for text (#E9D8C4 down to #877E74), every tier at 4.5:1 or better where it is allowed.",
+      "One accent, rust (#A8492B), with two meanings only: the primary action's fill, and an Item coming back.",
+      "Spectral for meaning, Work Sans for interface, JetBrains Mono for what the machine records, and one handwritten Caveat line above the waitlist headline.",
+      "Focus is always a 2px text-heading outline, never rust.",
+      "One easing curve (cubic-bezier(0.32, 0.72, 0, 1)) for every state change."
     ],
     "rules": [
       {
-        "name": "The One Signal Rule",
-        "body": "Orange means an Item came back, and nothing else. It is never a button fill, a link colour, a focus ring, a label or a decoration. If a new surface wants orange somewhere that is not the logo dot, a highlighted verb about saving and bringing back, or a resurfaced item, use Paper White instead.",
+        "name": "The Rust Means Back or Act Rule",
+        "body": "Rust has two meanings: the primary action (one filled button per view) and an Item coming back. It is never a link colour, a focus ring, a label, an icon colour or small text. If a new surface wants rust anywhere else, use Parchment instead. Links are Parchment with an underline.",
         "section": "colors"
       },
       {
-        "name": "The One White Rule",
-        "body": "Secondary text and edges are the same off-white at fixed strengths (66, 56, 16, 9 percent), not new greys. A new tier of emphasis takes a new opacity of Paper White, not a new hex.",
+        "name": "The One Beige Family Rule",
+        "body": "Text comes in five warm tiers, Parchment to Dust, and nothing else. A new level of emphasis picks one of the five; it does not introduce a new grey or an opacity of white.",
         "section": "colors"
       },
       {
-        "name": "The Error Is Red Rule",
-        "body": "Errors are red, at the founder's request: the field's edge goes to the error red (#FF6B6B) at 70% and the message is set in that red with a warning icon. Red is used for errors and nothing else; it never competes with the orange, which still means an Item came back.",
+        "name": "The Errors Are Red Rule",
+        "body": "Errors and destructive actions are Error Red, and red means nothing else. It never competes with Rust, which still means \"act\" or \"came back\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Borders Are Steps Rule",
+        "body": "Surfaces separate by tonal steps first. The hairline is decoration; anything a User acts on carries the Control Edge, and anything focused carries the Parchment ring.",
         "section": "colors"
       },
       {
         "name": "The Machine Speaks Mono Rule",
-        "body": "Anything the product records about an Item (when, where from, how far read, how many) is Geist Mono at meta size in Faint. Human-facing sentences are set in Geist, with one exception the founder's design makes: the proof line under the form (the invitation, \"Join the waitlist. Be among the first to use Resonory.\", or the waiting count) is the form's status line and is set in Geist Mono at Note size in Mute, with tabular figures.",
+        "body": "Anything the product records about an Item (when, where from, how far read, how many) is JetBrains Mono, at mono-sm on cards and mono elsewhere. Sentences a person reads are never mono.",
         "section": "typography"
       },
       {
         "name": "The Colour, Not Slant Rule",
-        "body": "Emphasis inside the headline is an `em` coloured orange with the italic removed. Use it only for the verbs of saving and bringing back.",
+        "body": "Emphasis inside a headline is colour, not italic: an `em` set upright in Rust, and only inside a display-size headline about saving and bringing back, where Rust text passes the large-text rule.",
         "section": "typography"
       },
       {
-        "name": "The Only Light Is Orange Rule",
-        "body": "Shadows are dark and soft; no blurred white or coloured glows, except the orange glow on a resurfaced card and its thread. The field's focus halo is a crisp 4px off-white spread, not a glow.",
+        "name": "The Label Is Not an Eyebrow Rule",
+        "body": "The uppercase label style is for tags, Item type badges, form labels and table headers only. It is never placed above a headline as a kicker or eyebrow; headings stand unboxed.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caveat Once Rule",
+        "body": "Caveat appears exactly once, in the sentence above the waitlist headline. Nowhere else, in no other surface.",
+        "section": "typography"
+      },
+      {
+        "name": "The Only Light Is Rust Rule",
+        "body": "Shadows are black and soft. There are no white glows and no coloured light anywhere except the Rust lit glow on an Item that has come back, and its thread. Focus is an outline, never a glow.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** keep the accent (#D4621A) to resurfacing: the logo dot, the verbs \"saved\" and \"brings\", a lit card, its thread and its rising dot.",
-      "**Do** make primary actions Paper White (#FAFAF7) fills with Archive Black (#141414) text, hover at 88% opacity, press at 0.97 scale.",
-      "**Do** derive secondary text and edges from Paper White at 66%, 56%, 16% and 9% before reaching for a new grey.",
-      "**Do** set every timestamp, source, count and keycap in Geist Mono at meta size.",
+      "**Do** keep Rust (#A8492B) to two jobs: the view's one primary fill (hover and press #863A22, label #FFFFFF), and an Item coming back (the lit card's 1px edge and `0 0 28px rgb(168 73 43 / 0.45)` glow, its thread, its rising dot, the logo's dot).",
+      "**Do** set Rust as text only at 24px and up, on the canvas (#151414): the headline's highlighted verbs and the emails' heading and founder name.",
+      "**Do** focus every interactive element with a 2px solid #E9D8C4 outline at a 2px offset.",
+      "**Do** give every input, checkbox and field a 1px #736D68 Control Edge, and every error a #D36E6E edge and message.",
+      "**Do** separate surfaces by tone first: #151414, #1A1918, #201E1D, #262422.",
+      "**Do** set meta on cards in Taupe (#988E81, `mono-sm` 11/16); keep Dust (#877E74) for fine print on the canvas.",
+      "**Do** set every timestamp, source domain, URL, count and keycap in JetBrains Mono: 11/16 on cards, 13/20 elsewhere.",
       "**Do** nest rounded elements concentrically: a 14px panel with a 6px inset holds a 10px button.",
-      "**Do** use cubic-bezier(0.32, 0.72, 0, 1) for every transition and entrance; only the wall's drift (ease-in-out) and the thread's spark (linear) differ.",
-      "**Do** give every animation a still final state under prefers-reduced-motion.",
-      "**Do** focus with a 2px Paper White outline offset 3px."
+      "**Do** use `cubic-bezier(0.32, 0.72, 0, 1)` at 150, 300, 600 or 900ms for every transition; only the wall's drift (44s, `ease-in-out`) and the thread's spark (1.4s, `linear`) differ.",
+      "**Do** press buttons to `scale(0.97)` and give every animation a still final state under `prefers-reduced-motion: reduce`.",
+      "**Do** lay the Library out as `repeat(auto-fill, minmax(240px, 1fr))` with a 16px gap, on the 640, 1024 and 1440px breakpoints.",
+      "**Do** set the emails' ground with `bgcolor=\"#151414\"` and `color-scheme: dark`, with Georgia and Arial named as fallbacks.",
+      "**Do** use Phosphor icons, regular weight, at 16 or 20px, in `currentColor`."
     ],
     "donts": [
-      "**Don't** fill a button, colour a link, draw a focus ring or set a label in orange.",
-      "**Don't** signal errors in red or orange; errors stay in Paper White.",
-      "**Don't** set human-facing sentences in mono (the proof line under the form is the one exception), or slant the headline's highlighted verbs.",
-      "**Don't** add blurred white or coloured glows; the only light is the orange glow of a resurfaced card and its thread.",
-      "**Don't** use photographs in Item cards; thumbnails are the seeded sun-over-ridge placeholder.",
-      "**Don't** place a small label or kicker above a headline (uppercase, tracked or boxed). The one line above it is a plain sentence in the body lead's voice, not a label."
+      "**Don't** use Rust for a link, a focus ring, a label, an icon, a border on a field, or any text under 24px; on a card it is 2.69 to 3.05:1.",
+      "**Don't** set Dust (#877E74) on any card or panel (3.88 to 4.40:1); use Taupe (#988E81).",
+      "**Don't** mark an interactive boundary with the hairline (#282624, 1.03 to 1.22:1); it is decoration.",
+      "**Don't** signal an error in Rust, or use Error Red (#D36E6E) for anything but errors and destructive actions.",
+      "**Don't** put two filled Rust buttons in one view; the second is secondary (#262422 with a #736D68 edge).",
+      "**Don't** introduce a new grey, an opacity of white, or a light theme; text is one of the five beige tiers, and the system is dark only.",
+      "**Don't** set human-facing sentences in mono, or slant a headline's highlighted words (they are upright Rust).",
+      "**Don't** place an uppercase `label` (12/16, 0.04em) above a headline as an eyebrow; it is for tags, Item type badges, form labels and table headers.",
+      "**Don't** add white glows, coloured shadows other than the lit glow, or a blurred scrim; the scrim is flat `rgb(0 0 0 / 0.6)`.",
+      "**Don't** use photographs on the waitlist wall (its pictures are the sun-over-ridge placeholder), or overlay text and badges on a Library Thumbnail.",
+      "**Don't** animate layout properties, or use any easing but the spring outside the two exceptions.",
+      "**Don't** use Caveat anywhere but the one sentence above the waitlist headline."
     ]
   }
 }
